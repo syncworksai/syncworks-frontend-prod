@@ -301,7 +301,17 @@ export default function UniversalTicketCreator({
   const stageRef = useRef(null);
   const [stageDirection, setStageDirection] = useState("forward");
   const initialProvider = useMemo(() => readRequestProviderPrefill(), []);
-  const [savedProviders, setSavedProviders] = useState(() => readSavedProviders());
+  const [localSavedProviders, setLocalSavedProviders] = useState(() => readSavedProviders());
+  const [accountSavedProviders, setAccountSavedProviders] = useState([]);
+  const savedProviders = useMemo(() => {
+    const seen = new Set();
+    return [...accountSavedProviders, ...localSavedProviders].filter((provider) => {
+      const key = String(provider?.id || "");
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [accountSavedProviders, localSavedProviders]);
   const [routeMode, setRouteModeState] = useState(
     initialProvider ? "SAVED_PROVIDER" : "MARKETPLACE"
   );
@@ -390,8 +400,32 @@ export default function UniversalTicketCreator({
   }, []);
 
   useEffect(() => {
+    let active = true;
+    if (isBusinessInternal) return undefined;
+    api.get("/me/favorites/businesses/", { timeout: 12000 })
+      .then(({ data }) => {
+        if (!active) return;
+        const list = Array.isArray(data) ? data : Array.isArray(data?.results) ? data.results : [];
+        setAccountSavedProviders(list.map((fav) => {
+          const biz = fav?.business || {};
+          return {
+            ...biz,
+            id: Number(biz?.id || 0),
+            name: biz?.name || "",
+            logo_url: biz?.logo_url || "",
+            service_keys: Array.isArray(biz?.services_offered) ? biz.services_offered.map(item => item?.key || item?.slug || item?.name || item).filter(Boolean) : [],
+            favorite_id: fav?.id,
+            saved_source: "account",
+          };
+        }).filter(row => row.id));
+      })
+      .catch(() => { /* offline/local providers remain available */ });
+    return () => { active = false; };
+  }, [isBusinessInternal]);
+
+  useEffect(() => {
     function refreshSavedProviders() {
-      setSavedProviders(readSavedProviders());
+      setLocalSavedProviders(readSavedProviders());
     }
     window.addEventListener("sw:savedProvidersChanged", refreshSavedProviders);
     return () =>
@@ -431,9 +465,19 @@ export default function UniversalTicketCreator({
     setNavMessage("");
   }
 
-  function deleteSavedProvider(providerId) {
+  async function deleteSavedProvider(providerId) {
+    const accountProvider = accountSavedProviders.find(p => Number(p.id) === Number(providerId));
+    if (accountProvider?.favorite_id) {
+      try {
+        await api.delete(`/me/favorites/businesses/${accountProvider.favorite_id}/`);
+        setAccountSavedProviders(rows => rows.filter(p => Number(p.id) !== Number(providerId)));
+      } catch (error) {
+        setNavMessage(error?.response?.data?.detail || "Could not remove saved business from your account.");
+        return;
+      }
+    }
     const next = removeSavedProvider(providerId);
-    setSavedProviders(next);
+    setLocalSavedProviders(next);
     if (Number(selectedProvider?.id) === Number(providerId)) {
       setSelectedProvider(null);
     }
