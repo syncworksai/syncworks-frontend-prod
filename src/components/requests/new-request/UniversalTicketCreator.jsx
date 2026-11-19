@@ -111,6 +111,7 @@ function RequestRouteChooser({
       <div className="mt-1 text-xs leading-5 text-slate-400">
         Use the open marketplace or send the request directly to a provider you trust.
       </div>
+      <a href="/customer/rolodex" className="mt-2 inline-flex min-h-11 items-center rounded-xl border border-cyan-300/30 px-3 text-xs font-bold text-cyan-100">Open My Rolodex · Scan a QR</a>
 
       <div className="sw-new-request-route-grid mt-4 grid gap-3 sm:grid-cols-2">
         <button
