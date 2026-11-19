@@ -94,3 +94,23 @@
  .sw-chief-page:has(.sw-chief-theme-button) .sw-chief-overview{display:none}
 }
 @media(prefers-reduced-motion:reduce){.sw-chief-voice-button[aria-busy="true"]::after{animation:none;width:100%}}
+
+/* Written briefing is a full-height, independently scrolling drawer. */
+.sw-chief-read-button{display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(15,48,73,.4)}
+.sw-chief-reading-overlay{position:fixed;z-index:270;inset:0;display:flex;align-items:stretch;justify-content:flex-end;background:rgba(0,4,13,.7);backdrop-filter:blur(10px)}
+.sw-chief-reading-dialog{width:min(520px,100%);height:100%;display:flex;flex-direction:column;min-height:0;padding:16px;background:linear-gradient(145deg,rgba(5,23,44,.98),rgba(12,15,35,.99));border-left:1px solid rgba(113,213,250,.38);box-shadow:-20px 0 55px rgba(0,0,0,.35)}
+.sw-chief-reading-dialog header{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid rgba(255,255,255,.14);padding:12px 0}
+.sw-chief-reading-dialog header button{width:44px;height:44px;flex-shrink:0;display:grid;place-items:center;border:1px solid rgba(255,255,255,.25);border-radius:13px}
+.sw-chief-reading-content{min-height:0;flex:1;overflow:auto;overscroll-behavior:contain;padding:14px 0 40px}
+.sw-chief-reading-section{margin-top:12px;padding:13px;border-radius:14px;border:1px solid rgba(105,201,239,.24);background:rgba(2,12,30,.52)}
+.sw-chief-reading-item{margin-top:10px;padding:10px;border-radius:10px;background:rgba(24,58,89,.35);font-size:13px}
+.sw-chief-reading-item p{margin-top:4px;color:#c4d7e7}
+.sw-chief-reading-section button,.sw-chief-reading-item button{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;min-height:36px;margin-top:9px;border:1px solid rgba(113,213,250,.42);border-radius:10px;font-size:12px;color:#c9efff}
+@media(max-width:767px){
+ .sw-chief-avatar-card .max-w-md{display:grid;gap:6px}
+ .sw-chief-avatar-card .max-w-md>p:first-child{display:none}
+ .sw-chief-avatar-card .max-w-md>p:nth-child(2){font-size:13px}
+ .sw-chief-avatar-card .max-w-md>button{width:100%;margin:0!important}
+ .sw-chief-reading-dialog{height:calc(100dvh - 110px);margin-top:110px;padding:12px;border-radius:20px 20px 0 0;border-left:none;border-top:1px solid rgba(113,213,250,.38)}
+}
+@media(prefers-reduced-motion:no-preference){.sw-chief-reading-dialog{animation:sw-chief-read-enter .25s ease-out both}@keyframes sw-chief-read-enter{from{opacity:0;transform:translateX(15px)}to{opacity:1;transform:none}}}
