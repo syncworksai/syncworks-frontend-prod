@@ -1,23 +1,27 @@
 import React,{useCallback,useEffect,useMemo,useState} from "react";
 import {ArrowLeft,ArrowRight,CheckCircle2,ChevronRight,FolderKanban,Home,Plus,RefreshCw,X} from "lucide-react";
 import {useNavigate} from "react-router-dom";
+import {useAuth} from "../auth/AuthContext";
 import {addVictoriaTask,createWorkspaceProject,getWorkspaceRecords,markWorkspaceTask,openTasks,projectRecords,updateWorkspaceProject} from "../api/syncWorkspaceRecords";
 import "./CustomerProjects.css";
 
 const KINDS=[["BUSINESS","Business"],["PERSONAL","Personal"],["HOME","Home improvement"]];
 export default function CustomerProjects(){
  const nav=useNavigate();
+ const {user}=useAuth();
+ const pilotAccess=String(user?.email||"").trim().toLowerCase()==="jacoblord7@outlook.com";
  const [records,setRecords]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(""),[notice,setNotice]=useState("");
  const [selected,setSelected]=useState(null),[creating,setCreating]=useState(false),[busy,setBusy]=useState(false),[filter,setFilter]=useState("ACTIVE");
  const [draft,setDraft]=useState({title:"",description:"",type:"BUSINESS",dueDate:""}),[taskTitle,setTaskTitle]=useState("");
  const refresh=useCallback(async()=>{setLoading(true);setError("");try{setRecords(await getWorkspaceRecords());}catch{setError("Projects could not load from your SyncWorks account.");}finally{setLoading(false);}},[]);
- useEffect(()=>{refresh();},[refresh]);
+ useEffect(()=>{if(pilotAccess)refresh();},[refresh,pilotAccess]);
  const projects=useMemo(()=>projectRecords(records).filter(p=>filter==="ALL"||String(p.metadata?.project_status||"ACTIVE")==="ACTIVE"),[records,filter]);
  const tasks=useMemo(()=>openTasks(records).filter(t=>String(t.metadata?.project_id||"")===String(selected?.id||"")&&selected),[records,selected]);
  async function create(e){e.preventDefault();if(busy)return;setBusy(true);setError("");try{const created=await createWorkspaceProject(draft);setRecords(rows=>[created,...rows]);setSelected(created);setCreating(false);setDraft({title:"",description:"",type:"BUSINESS",dueDate:""});setNotice("Project saved to your account.");}catch(err){setError(err.message||"Could not save project.");}finally{setBusy(false);}}
  async function newTask(e){e.preventDefault();if(!selected||busy)return;setBusy(true);setError("");try{await addVictoriaTask(taskTitle,{projectId:selected.id});setTaskTitle("");await refresh();setNotice("Task added. It remains open until completed.");}catch(err){setError(err.message||"Could not add task.");}finally{setBusy(false);}}
  async function completeTask(t){setBusy(true);try{await markWorkspaceTask(t,"DONE");setRecords(rows=>rows.map(row=>row.id===t.id?{...row,metadata:{...row.metadata,task_status:"DONE"}}:row));}catch{setError("Task completion could not be saved.");}finally{setBusy(false);}}
  async function setProjectStatus(project,status){setBusy(true);try{const updated=await updateWorkspaceProject(project,{metadata:{project_status:status}});setRecords(rows=>rows.map(row=>row.id===project.id?updated:row));setSelected(updated);setNotice(status==="COMPLETED"?"Project marked completed.":"Project reopened.");}catch{setError("Unable to update project.");}finally{setBusy(false);}}
+ if(!pilotAccess)return <main className="sw-projects-root"><section className="sw-projects-shell"><h1>Projects private pilot</h1><p>This workspace is not enabled for this account.</p><button type="button" onClick={()=>nav("/customer")}>Return Home</button></section></main>;
  return <main className="sw-projects-root">
   <div className="sw-projects-shell">
    <header className="sw-projects-top"><button type="button" onClick={()=>nav("/customer")}><ArrowLeft size={18}/> Home</button><div><span>SYNC WORKSPACE</span><h1>Projects</h1></div><button type="button" onClick={refresh} aria-label="Refresh projects" disabled={loading}><RefreshCw size={18}/></button></header>
