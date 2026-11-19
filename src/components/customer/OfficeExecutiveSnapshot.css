@@ -1,0 +1,16 @@
+.sw-office-executive{border:1px solid var(--office-drawer-border,rgba(64,189,245,.4));border-radius:20px;padding:14px;background:color-mix(in srgb,var(--office-drawer-bg,#0c1726) 67%,transparent);backdrop-filter:blur(16px);box-shadow:0 14px 36px #0002;color:var(--office-drawer-text,#fff);margin:12px 0 15px;}
+.sw-office-executive-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.sw-office-executive-head>svg,.sw-office-executive-kicker{color:var(--office-drawer-accent,#42ceff)}
+.sw-office-executive-kicker{font-size:10px;font-weight:850;letter-spacing:.15em}
+.sw-office-executive-head h3{font-size:17px;font-weight:800;margin:4px 0 0}
+.sw-office-executive-head p{font-size:11px;line-height:1.4;color:var(--office-drawer-muted,#a9c1d8);margin:4px 0 0}
+.sw-office-executive-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:13px}
+.sw-office-executive-metric{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:9px 7px;border:1px solid var(--office-drawer-border,rgba(76,161,223,.32));border-radius:12px;background:var(--office-drawer-tile,rgba(20,45,69,.55))}
+.sw-office-executive-metric svg{color:var(--office-drawer-accent,#42ceff)}
+.sw-office-executive-metric span{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;color:var(--office-drawer-muted,#adc1d2)}
+.sw-office-executive-metric strong{font-size:clamp(12px,2.5vw,16px);white-space:nowrap}
+.sw-office-executive-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px}
+.sw-office-executive-bottom span{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--office-drawer-muted,#a9c1d8)}
+.sw-office-executive-bottom button{display:flex;align-items:center;gap:6px;border:1px solid var(--office-drawer-border,rgba(76,161,223,.32));border-radius:10px;background:var(--office-drawer-tile,rgba(20,45,69,.55));padding:9px;color:var(--office-drawer-text,#fff);font-size:11px;font-weight:750;cursor:pointer}
+.sw-office-executive-bottom button:hover{border-color:var(--office-drawer-accent,#42ceff)}
+@media(max-width:390px){.sw-office-executive-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
