@@ -3,6 +3,7 @@ import {ArrowRight,CalendarDays,CheckCircle2,Clock3,CloudSun,Dumbbell,ExternalLi
 import {useNavigate} from "react-router-dom";
 import {getSyncAssistantDailyState} from "../../api/jarvisProduct";
 import {synthesizeSyncSpeech,SYNC_VOICE_ROLES} from "../../api/syncAi";
+import {addVictoriaTask} from "../../api/syncWorkspaceRecords";
 import "./VictoriaCommandCenter.css";
 
 const QUESTIONS={
@@ -21,6 +22,8 @@ export default function VictoriaCommandCenter({open,onClose}){
  const [state,setState]=useState(null),[loading,setLoading]=useState(false),[error,setError]=useState("");
  const [horizon,setHorizon]=useState("day");
  const [checkIn,setCheckIn]=useState("morning");
+ const [taskOpen,setTaskOpen]=useState(false),[taskTitle,setTaskTitle]=useState(""),[taskSaving,setTaskSaving]=useState(false),[taskMessage,setTaskMessage]=useState("");
+ const [connectionsOpen,setConnectionsOpen]=useState(false);
  const audio=useRef(null),audioUrl=useRef(null);
  const [speaking,setSpeaking]=useState(false),[voiceBusy,setVoiceBusy]=useState(false),[voiceNotice,setVoiceNotice]=useState("");
  const stopSpeaking=useCallback(()=>{audio.current?.pause();audio.current=null;if(audioUrl.current)URL.revokeObjectURL(audioUrl.current);audioUrl.current=null;setSpeaking(false);setVoiceBusy(false);},[]);
@@ -62,6 +65,15 @@ export default function VictoriaCommandCenter({open,onClose}){
    }catch{stopSpeaking();setVoiceNotice("Audio unavailable. Read the snapshot or use SYNC chat.");}
    finally{setVoiceBusy(false);}
  }
+ async function saveTask(event){event.preventDefault();setTaskSaving(true);setTaskMessage("");try{await addVictoriaTask(taskTitle);setTaskTitle("");setTaskOpen(false);setTaskMessage("Saved to your to-do list. It will stay open until completed.");await reload();}catch(e){setTaskMessage(e?.message||"Could not save task. Retry.");}finally{setTaskSaving(false);}}
+ const needsConnection=[
+  {name:"Email & Outlook",detail:"Authorize your mailbox within SyncWorks before Victoria can review messages, suggest replies or classify priorities.",route:"/sync/assist/email",unavailable:true},
+  {name:"Calendar",detail:"Review your SyncWorks calendar. External calendars need their own authorization; existing SyncWorks events can be used now.",route:"/calendar",unavailable:!state?.calendar},
+  {name:"Health & nutrition",detail:"Open Health to configure your profile, workout plan and nutrition records. Only connected entries are used in briefings.",route:"/customer/health",unavailable:!health.available},
+  {name:"Finance",detail:"Enter upcoming debts and due dates in Finance; bank account syncing is not required for manual tracking.",route:"/customer/finance",unavailable:!state?.money},
+  {name:"Weather",detail:"Enable location and local weather from the Weather page, or add a supported location for forecasts.",route:"/customer/weather",unavailable:!weather.available},
+  {name:"Projects",detail:"Create projects and their linked tasks; Victoria can include them in planning after they're saved.",route:"/customer/projects",unavailable:false}
+ ];
  if(!open)return null;
  return <div className="victoria-command-overlay" onMouseDown={e=>{if(e.currentTarget===e.target)onClose();}}>
   <section role="dialog" aria-modal="true" aria-label="Victoria daily command center" className="victoria-command-panel">
@@ -95,6 +107,13 @@ export default function VictoriaCommandCenter({open,onClose}){
       </>}
       {!state&&!loading&&!error&&<p className="victoria-record-muted">Open a briefing to review available records.</p>}
     </section>
+    <div className="victoria-task-and-connections">
+       <button type="button" onClick={()=>{setConnectionsOpen(v=>!v);setTaskOpen(false);}} aria-expanded={connectionsOpen}>Connections & setup <ArrowRight size={15}/></button>
+       <button type="button" onClick={()=>{setTaskOpen(v=>!v);setConnectionsOpen(false);}} aria-expanded={taskOpen}><CheckCircle2 size={15}/> Add a to-do</button>
+    </div>
+    {taskOpen&&<form className="victoria-task-editor" onSubmit={saveTask}><label htmlFor="victoria-task-title">What needs doing?</label><input id="victoria-task-title" required maxLength={180} value={taskTitle} onChange={e=>setTaskTitle(e.target.value)} placeholder="e.g. Review marketing campaign"/><button type="submit" disabled={taskSaving||!taskTitle.trim()}>{taskSaving?"Saving…":"Add to my tasks"}</button></form>}
+    {taskMessage&&<p role="status" className="victoria-task-status">{taskMessage}</p>}
+    {connectionsOpen&&<div className="victoria-connections"><h3>Connect what Victoria needs</h3><p>Each service must be authorized in SyncWorks. Access in ChatGPT does not automatically connect the app.</p>{needsConnection.map(item=><button type="button" key={item.name} onClick={()=>{onClose();navigate(item.route);}}><span><strong>{item.name}</strong><small>{item.detail}</small></span><ArrowRight size={16}/></button>)}</div>}
     <div className="victoria-quick-actions">
       <button type="button" onClick={()=>{onClose();navigate("/sync/assist/pilot");}}>Delegate work <ArrowRight size={14}/></button>
       <button type="button" onClick={()=>{onClose();navigate("/sync/assist/email");}}>Review email connection <ArrowRight size={14}/></button>
