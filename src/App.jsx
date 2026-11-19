@@ -159,6 +159,7 @@ import SyncAssistChiefOfStaff from "./pages/SyncAssistChiefOfStaff";
 import SyncAssistEmail from "./pages/SyncAssistEmail";
 import SyncHistory from "./pages/SyncHistory";
 import SyncVoiceDemo from "./pages/SyncVoiceDemo";
+import PrivateShowcase from "./pages/PrivateShowcase";
 
 const ConnectSportsBridge = lazy(() => import("./pages/ConnectSportsBridge"));
 const SportsHub = lazy(() => import("./pages/SportsHub"));
@@ -202,6 +203,7 @@ export default function App() {
         <Route path="/employee/invite" element={<EmployeeInvite />} />
         <Route path="/accept-invite" element={<EmployeeInvite />} />
         <Route path="/platform" element={<PlatformRoute><PlatformDashboard /></PlatformRoute>} />
+        <Route path="/private" element={<ProtectedRoute><PrivateShowcase /></ProtectedRoute>} />
         <Route path="/god-mode" element={<Navigate to="/platform" replace />} />
         <Route path="/platform/support" element={<PlatformRoute><PlatformSupportRequests /></PlatformRoute>} />
         <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
