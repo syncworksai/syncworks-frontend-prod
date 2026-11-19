@@ -17,6 +17,9 @@ export default function CeoCommandCenter() {
   const [metrics, setMetrics] = useState(null);
   const [dataError, setDataError] = useState("");
   const [drawer, setDrawer] = useState(null);
+  const readTheme = () => {try{return JSON.parse(localStorage.getItem("sw_workspace_appearance_v1") || "{}").theme || "legacy";}catch{return "legacy";}};
+  const [theme,setTheme] = useState(readTheme);
+  useEffect(() => {const onTheme = () => setTheme(readTheme()); window.addEventListener("sw:workspace-appearance",onTheme);return()=>window.removeEventListener("sw:workspace-appearance",onTheme);},[]);
   const [updated, setUpdated] = useState(null);
 
   const refresh = useCallback(async () => {
@@ -34,7 +37,7 @@ export default function CeoCommandCenter() {
       const settled = await Promise.allSettled([
         api.get("/kpis/business/", {params:{days:30}}),
         api.get("/tickets/"),
-        api.get("/business-members/me/")
+        api.get(`/businesses/${activeBusinessId}/members/`)
       ]);
       const [kpi, tickets, employees] = settled;
       if (kpi.status !== "fulfilled" || tickets.status !== "fulfilled" || employees.status !== "fulfilled") {
@@ -47,7 +50,7 @@ export default function CeoCommandCenter() {
         revenue: rows === null ? null : rows.reduce((sum, item) => sum + Number(item.gmv_paid_cents || 0), 0),
         openJobs: jobs === null ? null : jobs.filter(ticket => !isClosed(ticket)).length,
         completedJobs: jobs === null ? null : jobs.filter(ticket => String(ticket.status || "").toUpperCase() === "COMPLETED").length,
-        teamSize: memberRows === null ? null : memberRows.filter(item => String(item.business) === String(activeBusinessId) && item.is_active && item.role !== "OWNER").length,
+        teamSize: memberRows === null ? null : memberRows.filter(item => item.is_active && item.role !== "OWNER").length,
       });
       setUpdated(new Date());
     } catch (error) {
@@ -63,6 +66,7 @@ export default function CeoCommandCenter() {
     {title:"Employees", value:metrics?.teamSize ?? "—", icon:Users, path:"/team/invites"},
   ], [metrics]);
 
+  const room = ({future:"syncworks-future", classic:"classic-office", modern:"modern-dark", light:"clean-light", legacy:"syncworks-future"}[theme] || "syncworks-future");
   const modules = [
     {name:"Business operations", icon:BriefcaseBusiness, links:[["Operations office","/sbo"],["Dispatch","/sbo/dispatch"],["Technician board","/sbo/tech-board"]]},
     {name:"Finance", icon:DollarSign, links:[["Financial overview","/sbo/finance"],["Invoices","/sbo/invoices"],["Reports","/sbo/reports"]]},
@@ -80,7 +84,7 @@ export default function CeoCommandCenter() {
     </main>;
   }
 
-  return <div className="sw-sbo-compact relative isolate h-[calc(100dvh-172px)] min-h-[380px] overflow-hidden text-white sm:h-[calc(100dvh-110px)]" style={{"--sw-sbo-room":'url("/office-themes/modern-dark.webp")'}}>
+  return <div className="sw-sbo-compact relative isolate h-[calc(100dvh-172px)] min-h-[380px] overflow-hidden text-white sm:h-[calc(100dvh-110px)]" style={{"--sw-sbo-room":`url("/office-themes/${room}.webp")`}}>
     <div aria-hidden="true" className="sw-sbo-room-art absolute inset-0 -z-20"/><div aria-hidden="true" className="sw-sbo-room-shade absolute inset-0 -z-10"/>
     <main className="mx-auto flex h-full max-w-7xl flex-col gap-3 overflow-hidden p-3 sm:p-5">
       <header className="flex shrink-0 items-center justify-between rounded-2xl border border-white/15 bg-slate-950/55 p-3 backdrop-blur-xl">
