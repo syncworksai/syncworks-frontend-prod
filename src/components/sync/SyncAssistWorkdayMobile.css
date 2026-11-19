@@ -1,0 +1,24 @@
+/* Workday: one non-scrolling shell, with focused internal scrolling on mobile. */
+.sw-workday-mobile-switcher{display:none}
+@media(max-width:767px){
+ .sw-assist-workday{padding:9px!important;gap:8px}
+ .sw-assist-workday>div:first-child{gap:7px!important}
+ .sw-assist-workday>div:first-child h2{font-size:14px;margin-top:2px}
+ .sw-assist-workday>div:first-child>div:last-child{gap:5px!important}
+ .sw-assist-workday>div:first-child button{font-size:11px;min-height:36px;padding:0 10px}
+ .sw-workday-mobile-switcher{display:grid;grid-template-columns:1fr 1fr;gap:7px;flex-shrink:0}
+ .sw-workday-mobile-switcher button{min-height:41px;border:1px solid rgba(93,194,232,.35);border-radius:11px;font-weight:700;font-size:12px;color:#c4d9e9;background:rgba(5,21,45,.7)}
+ .sw-workday-mobile-switcher button[aria-pressed="true"]{border-color:rgba(87,211,244,.85);background:rgba(26,114,155,.28);color:white;box-shadow:0 0 16px rgba(68,189,231,.16)}
+ .sw-workday-mobile-grid{overflow:hidden!important;display:block!important;flex:1;min-height:0}
+ .sw-workday-mobile-grid>.sw-workday-creator,.sw-workday-mobile-grid>.sw-workday-results{height:100%;min-height:0;overflow-y:auto!important;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(97,199,241,.4) transparent;padding:12px!important;background:rgba(5,22,45,.55)!important;backdrop-filter:blur(18px)}
+ .sw-assist-workday[data-mobile-view="create"] .sw-workday-results,.sw-assist-workday[data-mobile-view="results"] .sw-workday-creator{display:none!important}
+ .sw-assist-workday[data-mobile-view="create"] .sw-workday-creator,.sw-assist-workday[data-mobile-view="results"] .sw-workday-results{display:block!important;animation:sw-workday-enter .24s ease both}
+ .sw-assist-themed .sw-assist-banner{padding:9px 12px!important}
+ .sw-assist-themed .sw-assist-banner>p,.sw-assist-themed .sw-assist-banner>div:last-child{display:none!important}
+ .sw-assist-themed .sw-assist-banner h1{font-size:15px}
+ .sw-assist-themed .sw-assist-banner .h-6{width:18px;height:18px}
+ .sw-assist-themed .sw-assist-task-overlay{inset:110px 0 88px!important;height:calc(100dvh - 198px)!important}
+ .sw-assist-themed .sw-assist-centered-task{width:calc(100vw - 16px)!important;height:100%!important;max-height:100%;border-radius:16px}
+ @keyframes sw-workday-enter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+}
+@media(prefers-reduced-motion:reduce){.sw-assist-workday .sw-workday-results,.sw-assist-workday .sw-workday-creator{animation:none!important}}
