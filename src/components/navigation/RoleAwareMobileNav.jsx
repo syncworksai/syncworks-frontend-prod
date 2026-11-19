@@ -7,6 +7,7 @@ import {
   Home,
   LayoutGrid,
   MapPinned,
+  Plus,
   MessageSquareText,
   Settings,
   Sparkles,
@@ -325,7 +326,7 @@ export default function RoleAwareMobileNav() {
         <div className="sw-role-mobile-nav-grid">
           {renderedItems.slice(0, 2).map((item) => <NavButton key={item.id} item={item} onClick={() => openItem(item)} />)}
           <button type="button" className={`sw-role-mobile-nav-center ${center.sync ? "is-sync" : ""}`} onClick={openCenter} aria-label={center.sync ? "Open SYNC Assistant" : `New ${center.label}`}>
-            <span className="sw-role-mobile-nav-center-orb">{center.sync ? <Sparkles aria-hidden="true" size={27} strokeWidth={2.3} /> : <img src="/brands/syncworks-icon-192.png" alt="" />}</span>
+            <span className="sw-role-mobile-nav-center-orb">{center.sync ? <Sparkles aria-hidden="true" size={27} strokeWidth={2.3} /> : navMode === "SBO" ? <Plus aria-hidden="true" size={31} strokeWidth={2.6} /> : <img src="/brands/syncworks-icon-192.png" alt="" />}</span>
             <span>{center.label}</span>
           </button>
           {renderedItems.slice(2, 4).map((item) => <NavButton key={item.id} item={item} onClick={() => openItem(item)} />)}
