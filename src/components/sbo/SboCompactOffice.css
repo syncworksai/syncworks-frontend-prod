@@ -319,3 +319,29 @@
   .sw-sbo-compact .sw-sbo-kpis .sw-sbo-stat {padding: 5px;}
   .sw-sbo-compact .sw-sbo-action-grid .sw-sbo-glass-tile svg {height: 17px;width:17px;margin-bottom:2px;}
 }
+
+/* Business operations landing: reclaim the unused mobile canvas while
+   keeping tools above the fixed global dock. Never expand body scroll. */
+.sw-sbo-growth-link {backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:var(--sbo-ink);border-color:var(--sbo-border);background:var(--sbo-glass);}
+.sw-sbo-ai-dock{display:flex;align-items:center;justify-content:space-around;gap:6px;padding:5px 7px;border-radius:16px;border:1px solid var(--sbo-border);background:var(--sbo-glass);backdrop-filter:blur(13px);-webkit-backdrop-filter:blur(13px);}
+.sw-sbo-ai-label{flex:0 0 auto;font-size:9px;font-weight:800;letter-spacing:.1em;color:var(--sbo-muted)}
+.sw-sbo-ai-worker{display:flex;min-width:0;flex:1 1 0;align-items:center;flex-direction:column;justify-content:center;gap:3px;padding:2px;color:var(--sbo-ink);}
+.sw-sbo-ai-worker img{width:38px;height:38px;border:1px solid var(--sbo-border);border-radius:50%;object-fit:cover;object-position:top;background:#101b33;box-shadow:0 0 11px rgba(38,180,231,.17)}
+.sw-sbo-ai-worker span{font-size:10px;line-height:1.1;text-align:center;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.sw-sbo-ai-worker:focus-visible img{outline:2px solid var(--sbo-accent);outline-offset:3px;}
+@media(max-width:767px){
+ .sw-sbo-compact .sw-sbo-office-canvas{justify-content:stretch;gap:7px;}
+ .sw-sbo-compact .sw-sbo-action-grid{min-height:130px;}
+ .sw-sbo-compact .sw-sbo-growth-link{min-height:46px;padding:7px 10px;}
+ .sw-sbo-compact .sw-sbo-ai-dock{min-height:64px;}
+ .sw-sbo-compact .sw-sbo-ai-worker img{width:36px;height:36px;}
+}
+@media(max-width:767px) and (max-height:740px){
+ .sw-sbo-compact .sw-sbo-growth-link{min-height:38px;padding:5px 8px;}
+ .sw-sbo-compact .sw-sbo-growth-link .text-xs{font-size:10px;}
+ .sw-sbo-compact .sw-sbo-ai-dock{min-height:54px;padding:3px;}
+ .sw-sbo-compact .sw-sbo-ai-worker img{width:29px;height:29px;}
+ .sw-sbo-compact .sw-sbo-ai-worker span{font-size:9px;}
+ .sw-sbo-compact .sw-sbo-action-grid{min-height:104px;}
+}
+@media(min-width:768px){.sw-sbo-ai-dock{max-width:590px;align-self:center;width:100%;}}
