@@ -48,6 +48,8 @@ import CustomerTickets from "./pages/CustomerTickets";
 import CustomerInvoices from "./pages/CustomerInvoices";
 import CustomerFavorites from "./pages/CustomerFavorites";
 import CustomerBusinessCards from "./pages/CustomerBusinessCards";
+import MyConnectQR from "./pages/MyConnectQR";
+import SecureWalletPilot from "./pages/SecureWalletPilot";
 import CustomerBusinessCardDetail from "./pages/CustomerBusinessCardDetail";
 import CustomerDiscover from "./pages/CustomerDiscover";
 import CustomerWeather from "./pages/CustomerWeather";
@@ -271,6 +273,9 @@ export default function App() {
         <Route path="/customer/store" element={<ProtectedRoute><CustomerStore /></ProtectedRoute>} />
         <Route path="/customer/favorites" element={<ProtectedRoute><CustomerFavorites /></ProtectedRoute>} />
         <Route path="/customer/business-cards" element={<ProtectedRoute><CustomerBusinessCards /></ProtectedRoute>} />
+        <Route path="/customer/rolodex" element={<ProtectedRoute><CustomerBusinessCards /></ProtectedRoute>} />
+        <Route path="/customer/my-qr" element={<ProtectedRoute><MyConnectQR /></ProtectedRoute>} />
+        <Route path="/customer/secure-wallet" element={<ProtectedRoute><SecureWalletPilot /></ProtectedRoute>} />
         <Route path="/customer/business-cards/:favoriteId" element={<ProtectedRoute><CustomerBusinessCardDetail /></ProtectedRoute>} />
         <Route path="/customer/new-request" element={<ProtectedRoute><CustomerNewRequest /></ProtectedRoute>} />
         <Route path="/customer/marketplace" element={<ProtectedRoute><CustomerMarketplaceAvailability /></ProtectedRoute>} />
