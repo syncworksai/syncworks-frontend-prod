@@ -19,7 +19,7 @@ export default function SyncAssistChiefOfStaff(){
   const authorized=String(user?.email||"").trim().toLowerCase()==="jacoblord7@outlook.com";
   const [brief,setBrief]=useState(null),[cases,setCases]=useState([]),[busy,setBusy]=useState(false);
   const [error,setError]=useState(""),[notice,setNotice]=useState("");
-  const [expanded,setExpanded]=useState("cases"),[adding,setAdding]=useState(false);
+  const [expanded,setExpanded]=useState("today"),[adding,setAdding]=useState(false);
   const [activePanel,setActivePanel]=useState("today");
   const [theme,setTheme]=useState(()=>{
     try {const saved=window.localStorage.getItem("sw-assist-chief-theme");return THEMES[saved]?saved:"future";}catch{return "future";}
@@ -27,39 +27,66 @@ export default function SyncAssistChiefOfStaff(){
   const [themeOpen,setThemeOpen]=useState(false);
   const avatarId = "executive-female"; // Victoria is permanently assigned to Chief of Staff.
   const [avatarTalking,setAvatarTalking]=useState(false);
-  const avatarAudio=React.useRef(null);
-  const avatarAudioUrl=React.useRef(null);
+  const voiceContext=React.useRef(null);
+  const voiceSource=React.useRef(null);
+  const voiceRequest=React.useRef(0);
   const [voiceLoading,setVoiceLoading]=useState(false);
+  const [voiceError,setVoiceError]=useState(false);
   function stopVoice(){
-    avatarAudio.current?.pause();
-    avatarAudio.current=null;
-    if(avatarAudioUrl.current) URL.revokeObjectURL(avatarAudioUrl.current);
-    avatarAudioUrl.current=null;
+    voiceRequest.current+=1;
+    try{voiceSource.current?.stop();}catch{}
+    voiceSource.current=null;
     setAvatarTalking(false);
+    setVoiceLoading(false);
   }
-  useEffect(()=>()=>{avatarAudio.current?.pause();if(avatarAudioUrl.current)URL.revokeObjectURL(avatarAudioUrl.current);},[]);
+  useEffect(()=>()=>{voiceRequest.current+=1;try{voiceSource.current?.stop();}catch{};void voiceContext.current?.close?.();},[]);
   async function previewAssistant(){
     if(avatarTalking||voiceLoading){stopVoice();return;}
-    setVoiceLoading(true);setNotice("");
+    // Safari requires the audio engine to be unlocked in the original tap,
+    // BEFORE asynchronous voice synthesis completes.
+    const AudioEngine=window.AudioContext||window.webkitAudioContext;
+    if(!AudioEngine){setVoiceError(true);return;}
+    const request=++voiceRequest.current;
+    setVoiceError(false);
+    setVoiceLoading(true);
+    let context;
     try {
+      context=voiceContext.current;
+      if(!context||context.state==="closed"){
+        context=new AudioEngine();
+        voiceContext.current=context;
+      }
+      await context.resume();
       const status=await api.get("/sync-ai/voice/status/",{timeout:12000});
-      if(!status.data?.roles?.female_assistant?.configured)throw new Error("Victoria's ElevenLabs Gemma voice is not configured on Render.");
+      if(!status.data?.roles?.female_assistant?.configured)throw new Error("Voice service unavailable.");
       const response=await api.post("/sync-ai/voice/synthesize/",{
         role:"female_assistant",
         text:"Good morning. I am Victoria, your SyncWorks chief of staff. Let us review your priorities."
-      },{responseType:"blob",timeout:90000});
-      const url=URL.createObjectURL(response.data);
-      avatarAudioUrl.current=url;
-      const audio=new Audio(url);
-      avatarAudio.current=audio;
-      audio.onplaying=()=>setAvatarTalking(true);
-      audio.onended=()=>stopVoice();
-      audio.onerror=()=>{stopVoice();setNotice("ElevenLabs audio could not be played on this device.");};
-      await audio.play();
-    }catch(e){
-      stopVoice();
-      setNotice(e?.message||"Victoria's ElevenLabs voice is unavailable. Check the Render voice configuration.");
-    }finally{setVoiceLoading(false);}
+      },{responseType:"arraybuffer",timeout:90000,headers:{"Accept":"audio/mpeg"}});
+      if(request!==voiceRequest.current)return;
+      const mime=String(response.headers?.["content-type"]||"").toLowerCase();
+      if(!mime.includes("audio/")||!response.data?.byteLength)throw new Error("Invalid voice audio response.");
+      const buffer=await context.decodeAudioData(response.data.slice(0));
+      if(request!==voiceRequest.current)return;
+      const source=context.createBufferSource();
+      source.buffer=buffer;
+      source.connect(context.destination);
+      source.onended=()=>{
+        if(request!==voiceRequest.current)return;
+        voiceSource.current=null;
+        setAvatarTalking(false);
+      };
+      voiceSource.current=source;
+      source.start(0);
+      setAvatarTalking(true);
+    }catch{
+      if(request===voiceRequest.current){
+        setVoiceError(true);
+        setAvatarTalking(false);
+      }
+    }finally{
+      if(request===voiceRequest.current)setVoiceLoading(false);
+    }
   }
   const design=THEMES[theme]||THEMES.future;
   const isLight=theme==="daylight";
@@ -119,8 +146,8 @@ export default function SyncAssistChiefOfStaff(){
       <div className="w-full max-w-md space-y-2">
         <p className={`text-[11px] font-black uppercase tracking-widest ${isLight?"text-slate-700":design.accent}`}>Your Chief of Staff</p>
         <p className={`text-sm font-bold ${textColor}`}>Victoria — Chief of Staff</p>
-        <button type="button" onClick={previewAssistant} className={`min-h-11 w-full rounded-xl border px-4 text-xs font-black ${isLight?"border-slate-400 bg-white text-slate-900":"border-cyan-400/40 bg-cyan-500/10 text-cyan-100"}`}>{voiceLoading?"Preparing Gemma voice…":avatarTalking?"Stop Victoria":"Hear Victoria · ElevenLabs"}</button>
-        <p className={`text-[11px] ${subText}`}>Victoria uses the Gemma ElevenLabs voice. Playback requires the configured backend voice service.</p>
+        <button type="button" onClick={previewAssistant} aria-busy={voiceLoading} className={`sw-chief-voice-button min-h-11 w-full rounded-xl border px-4 text-xs font-black ${isLight?"border-slate-400 bg-white text-slate-900":"border-cyan-400/40 bg-cyan-500/10 text-cyan-100"}`}>{avatarTalking||voiceLoading?"Stop":"Speak"}</button>
+        {voiceError&&<p role="status" className="sw-chief-voice-error text-[11px]">Voice unavailable. Tap Speak to retry.</p>}
       </div>
     </section>
     <section className={`sw-chief-overview rounded-3xl border p-5 shadow-2xl backdrop-blur-xl ${design.border} ${design.panel}`}>
@@ -130,10 +157,10 @@ export default function SyncAssistChiefOfStaff(){
       <div className="mt-4 grid grid-cols-3 gap-2 text-center">
         {[[brief?.counts?.tasks_open,"Tasks"],[brief?.counts?.cases_open,"Open cases"],[brief?.counts?.cases_high,"High priority cases"]].map(([n,l])=><div key={l} className={`rounded-xl border p-3 ${isLight?"border-slate-300 bg-white/70":"border-white/15 bg-slate-950/40"}`}><div className="text-2xl font-black">{n??"—"}</div><p className={`text-[11px] ${subText}`}>{l}</p></div>)}
       </div>
-      <p className={`mt-3 text-xs ${subText}`}>{brief?.date||"On-demand"} · Not a scheduled or complete inbox briefing</p>
+      <p className={`mt-3 text-xs ${subText}`}>{brief?.date||"Today"} · Updated when refreshed</p>
     </section>
     {error&&<p role="alert" className="mt-3 rounded-xl border border-rose-400/40 p-3 text-sm text-rose-200">{error}</p>}
-    {notice&&<p role="status" className="mt-3 rounded-xl border border-emerald-400/30 p-3 text-sm text-emerald-200">{notice}</p>}
+    {notice&&<p role="status" className="sw-chief-notice mt-3 rounded-xl border border-emerald-400/30 p-3 text-sm text-emerald-200">{notice}</p>}
     {!authorized&&<p className="mt-3 text-rose-200">Private pilot account only.</p>}
     <nav className="sw-chief-mobile-tabs" aria-label="Chief of Staff sections">{[...(brief?.sections||[]).map(s=>({key:s.key,label:s.title})),{key:"register",label:"Issue register"}].map(tab=><button key={tab.key} type="button" aria-pressed={activePanel===tab.key} onClick={()=>{setActivePanel(tab.key);setExpanded(tab.key);}}>{tab.label}</button>)}</nav>
     <div className="sw-chief-mobile-detail">
@@ -146,7 +173,7 @@ export default function SyncAssistChiefOfStaff(){
         {(s.items||[]).map((x,i)=><div key={i} className="mt-3 rounded-xl border border-white/10 p-3"><p className={`text-sm font-bold ${textColor}`}>{x.title}</p><p className="mt-1 text-xs text-cyan-200">{x.next_action}</p></div>)}
         {s.key==="email"&&<button onClick={()=>navigate("/sync/assist/email")} className="mt-3 flex min-h-11 items-center gap-2 rounded-xl border border-cyan-400/30 px-4 text-sm text-cyan-200"><Mail size={16}/> Open Mail Desk</button>}
         {s.key==="today"&&<button onClick={()=>navigate("/sync/assist/daily")} className="mt-3 min-h-11 rounded-xl border border-cyan-400/30 px-4 text-sm text-cyan-200">Open task list</button>}
-        {s.key==="cases"&&<button onClick={()=>setAdding(true)} className="mt-3 flex min-h-11 items-center gap-2 rounded-xl border border-cyan-400/30 px-4 text-sm text-cyan-200"><Plus size={16}/> Track an issue</button>}
+        {s.key==="cases"&&<button onClick={()=>{setActivePanel("register");setAdding(true);}} className="mt-3 flex min-h-11 items-center gap-2 rounded-xl border border-cyan-400/30 px-4 text-sm text-cyan-200"><Plus size={16}/> Track an issue</button>}
       </div>}
     </section>)}
     <section className={`sw-chief-register ${activePanel==="register"?"sw-chief-section-active":""} mt-5 rounded-2xl border p-4 shadow-lg backdrop-blur-xl ${design.border} ${design.panel}`}>
