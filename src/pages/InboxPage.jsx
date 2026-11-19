@@ -146,6 +146,7 @@ export default function InboxPage() {
 
       <main className="sw-inbox-main mx-auto max-w-[1500px] space-y-4 px-4 py-5 pb-28 lg:px-8">
         <div className="sw-inbox-mobile-heading"><button type="button" className="sw-inbox-return" onClick={() => setMobileConversationOpen(false)} aria-label="Back to conversation list">←</button><div><span>SYNCWORKS / MESSAGES</span><h1>{mobileConversationOpen ? (selected?.subject || "Conversation") : title}</h1><small>{mobileConversationOpen ? "Secure conversation" : `${unreadTotal} unread · ${threads.length} conversations`}</small></div><button type="button" onClick={()=>loadThreads({preserveSelection:true})} className="sw-inbox-reload" disabled={loadingThreads}>Refresh</button></div>
+        {scope === "BUSINESS" ? <div className="sw-inbox-business-selector"><BusinessPicker compact /></div> : null}
         {scope === "PERSONAL" && quickMode === "email" ? <div className="sw-inbox-desktop-quick-email"><SyncUnifiedInboxCard /></div> : null}
         {scope === "PERSONAL" ? (
           <section className="sw-inbox-intro grid gap-3 lg:grid-cols-[minmax(0,1fr)_360px]">

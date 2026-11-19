@@ -385,3 +385,26 @@ body[data-sw-office-theme="light"] .sw-inbox-shell {
   .sw-inbox-shell .sw-email-list-entry p{font-size:11px;color:#d1dfea;margin-top:7px;line-height:1.4}
   .sw-inbox-shell .sw-email-connect{width:100%;text-align:center}
 }
+
+
+/* Business context must be selectable on phones as well as desktop.
+   Keep picker beneath the shared header, in the bounded inbox area. */
+@media(max-width:767px){
+  .sw-inbox-shell .sw-inbox-business-selector{
+    flex:0 0 auto;
+    display:flex;
+    min-width:0;
+    max-width:100%;
+    position:relative;
+    z-index:40;
+  }
+  .sw-inbox-shell .sw-inbox-business-selector > div{max-width:100%;min-width:0}
+  .sw-inbox-shell .sw-inbox-business-selector > div > button{min-height:44px;max-width:100%}
+  .sw-inbox-shell .sw-inbox-business-selector > div > div{
+    left:0;
+    right:auto;
+    max-width:min(92vw,420px);
+    max-height:min(60dvh,540px);
+    overflow-y:auto;
+  }
+}
