@@ -369,3 +369,21 @@
     outline:2px solid #ffe0a5!important;outline-offset:2px;
   }
 }
+
+/* Founder pilot: compact employee row, below work content and above nav */
+@media(max-width:767px){
+  .sw-mobile-bots-dock.sw-mobile-bots-dock-compact{
+    bottom:calc(6.8rem + env(safe-area-inset-bottom));
+    min-height:51px;
+    max-height:62px;
+    padding:2px 7px;
+    border-radius:15px;
+    gap:5px;
+    z-index:82;
+    background:color-mix(in srgb,var(--office-page-panel,rgba(5,16,36,.94)) 85%,transparent);
+  }
+  .sw-mobile-bots-dock-compact .sw-mobile-bots-people button{min-height:46px;gap:1px;}
+  .sw-mobile-bots-dock-compact .sw-mobile-bots-people img{width:30px;height:30px;}
+  .sw-mobile-bots-dock-compact .sw-mobile-bots-people span{font-size:9px;}
+  .sw-mobile-bots-dock-compact .sw-mobile-bots-expand{font-size:9px;}
+}
