@@ -345,3 +345,21 @@
  .sw-sbo-compact .sw-sbo-action-grid{min-height:104px;}
 }
 @media(min-width:768px){.sw-sbo-ai-dock{max-width:590px;align-self:center;width:100%;}}
+
+/* Direct viewport anchoring avoids Safari flex/root height collapsing and
+   leaving unused space between office cards and the global fixed dock. */
+@media(max-width:767px){
+ body.sw-sbo-mobile-locked .sw-sbo-compact {
+   position:fixed !important;
+   top:var(--sw-sbo-header-height,112px);
+   right:0;
+   bottom:calc(var(--sw-sbo-dock-reserve,88px) + env(safe-area-inset-bottom));
+   left:0;
+   width:100%;
+   height:auto !important;
+   max-height:none;
+   min-height:0;
+   z-index:2;
+ }
+ body.sw-sbo-mobile-locked .sw-sbo-compact > .grid {height:100%;min-height:0;}
+}
