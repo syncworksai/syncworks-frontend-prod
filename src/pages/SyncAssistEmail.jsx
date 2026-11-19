@@ -2,6 +2,7 @@ import React, {useEffect,useState} from "react";
 import {useNavigate,useSearchParams} from "react-router-dom";
 import {ArrowLeft,Mail,ShieldCheck,RefreshCw,Send,Plus,Reply,PlugZap} from "lucide-react";
 import api from "../api/client";
+import "./SyncAssistEmailMobile.css";
 import {useAuth} from "../auth/AuthContext";
 
 const BASE="/sync-ai/assist/pilot/outlook/";
@@ -12,6 +13,7 @@ export default function SyncAssistEmail() {
   const pilot=String(user?.email||"").trim().toLowerCase()==="jacoblord7@outlook.com";
   const [status,setStatus]=useState(null),[messages,setMessages]=useState([]),[busy,setBusy]=useState(false);
   const [error,setError]=useState(""),[notice,setNotice]=useState(""),[selected,setSelected]=useState(null);
+  const [mobilePanel,setMobilePanel]=useState("connection");
   const [editor,setEditor]=useState(false),[form,setForm]=useState({recipient:"",subject:"",body:"",reply_to_id:""});
   const [draft,setDraft]=useState(null),[confirm,setConfirm]=useState(false);
   const [brief,setBrief]=useState(null),[briefOpen,setBriefOpen]=useState(false);
@@ -25,6 +27,7 @@ export default function SyncAssistEmail() {
       const s=await api.get(BASE+"status/",{timeout:15000});
       setStatus(s.data);
       if(s.data.connected) {
+        setMobilePanel(current=>current==="connection"?"inbox":current);
         const result=await api.get(BASE+"inbox/",{timeout:25000});
         setMessages(result.data.messages||[]);
       } else setMessages([]);
@@ -40,7 +43,7 @@ export default function SyncAssistEmail() {
     e.preventDefault();setBusy(true);setError("");
     try {
       const r=await api.post("/sync-ai/assist/pilot/chief-of-staff/preferences/",preferences);
-      setPreferences(r.data.preferences);setNotice("Jarvis writing preferences saved. Automatic sending is still disabled.");
+      setPreferences(r.data.preferences);setNotice("Writing preferences saved. Automatic sending is still disabled.");
     } catch(e){setError(e?.response?.data?.detail||"Could not save writing preferences.");}
     finally{setBusy(false);}
   }
@@ -55,13 +58,13 @@ export default function SyncAssistEmail() {
         message_id:form.reply_to_id,recipient:form.recipient,subject:form.subject,purpose:direction
       },{timeout:45000});
       setForm(v=>({...v,body:r.data.draft}));
-      setDraft(null);setConfirm(false);setNotice("Jarvis suggestion prepared. Check the facts, edit the text, then save it as an Outlook draft.");
+      setDraft(null);setConfirm(false);setNotice("Draft suggestion prepared. Check the facts, edit the text, then save it as an Outlook draft.");
     } catch(e){setError(e?.response?.data?.detail||"Jarvis could not prepare an email.");}
     finally{setBusy(false);}
   }
   async function briefMe() {
     setBusy(true);setError("");
-    try {const r=await api.post(BASE+"brief/",{}, {timeout:45000});setBrief(r.data);setBriefOpen(true);}
+    try {const r=await api.post(BASE+"brief/",{}, {timeout:45000});setBrief(r.data);setBriefOpen(true);setMobilePanel("brief");}
     catch(e){setError(e?.response?.data?.detail||"Briefing unavailable.");}
     finally{setBusy(false);}
   }
@@ -79,7 +82,7 @@ export default function SyncAssistEmail() {
     setSelected(message||null);
     setDraft(null);setConfirm(false);setNotice("");setDirection("");
     setForm(message ? {recipient:message.reply_to||message.from,subject:message.subject,body:"",reply_to_id:message.id} : {recipient:"",subject:"",body:"",reply_to_id:""});
-    setEditor(true);
+    setEditor(true);setMobilePanel("compose");
   }
   async function saveDraft(e) {
     e.preventDefault();setBusy(true);setError("");setNotice("");
@@ -106,11 +109,11 @@ export default function SyncAssistEmail() {
     catch(e){setError(e?.response?.data?.detail||"Disconnect failed.");}
     finally {setBusy(false);}
   }
-  return <main className="min-h-dvh bg-[#020617] px-4 pb-32 pt-28 text-white"><div className="mx-auto max-w-3xl">
-    <button onClick={()=>navigate("/sync/assist/daily")} className="mb-4 flex min-h-11 items-center gap-2 rounded-xl border border-white/20 px-4 text-sm"><ArrowLeft size={17}/> Jarvis Daily</button>
-    <section className="rounded-3xl border border-cyan-400/30 bg-gradient-to-br from-[#063047] to-[#1d103e] p-5">
+  return <main data-mobile-panel={mobilePanel} className="sw-mail-page min-h-dvh bg-[#020617] px-4 pb-32 pt-28 text-white"><div className="sw-mail-layout mx-auto max-w-3xl">
+    <button onClick={()=>navigate("/sync/assist/daily")} className="mb-4 flex min-h-11 items-center gap-2 rounded-xl border border-white/20 px-4 text-sm"><ArrowLeft size={17}/> Daily Briefing</button>
+    <section className="sw-mail-hero rounded-3xl border border-cyan-400/30 bg-gradient-to-br from-[#063047] to-[#1d103e] p-5">
       <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-cyan-200"><Mail size={18}/> Chief of Staff</div>
-      <h1 className="mt-2 text-2xl font-black">Jarvis Mail Desk</h1>
+      <h1 className="mt-2 text-2xl font-black">SYNC Mail Desk</h1>
       <p className="mt-2 text-sm leading-6 text-slate-300">Review Outlook, compose messages, prepare replies, and explicitly approve sending. Nothing is sent automatically.</p>
       <p className="mt-3 flex items-center gap-2 text-xs text-emerald-200"><ShieldCheck size={16}/> Server-side OAuth · Private pilot · Manual send confirmation</p>
     </section>
@@ -118,7 +121,8 @@ export default function SyncAssistEmail() {
     {connection && <p role="status" className="mt-3 rounded-xl border border-cyan-400/30 p-3 text-sm">Microsoft connection: {connection==="connected"?"connected":connection==="wrong_account"?"wrong email account selected":"not completed"}</p>}
     {error && <p role="alert" className="mt-3 rounded-xl border border-rose-400/50 p-3 text-sm text-rose-200">{error}</p>}
     {notice && <p role="status" className="mt-3 rounded-xl border border-emerald-400/30 p-3 text-sm text-emerald-200">{notice}</p>}
-    <section className="mt-4 rounded-2xl border border-white/10 bg-slate-900/60 p-4">
+    <div className="sw-mail-mobile-tabs" role="group" aria-label="Mail Desk views"><button type="button" onClick={()=>setMobilePanel("inbox")} aria-pressed={mobilePanel==="inbox"}>Inbox</button><button type="button" onClick={()=>setMobilePanel("connection")} aria-pressed={mobilePanel==="connection"}>Connection</button><button type="button" onClick={()=>{setMobilePanel("preferences");setPrefsOpen(true);}} aria-pressed={mobilePanel==="preferences"}>Writing</button>{brief&&<button type="button" onClick={()=>setMobilePanel("brief")} aria-pressed={mobilePanel==="brief"}>Brief</button>}</div>
+    <section className="sw-mail-connection mt-4 rounded-2xl border border-white/10 bg-slate-900/60 p-4">
       <div className="flex items-center justify-between gap-2"><h2 className="font-black">Outlook connection</h2><span className="text-xs font-bold text-cyan-200">{status?.connected?"Connected":status?.configured?"Ready to connect":"Setup required"}</span></div>
       {!status?.configured ? <p className="mt-3 text-sm leading-6 text-amber-200">Microsoft authorization must be configured on the SyncWorks server before connecting. You do not need to provide your Microsoft password to Jarvis.</p> :
         !status?.connected ? <button disabled={busy} onClick={connect} className="mt-3 flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 text-sm font-black"><PlugZap size={17}/> Connect my Outlook</button> :
@@ -129,33 +133,33 @@ export default function SyncAssistEmail() {
           <button disabled={busy} onClick={disconnect} className="min-h-11 rounded-xl border border-slate-600 px-4 text-xs text-slate-300">Disconnect</button>
         </div>}
     </section>
-    {briefOpen && brief && <section className="mt-4 rounded-2xl border border-purple-400/30 bg-slate-900 p-4">
-      <div className="flex items-center justify-between"><h2 className="font-black">Jarvis Inbox Brief</h2><button onClick={()=>setBriefOpen(false)} className="min-h-10 rounded-lg border border-slate-600 px-3 text-xs">Close</button></div>
+    {briefOpen && brief && <section className="sw-mail-brief mt-4 rounded-2xl border border-purple-400/30 bg-slate-900 p-4">
+      <div className="flex items-center justify-between"><h2 className="font-black">Inbox Brief</h2><button onClick={()=>setBriefOpen(false)} className="min-h-10 rounded-lg border border-slate-600 px-3 text-xs">Close</button></div>
       <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-200">{brief.summary}</p>
       <p className="mt-2 text-xs text-slate-400">{brief.messages_reviewed} recent messages reviewed · {brief.unread_in_sample} unread in sample. Based on previews only; open full threads for verification.</p>
     </section>}
-    <section className="mt-4 rounded-2xl border border-white/10 bg-slate-900/60 p-4">
+    <section className="sw-mail-preferences mt-4 rounded-2xl border border-white/10 bg-slate-900/60 p-4">
       <button type="button" aria-expanded={prefsOpen} onClick={()=>setPrefsOpen(v=>!v)} className="flex min-h-11 w-full items-center justify-between text-left font-black text-cyan-100">
-        <span>Teach Jarvis my writing style<span className="block text-xs font-normal text-slate-400">Tone · Signature · Instructions · Review required</span></span><span>{prefsOpen?"−":"+"}</span>
+        <span>Writing preferences<span className="block text-xs font-normal text-slate-400">Tone · Signature · Instructions · Review required</span></span><span>{prefsOpen?"−":"+"}</span>
       </button>
       {prefsOpen && <form onSubmit={savePreferences} className="mt-3 space-y-3">
         {!preferences ? <p className="text-sm text-slate-400">Loading your preferences…</p> : <>
         <label className="block text-xs text-slate-300">Preferred tone<select value={preferences.tone} onChange={e=>setPreferences(v=>({...v,tone:e.target.value}))} className="mt-1 min-h-11 w-full rounded-lg border border-slate-600 bg-slate-950 p-3">{["professional","friendly","direct","concise"].map(t=><option key={t}>{t}</option>)}</select></label>
         <label className="block text-xs text-slate-300">Signature<input maxLength={160} value={preferences.signature} onChange={e=>setPreferences(v=>({...v,signature:e.target.value}))} className="mt-1 min-h-11 w-full rounded-lg border border-slate-600 bg-slate-950 p-3" placeholder="Your preferred sign-off"/></label>
-        <label className="block text-xs text-slate-300">My writing rules<textarea required maxLength={1200} rows={4} value={preferences.writing_rules} onChange={e=>setPreferences(v=>({...v,writing_rules:e.target.value}))} className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-950 p-3" placeholder="What should Jarvis learn about how you write?"/></label>
-        <p className="text-xs text-amber-200">Your rules guide future suggestions. Jarvis will not send emails automatically based on these preferences.</p>
-        <button type="submit" disabled={busy} className="min-h-11 rounded-lg bg-cyan-700 px-4 text-sm font-bold">Save Jarvis preferences</button>
+        <label className="block text-xs text-slate-300">My writing rules<textarea required maxLength={1200} rows={4} value={preferences.writing_rules} onChange={e=>setPreferences(v=>({...v,writing_rules:e.target.value}))} className="mt-1 w-full rounded-lg border border-slate-600 bg-slate-950 p-3" placeholder="Describe your preferred writing style"/></label>
+        <p className="text-xs text-amber-200">Your rules guide future suggestions. SYNC will not send emails automatically based on these preferences.</p>
+        <button type="submit" disabled={busy} className="min-h-11 rounded-lg bg-cyan-700 px-4 text-sm font-bold">Save writing preferences</button>
         </>}
       </form>}
     </section>
-        {editor && status?.connected && <section className="mt-4 rounded-2xl border border-cyan-400/30 bg-slate-900 p-4">
+        {editor && status?.connected && <section className="sw-mail-compose mt-4 rounded-2xl border border-cyan-400/30 bg-slate-900 p-4">
       <h2 className="mb-3 font-black">{form.reply_to_id?"Reply to message":"Compose email"}</h2>
       <form onSubmit={saveDraft} className="space-y-3">
         <label className="block text-xs text-slate-300">To<input type="email" disabled={Boolean(form.reply_to_id)} required value={form.recipient} onChange={e=>setForm(v=>({...v,recipient:e.target.value}))} className="mt-1 min-h-11 w-full rounded-xl border border-white/20 bg-slate-950 p-3 text-white disabled:opacity-65"/></label>
         <label className="block text-xs text-slate-300">Subject<input required disabled={Boolean(form.reply_to_id)} value={form.subject} onChange={e=>setForm(v=>({...v,subject:e.target.value}))} className="mt-1 min-h-11 w-full rounded-xl border border-white/20 bg-slate-950 p-3 text-white disabled:opacity-65"/></label>
-        <label className="block text-xs text-slate-300">Tell Jarvis what to write (optional for a reply)<textarea rows={2} maxLength={800} value={direction} onChange={e=>setDirection(e.target.value)} className="mt-1 w-full rounded-xl border border-white/20 bg-slate-950 p-3 text-sm text-white" placeholder="e.g. Ask for a detailed reconciliation of the MHA payments without assuming a balance was paid."/></label>
-        <button type="button" onClick={suggestEmail} disabled={busy} className="min-h-11 w-full rounded-xl border border-purple-400/40 bg-purple-900/30 px-4 text-sm font-bold text-purple-100 disabled:opacity-40">✨ Jarvis, write this email</button>
-        <label className="block text-xs text-slate-300">Message<textarea rows={7} required maxLength={8000} value={form.body} onChange={e=>{setDraft(null);setConfirm(false);setForm(v=>({...v,body:e.target.value}));}} className="mt-1 w-full rounded-xl border border-white/20 bg-slate-950 p-3 text-sm leading-6 text-white" placeholder="Write or paste your Jarvis-prepared response…"/></label>
+        <label className="block text-xs text-slate-300">What should this message say (optional for a reply)<textarea rows={2} maxLength={800} value={direction} onChange={e=>setDirection(e.target.value)} className="mt-1 w-full rounded-xl border border-white/20 bg-slate-950 p-3 text-sm text-white" placeholder="e.g. Ask for a detailed reconciliation of the MHA payments without assuming a balance was paid."/></label>
+        <button type="button" onClick={suggestEmail} disabled={busy} className="min-h-11 w-full rounded-xl border border-purple-400/40 bg-purple-900/30 px-4 text-sm font-bold text-purple-100 disabled:opacity-40">Prepare suggestion</button>
+        <label className="block text-xs text-slate-300">Message<textarea rows={7} required maxLength={8000} value={form.body} onChange={e=>{setDraft(null);setConfirm(false);setForm(v=>({...v,body:e.target.value}));}} className="mt-1 w-full rounded-xl border border-white/20 bg-slate-950 p-3 text-sm leading-6 text-white" placeholder="Write or paste your prepared response…"/></label>
         <button type="submit" disabled={busy||!form.body.trim()} className="min-h-11 w-full rounded-xl bg-cyan-800 px-4 font-black disabled:opacity-40">Save reviewed Outlook draft</button>
       </form>
       {draft && <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-950/20 p-3">
@@ -167,7 +171,7 @@ export default function SyncAssistEmail() {
       </div>}
       <button type="button" onClick={()=>{setEditor(false);setDraft(null);}} className="mt-3 min-h-10 rounded-xl border border-slate-700 px-4 text-xs">Close editor</button>
     </section>}
-    {status?.connected && <section className="mt-4 rounded-2xl border border-white/10 bg-slate-900/50 p-4">
+    {status?.connected && <section className="sw-mail-inbox mt-4 rounded-2xl border border-white/10 bg-slate-900/50 p-4">
       <h2 className="mb-3 text-lg font-black">Recent incoming mail</h2>
       {messages.length===0 ? <p className="text-sm text-slate-400">{busy?"Loading…":"No recent messages returned."}</p> :
         <div className="space-y-2">{messages.map(m=><article key={m.id} className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
