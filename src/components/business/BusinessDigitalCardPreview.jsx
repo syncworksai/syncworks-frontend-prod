@@ -37,6 +37,7 @@ function businessConnectCode(businessId) {
 
 export default function BusinessDigitalCardPreview({
   businessId,
+  businessCardCode = "",
   name,
   logoUrl,
   headline,
@@ -65,7 +66,8 @@ export default function BusinessDigitalCardPreview({
 
   const location = [city, state, baseZip].filter(Boolean).join(", ");
   const webHref = normalizeWebsite(website);
-  const connectCode = useMemo(() => businessConnectCode(businessId), [businessId]);
+  const connectCode = String(businessCardCode || "").trim();
+  const saveLink = connectCode ? `https://syncworksapp.com/customer/rolodex?code=${encodeURIComponent(connectCode)}` : "";
 
   const shareText = useMemo(() => {
     const lines = [
@@ -78,7 +80,8 @@ export default function BusinessDigitalCardPreview({
       businessEmail ? `Email: ${businessEmail}` : "",
       website ? `Website: ${website}` : "",
       businessId ? `SyncWorks Business ID: ${businessId}` : "",
-      `SyncWorks Connect Code: ${connectCode}`,
+      connectCode ? `SyncWorks Connect Code: ${connectCode}` : "",
+      saveLink ? `Save to SyncWorks Rolodex: ${saveLink}` : "",
     ];
     return lines.filter(Boolean).join("\n");
   }, [
@@ -94,6 +97,7 @@ export default function BusinessDigitalCardPreview({
     website,
     businessId,
     connectCode,
+    saveLink,
   ]);
 
   const vCardValue = useMemo(() => {
@@ -108,7 +112,7 @@ export default function BusinessDigitalCardPreview({
       businessEmail ? `EMAIL;TYPE=WORK:${escapeVCard(businessEmail)}` : "",
       webHref ? `URL:${escapeVCard(webHref)}` : "",
       addressParts ? `ADR;TYPE=WORK:;;;${addressParts};;` : "",
-      `NOTE:${escapeVCard(`SyncWorks Connect Code: ${connectCode}`)}`,
+      connectCode ? `NOTE:${escapeVCard(`SyncWorks Connect Code: ${connectCode}`)}` : "",
       "END:VCARD",
     ]
       .filter(Boolean)
@@ -301,21 +305,21 @@ export default function BusinessDigitalCardPreview({
           <div className="mx-auto rounded-3xl bg-white p-4 shadow-[0_0_40px_rgba(34,211,238,0.18)]">
             <QRCodeSVG
               id={`business-card-qr-${businessId || "pending"}`}
-              value={vCardValue}
+              value={saveLink || vCardValue}
               size={188}
               level="M"
               includeMargin
-              title={`Add ${name || "this business"} to contacts`}
+              title={saveLink ? `Save ${name || "this business"} to SyncWorks Rolodex` : `Add ${name || "this business"} to contacts`}
             />
           </div>
 
           <div>
             <div className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-200">
-              Scan to add this business
+              Scan to save this provider
             </div>
-            <h3 className="mt-2 text-xl font-black text-white">QR contact card</h3>
+            <h3 className="mt-2 text-xl font-black text-white">SyncWorks Rolodex QR</h3>
             <p className="mt-2 text-sm leading-6 text-slate-300">
-              A customer can scan this QR code with a phone camera and save the business contact information directly.
+              Scan with a phone to open the SyncWorks Rolodex and confirm saving this business. Add this QR image to flyers, signs, emails or your website.
             </p>
 
             <div className="mt-4 rounded-2xl border border-fuchsia-400/25 bg-fuchsia-500/10 p-4">
@@ -323,17 +327,19 @@ export default function BusinessDigitalCardPreview({
                 SyncWorks Connect Code
               </div>
               <div className="mt-2 break-all font-mono text-2xl font-black tracking-[0.16em] text-white">
-                {connectCode}
+                {connectCode || "Save your business profile to generate a QR."}
               </div>
               <div className="mt-2 text-xs leading-5 text-slate-400">
-                This code is unique to Business ID {businessId || "pending"}. It can be shared verbally or copied when a QR scan is not practical.
+                This is the secure business card code issued by SyncWorks. Customers can use it when QR scanning is unavailable.
               </div>
             </div>
 
+            {saveLink ? <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => navigator.clipboard?.writeText(saveLink)} className="min-h-11 rounded-xl border border-cyan-400/40 px-4 text-sm font-bold text-cyan-100">Copy invite link</button><a href={`sms:?&body=${encodeURIComponent(`Save ${name || "my business"} in SyncWorks: ${saveLink}`)}`} className="inline-flex min-h-11 items-center rounded-xl border border-white/25 px-4 text-sm font-bold text-white">Share by text</a><a href={`mailto:?subject=${encodeURIComponent(`Connect with ${name || "my business"}`)}&body=${encodeURIComponent(saveLink)}`} className="inline-flex min-h-11 items-center rounded-xl border border-white/25 px-4 text-sm font-bold text-white">Share by email</a></div> : <p className="mt-3 text-xs text-amber-200">A valid SyncWorks business card code has not loaded. QR sharing is disabled until the profile returns its issued code.</p>}
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               <button
                 type="button"
                 onClick={copyConnectCode}
+                disabled={!connectCode}
                 className="min-h-11 rounded-2xl border border-cyan-400/30 bg-cyan-500/12 px-4 text-sm font-black text-cyan-100"
               >
                 {codeCopied ? "Code Copied" : "Copy Connect Code"}
@@ -341,6 +347,7 @@ export default function BusinessDigitalCardPreview({
               <button
                 type="button"
                 onClick={downloadQr}
+                disabled={!connectCode}
                 className="min-h-11 rounded-2xl border border-slate-700 bg-slate-950/70 px-4 text-sm font-black text-slate-200"
               >
                 Save QR Image
