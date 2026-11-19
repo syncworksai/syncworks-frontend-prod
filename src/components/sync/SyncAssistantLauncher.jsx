@@ -25,6 +25,7 @@ export default function SyncAssistantLauncher() {
   const { user } = useAuth();
   const [chiefOpen, setChiefOpen] = useState(false);
   const [commandOpen,setCommandOpen]=useState(false);
+  useEffect(()=>{const open=()=>{setChiefOpen(false);setCommandOpen(true);};window.addEventListener("syncworks:victoria-open",open);return()=>window.removeEventListener("syncworks:victoria-open",open);},[]);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   useEffect(() => {
     const onDialog = (event) => {
