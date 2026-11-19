@@ -1,85 +1,115 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { useWorkspaceAppearance } from "../components/customer/CustomerWorkspace";
-import "./PrivateShowcaseOffice.css";
 import { useAuth } from "../auth/AuthContext";
+import { useWorkspaceAppearance } from "../components/customer/CustomerWorkspace";
+import { Activity, ArrowLeft, ArrowRight, BarChart3, Bell, BriefcaseBusiness, Building2, CalendarDays, CheckCircle2, ChevronRight, ClipboardList, Clock3, Download, FileText, Filter, LayoutDashboard, Mail, Menu, RotateCcw, Settings2, ShieldCheck, Sparkles, TrendingUp, Truck, Users, Wallet, X } from "lucide-react";
+import { demoPeople, demoCustomers, demoJobs, demoProperties, demoLeads, demoInvoices, money, statusSteps, summarize } from "./sterlingDemoData";
+import "./PrivateSterlingWorkspace.css";
 
-const PRIVATE_EMAIL = "jacoblord7@outlook.com";
-const money = value => new Intl.NumberFormat("en-US", {style:"currency",currency:"USD",maximumFractionDigits:0}).format(value);
-const serviceJobs = [
-  {id:"SW-1041", customer:"Hamilton Office Park", service:"HVAC service", tech:"Daniel Brooks", status:"In progress", amount:1240, duration:112},
-  {id:"SW-1042", customer:"Willow Creek Residences", service:"Plumbing repair", tech:"Marcus Reed", status:"Scheduled", amount:675, duration:84},
-  {id:"SW-1043", customer:"Cedar Ridge Retail", service:"Electrical repair", tech:"Olivia Carter", status:"Completed", amount:920, duration:96},
-  {id:"SW-1044", customer:"Ashford Apartments", service:"Preventive maintenance", tech:"Ethan Foster", status:"Awaiting invoice", amount:480, duration:68},
-  {id:"SW-1045", customer:"Riverside Medical Offices", service:"Emergency cooling", tech:"Sophia Bennett", status:"Dispatched", amount:1860, duration:145}
+const PILOT_EMAIL="jacoblord7@outlook.com";
+const STORAGE="sw-private-sterling-jobs-v2";
+const sections=[
+ ["overview","Overview",LayoutDashboard],["tickets","Tickets",ClipboardList],["dispatch","Dispatch",Truck],
+ ["team","Team",Users],["schedule","Schedule",CalendarDays],["leads","Leads",TrendingUp],
+ ["finance","Finance",Wallet],["property","Property Management",Building2],["ceo","CEO Office",BarChart3],
+ ["reports","Reports",FileText],["ai","AI Employees",Sparkles]
 ];
-const team = [
-  {name:"Daniel Brooks", trade:"HVAC", jobs:34, travel:22, onSite:102, sla:97},
-  {name:"Marcus Reed", trade:"Plumbing", jobs:31, travel:19, onSite:91, sla:95},
-  {name:"Olivia Carter", trade:"Electrical", jobs:37, travel:26, onSite:108, sla:98},
-  {name:"Ethan Foster", trade:"Maintenance", jobs:29, travel:17, onSite:83, sla:96},
-  {name:"Sophia Bennett", trade:"HVAC", jobs:33, travel:24, onSite:116, sla:94}
-];
-const properties = [
-  {name:"Willow Creek Residences",units:32,occupied:30,rent:41800,open:3},
-  {name:"Ashford Apartments",units:24,occupied:23,rent:31900,open:5},
-  {name:"Cedar Ridge Townhomes",units:18,occupied:17,rent:23800,open:2},
-  {name:"Riverside Cottages",units:12,occupied:11,rent:14900,open:2}
-];
-const reports = [
-  {name:"Profit & Loss",category:"Financial",detail:"Revenue, direct costs and operating expenses"},
-  {name:"Invoice & Payments Ledger",category:"Financial",detail:"Payments, balances and adjustments"},
-  {name:"Technician Productivity",category:"Workforce",detail:"Jobs, travel, time on site and SLA"},
-  {name:"Customer & Sales Intelligence",category:"Growth",detail:"Retention, lead conversions and pipeline"},
-  {name:"Rent Roll & Collections",category:"Property Management",detail:"Units, charges and payment status"},
-  {name:"Property Operating Summary",category:"Property Management",detail:"Occupancy and maintenance expenses"}
-];
-const metrics = [
-  ["Revenue invoiced", "$42,200", "Monthly goal $60,000"],
-  ["Gross profit", "$12,660", "30.0% estimated margin"],
-  ["Completed jobs", "142", "12.7% growth"],
-  ["SLA compliance", "96.4%", "4 jobs at risk"],
-  ["Cash collected", "$36,400", "86.3% of invoiced"],
-  ["Outstanding invoices", "$18,650", "6 need attention"]
-];
-function Tile({label,value,detail}) {return <div className="rounded-2xl border border-cyan-300/15 bg-slate-900/70 p-3"><p className="text-[11px] uppercase tracking-wider text-cyan-100/65">{label}</p><strong className="mt-1 block text-xl text-white">{value}</strong><span className="text-xs text-slate-400">{detail}</span></div>;}
-function Section({title,children}) {return <section className="rounded-2xl border border-cyan-300/15 bg-slate-900/70 p-4"><h2 className="mb-3 text-base font-bold text-white">{title}</h2>{children}</section>;}
-function Table({columns,rows}) {return <div className="max-h-56 overflow-auto rounded-xl border border-white/10"><table className="w-full min-w-[520px] text-left text-xs"><thead className="sticky top-0 bg-slate-800 text-cyan-100"><tr>{columns.map(c=><th className="p-2" key={c}>{c}</th>)}</tr></thead><tbody>{rows.map((r,i)=><tr key={i} className="border-t border-white/10 text-slate-200">{r.map((v,j)=><td className="p-2" key={j}>{v}</td>)}</tr>)}</tbody></table></div>;}
-export default function PrivateShowcase() {
-  const {user,isAuthed} = useAuth();
-  const [appearance] = useWorkspaceAppearance();
-  const [tab,setTab] = useState(() => { const value = new URLSearchParams(window.location.search).get("tab"); return ["business","property","ceo","reports"].includes(value) ? value : "ceo"; });
-  const [notice,setNotice] = useState("");
-  const [year,setYear] = useState("2026");
-  const [format,setFormat] = useState("CSV");
-  const isOwner = String(user?.email||"").trim().toLowerCase() === PRIVATE_EMAIL;
-  if (!isAuthed || !isOwner) return <Navigate to="/customer" replace />;
-  const exportPreview = () => {
-    if(format!=="CSV") {setNotice("PDF, Excel and Google Sheets exports require the isolated reporting backend. No file has been generated.");return;}
-    const csv = ["Report,Category,Tax Year,Dataset",...reports.map(r=>[r.name,r.category,year,"SIMULATED SHOWCASE DATA"].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(","))].join("\n");
-    const url = URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
-    const a=document.createElement("a");a.href=url;a.download="sterling-showcase-report-index-"+year+".csv";a.click();URL.revokeObjectURL(url);
-    setNotice("Downloaded a simulated report INDEX, not financial records or a tax filing package.");
-  };
-  return <main className="sw-private-office min-h-[calc(100dvh-115px)] px-3 pb-20 pt-4 sm:px-6" data-workspace-theme={appearance.theme} data-workspace-motion={appearance.motion ? "on" : "off"}>
-    <div className="sw-private-office-cockpit mx-auto max-w-6xl space-y-4">
-      <header className="rounded-3xl border border-amber-400/35 bg-gradient-to-r from-[#15253e] to-[#081629] p-4 shadow-lg">
-        <div className="flex flex-wrap items-center justify-between gap-2"><span className="rounded-full border border-amber-300/40 bg-amber-300/10 px-3 py-1 text-[11px] font-black uppercase tracking-widest text-amber-200">Private · Isolated showcase · Simulated</span><Link to="/customer" className="rounded-xl border border-white/20 px-3 py-2 text-xs font-semibold hover:bg-white/10">Return to my dashboard</Link></div>
-        <h1 className="mt-3 text-2xl font-black tracking-wide">Sterling Group <span className="text-cyan-300">Command Center</span></h1>
-        <p className="mt-1 text-xs text-slate-300">Presentation preview only. Fictional employees, customers, jobs, financials and properties. No live business is connected, no payments are processed, and actions here never alter real records.</p>
-      </header>
-      <nav aria-label="Showcase sections" className="sw-private-office-nav grid grid-cols-2 gap-2 sm:grid-cols-4">{[["business","Business"],["property","Property Management"],["ceo","CEO Command"],["reports","Reports & Export"]].map(([key,title])=><button type="button" key={key} onClick={()=>{setTab(key);setNotice("");}} className={`min-h-12 rounded-xl border px-2 text-sm font-bold transition ${tab===key?"is-active border-cyan-300 bg-cyan-300/20 text-cyan-100":"border-white/15 bg-slate-900 text-slate-300 hover:bg-slate-800"}`}>{title}</button>)}</nav>
-      <div className="sw-private-office-panels" key={tab}>
-      {tab==="business" && <><div className="grid grid-cols-2 gap-3 md:grid-cols-4"><Tile label="Open work orders" value="42" detail="Across 4 service teams"/><Tile label="Technicians" value="18" detail="5 shown below"/><Tile label="Historical work orders" value="1,284" detail="Fictional 2024–2026 history"/><Tile label="New leads" value="65" detail="Simulated pipeline"/></div>
-        <div className="grid gap-3 lg:grid-cols-2"><Section title="Service dispatch board"><Table columns={["Ticket","Customer","Technician","Status"]} rows={serviceJobs.map(j=>[j.id,j.customer,j.tech,j.status])}/></Section><Section title="Today's appointments"><Table columns={["Time","Job","Technician"]} rows={[["8:00–10:00","Cooling service","Daniel Brooks"],["9:00–11:00","Plumbing repair","Marcus Reed"],["11:30–13:00","Electrical diagnostics","Olivia Carter"],["13:00–15:00","Preventive maintenance","Ethan Foster"],["15:00–17:00","Emergency cooling","Sophia Bennett"]]}/></Section></div>
-        <Section title="Technician performance"><Table columns={["Employee","Specialty","Jobs / mo","Avg travel","Avg on-site","SLA"]} rows={team.map(t=>[t.name,t.trade,t.jobs,t.travel+" min",t.onSite+" min",t.sla+"%"])}/></Section>
-      </>}
-      {tab==="property" && <><div className="grid grid-cols-2 gap-3 md:grid-cols-4"><Tile label="Managed units" value="86" detail="4 communities"/><Tile label="Occupied" value="81" detail="94.2% occupancy"/><Tile label="Monthly rent roll" value="$112,400" detail="Fictional recurring charges"/><Tile label="Maintenance" value="12" detail="Open requests"/></div><Section title="Sterling Property Management portfolio"><Table columns={["Community","Units","Occupied","Rent roll","Open requests"]} rows={properties.map(p=>[p.name,p.units,p.occupied,money(p.rent),p.open])}/></Section><Section title="Lease and collection activity"><Table columns={["Item","Property","Status"]} rows={[["Lease renewal","Willow Creek","Due in 30 days"],["Partial rent payment","Ashford","Follow-up required"],["Maintenance dispatch","Cedar Ridge","Assigned to service team"],["Inspection","Riverside","Scheduled"] ]}/></Section></>}
-      {tab==="ceo" && <><div className="grid grid-cols-2 gap-3 md:grid-cols-3">{metrics.map(([label,value,detail])=><Tile key={label} label={label} value={value} detail={detail}/>)}</div><div className="grid gap-3 lg:grid-cols-2"><Section title="Executive briefing · Victoria (simulation)"><p className="text-sm leading-6 text-slate-200">Four service jobs are approaching SLA deadlines. Six invoices require collection follow-up. Two technician scheduling conflicts need dispatcher review.</p><p className="mt-2 text-xs text-amber-200">Illustrative briefing only. AI execution is not connected to this showcase.</p></Section><Section title="Revenue goal"><div className="flex justify-between text-sm"><span>Monthly invoiced revenue</span><strong>$42,200 / $60,000</strong></div><div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-700"><div className="h-full rounded-full bg-cyan-400" style={{width:"70.3%"}}/></div><p className="mt-2 text-xs text-slate-400">70.3% to target · illustrative, not a live financial calculation</p></Section></div><Section title="Operational and sales intelligence"><Table columns={["Metric","Showcase value","Context"]} rows={[["Average travel to site","22 min","Sample technician logs"],["First-visit fix rate","91%","Sample work-order history"],["Customer retention","78%","Illustrative rolling measure"],["Sales pipeline","$68,500","Sample qualified opportunities"],["Net profit","Not calculated","Requires verified expense ledger"]]}/></Section></>}
-      {tab==="reports" && <><Section title="Report library"><Table columns={["Report","Category","Contents"]} rows={reports.map(r=>[r.name,r.category,r.detail])}/></Section><Section title="Export preview"><div className="grid gap-3 sm:grid-cols-3"><label className="text-sm">Tax year<select value={year} onChange={e=>setYear(e.target.value)} className="mt-1 block w-full rounded-lg border border-white/20 bg-slate-800 p-2">{["2026","2025","2024"].map(x=><option key={x}>{x}</option>)}</select></label><label className="text-sm">Format<select value={format} onChange={e=>setFormat(e.target.value)} className="mt-1 block w-full rounded-lg border border-white/20 bg-slate-800 p-2">{["CSV","PDF","Excel","Google Sheets","QuickBooks / tax software"].map(x=><option key={x}>{x}</option>)}</select></label><div className="flex items-end"><button onClick={exportPreview} className="w-full rounded-lg bg-cyan-500 px-3 py-2 font-bold text-slate-950 hover:bg-cyan-400">Export preview</button></div></div><p className="mt-3 text-xs text-slate-400">Only the CSV report index is downloadable in this preview. Financial exports and connected app uploads are not enabled.</p></Section></>}
+const dateLabel=(offset,hour,minute)=>{const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()+offset);d.setHours(hour,minute,0,0);return d.toLocaleString("en-US",{weekday:"short",hour:"numeric",minute:"2-digit"});};
+const rawStatus=value=>String(value||"NEW").replace(/_/g," ");
+function readJobs(){try{const s=JSON.parse(localStorage.getItem(STORAGE)||"null");if(Array.isArray(s)&&s.length===demoJobs.length&&s.every(j=>j.id))return s;}catch{/* use immutable seed */}return demoJobs;}
+function Chip({children,tone="info"}){return <span className={`sterling-chip sterling-chip-${tone}`}>{children}</span>;}
+function Card({title,action,children,className=""}){return <section className={`sterling-panel ${className}`}><header className="sterling-panel-head"><h2>{title}</h2>{action}</header>{children}</section>;}
+function Tile({title,value,detail,onClick}){return <button className="sterling-stat" onClick={onClick} type="button"><span>{title}</span><strong>{value}</strong><small>{detail}</small></button>;}
+function Row({children,onClick}){return <button className="sterling-data-row" onClick={onClick} type="button">{children}<ChevronRight size={15}/></button>;}
+function Empty(){return <p className="sterling-muted">No results for this filter.</p>;}
+function PanelGroup({items,onSelect}){return <div className="sterling-module-grid">{items.map(([id,label,Icon])=><button type="button" key={id} onClick={()=>onSelect(id)}><Icon size={19}/><span>{label}</span><ChevronRight size={14}/></button>)}</div>;}
+export default function PrivateShowcase(){
+ const {isAuthed,user}=useAuth();
+ const [appearance]=useWorkspaceAppearance();
+ const owner=String(user?.email||"").trim().toLowerCase()===PILOT_EMAIL;
+ const [section,setSection]=useState(()=>{const t=new URLSearchParams(window.location.search).get("tab");return sections.some(x=>x[0]===t)?t:"overview";});
+ const [drawer,setDrawer]=useState(null);
+ const [filter,setFilter]=useState("");
+ const [jobs,setJobs]=useState(readJobs);
+ const [activity,setActivity]=useState([]);
+ const [notice,setNotice]=useState("");
+ const [activeReport,setActiveReport]=useState("Job & Dispatch Report");
+ const kpi=useMemo(()=>summarize(jobs,demoInvoices),[jobs]);
+ const showSection=s=>{setSection(s);setDrawer(null);setFilter("");const u=new URL(window.location.href);u.searchParams.set("tab",s);window.history.replaceState(null,"",u.pathname+u.search);};
+ const updateJob=(jobId,next)=>{setJobs(old=>{const updated=old.map(j=>j.id===jobId?{...j,status:next}:j);try{localStorage.setItem(STORAGE,JSON.stringify(updated));}catch{/* in-memory works */}return updated;});setActivity(a=>[{jobId,next,date:new Date().toLocaleTimeString()},...a].slice(0,12));setNotice(jobId+" moved to "+rawStatus(next)+" in this private simulation.");setDrawer(null);};
+ const reset=()=>{try{localStorage.removeItem(STORAGE)}catch{/* in memory */}setJobs(demoJobs);setActivity([]);setNotice("Sterling presentation restored. No live data was changed.");setDrawer(null);};
+ const open=(kind,data)=>setDrawer({kind,data});
+ const safeCsv=cell=>'"'+String(cell??"").replace(/"/g,'""')+'"';
+ const downloadReport=()=>{
+  const rows=activeReport==="Job & Dispatch Report"?[["Ticket","Customer","Service","Technician","Status","Amount","Travel minutes","On-site minutes"],...jobs.map(j=>[j.id,j.customer,j.service,demoPeople.find(t=>t.id===j.technicianId)?.name,j.status,j.amount,j.travelMinutes,j.siteMinutes])]:
+   activeReport==="Payments & Receivables"?[["Invoice","Customer","Total","Paid","Outstanding","Status"],...demoInvoices.map(i=>[i.id,i.customer,i.total,i.paid,i.total-i.paid,i.status])]:
+   activeReport==="Technician Productivity"?[["Employee","Trade","Completed jobs","Travel minutes","On-site minutes","SLA %"],...demoPeople.map(t=>[t.name,t.trade,t.completed,t.travel,t.onSite,t.sla])]:
+   [["Property","Units","Occupied","Rent roll","Open maintenance"],...demoProperties.map(p=>[p.name,p.units,p.occupied,p.rent,p.open])];
+  const csv=rows.map(row=>row.map(safeCsv).join(",")).join("\r\n");
+  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));const a=document.createElement("a");a.href=url;a.download="sterling-"+activeReport.toLowerCase().replace(/[^a-z0-9]+/g,"-")+".csv";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  setNotice("Downloaded a CSV of fictional Sterling records. Accounting and tax integrations are not active.");
+ };
+ if(!isAuthed||!owner)return <Navigate to="/customer" replace/>;
+ const visibleJobs=jobs.filter(j=>(j.customer+" "+j.service+" "+j.id+" "+j.status).toLowerCase().includes(filter.toLowerCase()));
+ const panelTitle=sections.find(x=>x[0]===section)?.[1]||"Overview";
+ const openJob=j=>open("job",j);
+ const jobRows=(rows,max=8)=><div className="sterling-rows">{rows.slice(0,max).map(j=><Row key={j.id} onClick={()=>openJob(j)}><span className="sterling-row-main"><strong>{j.id} · {j.customer}</strong><small>{j.service} · {demoPeople.find(p=>p.id===j.technicianId)?.name}</small></span><Chip tone={["PAID","COMPLETED"].includes(j.status)?"good":j.priority==="P1"?"urgent":"info"}>{rawStatus(j.status)}</Chip></Row>)}{rows.length===0&&<Empty/>}</div>;
+ const statusOptions=["NEW","ASSIGNED","ACCEPTED","SCHEDULED","EN_ROUTE","ON_SITE","IN_PROGRESS","NEEDS_QUOTE","QUOTED","APPROVED","COMPLETED","INVOICED","PAID"];
+ return <main className="sterling-workspace" data-theme={appearance.theme} data-motion={appearance.motion?"on":"off"} aria-label="Private Sterling business simulator">
+  <div className="sterling-workspace-inner">
+   <header className="sterling-heading">
+    <div><span className="sterling-eyebrow">SYNCWORKS BUSINESS OS <Chip tone="private">PRIVATE SHOWCASE · SIMULATED</Chip></span><h1>Sterling Property Services <small>Business Command Center</small></h1></div>
+    <div className="sterling-heading-actions"><button type="button" onClick={()=>open("briefing")}><Sparkles size={17}/> Victoria's Briefing</button><Link to="/customer"><ArrowLeft size={16}/> My Dashboard</Link></div>
+   </header>
+   <div className="sterling-workspace-content">
+    <aside className="sterling-sidebar" aria-label="Sterling navigation">
+     <div className="sterling-sidebar-title"><BriefcaseBusiness size={18}/> <span>STERLING GROUP</span></div>
+     <nav>{sections.map(([id,label,Icon])=><button type="button" key={id} className={section===id?"is-current":""} onClick={()=>showSection(id)}><Icon size={17}/><span>{label}</span></button>)}</nav>
+     <div className="sterling-sidebar-bottom"><ShieldCheck size={16}/> Private presentation data <button type="button" onClick={()=>open("reset")}>Reset demo</button></div>
+    </aside>
+    <div className="sterling-main">
+     <div className="sterling-section-top"><div><span className="sterling-eyebrow">{section==="overview"?"TODAY AT A GLANCE":"STERLING OPERATIONS"}</span><h2>{section==="overview"?"Business overview":panelTitle}</h2></div><div className="sterling-section-actions"><Chip tone="good">Operating · Demo</Chip><button type="button" onClick={()=>open("briefing")} aria-label="Open briefing"><Bell size={16}/><span>Needs attention</span></button></div></div>
+     {section==="overview" && <>
+      <div className="sterling-stats">
+       <Tile title="Invoiced revenue" value={money(kpi.invoiced)} detail="36 simulated invoices" onClick={()=>showSection("finance")}/>
+       <Tile title="Cash collected" value={money(kpi.collected)} detail="Recorded example payments" onClick={()=>showSection("finance")}/>
+       <Tile title="Open work orders" value={kpi.active} detail="Across all crews" onClick={()=>showSection("tickets")}/>
+       <Tile title="Outstanding" value={money(kpi.outstanding)} detail="Invoices requiring collection" onClick={()=>showSection("finance")}/>
       </div>
-      {notice && <div role="status" className="rounded-xl border border-amber-300/30 bg-amber-400/10 p-3 text-sm text-amber-100">{notice}</div>}
-      <footer className="pb-4 text-center text-xs text-slate-500">Sterling Showcase · Private pilot · Sample content only · No production data</footer>
+      <div className="sterling-grid-two">
+       <Card title="Today's dispatch" action={<button onClick={()=>showSection("dispatch")}>Open board <ChevronRight size={15}/></button>}>{jobRows(jobs.filter(j=>j.dayOffset===0),5)}</Card>
+       <Card title="Technician status" action={<button onClick={()=>showSection("team")}>View team <ChevronRight size={15}/></button>}><div className="sterling-rows">{demoPeople.slice(0,6).map(t=><Row key={t.id} onClick={()=>open("person",t)}><span className="sterling-row-main"><strong>{t.name}</strong><small>{t.trade} · Avg travel {t.travel} min</small></span><Chip tone={t.status==="Available"?"good":"info"}>{t.status}</Chip></Row>)}</div></Card>
+      </div>
+      <div className="sterling-grid-three">
+       <Card title="Needs attention"><div className="sterling-alerts"><button onClick={()=>showSection("tickets")}><Clock3 size={17}/> Priority requests to schedule <strong>4</strong></button><button onClick={()=>showSection("finance")}><Wallet size={17}/> Outstanding invoice balances <strong>{money(kpi.outstanding)}</strong></button><button onClick={()=>showSection("leads")}><Mail size={17}/> New leads awaiting follow-up <strong>3</strong></button></div></Card>
+       <Card title="Weekly schedule"><div className="sterling-schedule-mini">{jobs.slice(0,5).map(j=><button key={j.id} onClick={()=>openJob(j)}><span>{dateLabel(j.dayOffset,j.hour,j.minute)}</span><strong>{j.service}</strong></button>)}</div></Card>
+       <Card title="Executive pulse"><p className="sterling-muted">Fictional company performance from simulated records.</p><div className="sterling-progress"><span>Monthly goal</span><strong>{money(kpi.invoiced)} / $60,000</strong><div><i style={{width:Math.min(100,kpi.invoiced/60000*100)+"%"}}/></div></div><button className="sterling-inline-link" onClick={()=>showSection("ceo")}>View CEO Command <ArrowRight size={15}/></button></Card>
+      </div>
+     </>}
+     {section==="tickets" && <Card title="Service requests & lifecycle" action={<span>{visibleJobs.length} records</span>}><input className="sterling-search" placeholder="Search ticket, customer, service or status" value={filter} onChange={e=>setFilter(e.target.value)}/>{jobRows(visibleJobs,42)}</Card>}
+     {section==="dispatch" && <><div className="sterling-stats"><Tile title="Assigned technicians" value="18" detail="Four specialist teams" onClick={()=>showSection("team")}/><Tile title="Open service jobs" value={kpi.active} detail="Sample operating queue" onClick={()=>showSection("tickets")}/><Tile title="Completed jobs" value={kpi.completed} detail="Demo work-order dataset" onClick={()=>showSection("tickets")}/><Tile title="Average travel" value={Math.round(demoPeople.reduce((s,t)=>s+t.travel,0)/demoPeople.length)+" min"} detail="Illustrative technician logs" onClick={()=>showSection("team")}/></div><Card title="Dispatch & field activity">{jobRows(jobs,42)}</Card></>}
+     {section==="team" && <Card title="18 field technicians" action={<Chip tone="good">4 crews</Chip>}><div className="sterling-team-grid">{demoPeople.map(t=><button key={t.id} onClick={()=>open("person",t)}><span className="sterling-avatar">{t.name.split(" ").map(x=>x[0]).join("")}</span><strong>{t.name}</strong><small>{t.trade} · {t.status}</small><span>SLA {t.sla}% · {t.completed} jobs</span></button>)}</div></Card>}
+     {section==="schedule" && <Card title="Appointments & time blocks" action={<Chip>Next four days</Chip>}><div className="sterling-agenda">{[0,1,2,3].map(day=><div key={day}><h3>{new Date(Date.now()+day*86400000).toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}</h3>{jobs.filter(j=>j.dayOffset===day).map(j=><Row key={j.id} onClick={()=>openJob(j)}><span className="sterling-time">{dateLabel(j.dayOffset,j.hour,j.minute)}</span><span className="sterling-row-main"><strong>{j.customer}</strong><small>{j.service} · {demoPeople.find(t=>t.id===j.technicianId)?.name}</small></span><Chip>{rawStatus(j.status)}</Chip></Row>)}</div>)}</div></Card>}
+     {section==="leads" && <><div className="sterling-stats"><Tile title="Pipeline leads" value={demoLeads.length} detail="5 simulated channels" onClick={()=>open("lead",demoLeads[0])}/><Tile title="Pipeline value" value={money(demoLeads.reduce((s,l)=>s+l.value,0))} detail="Proposals and prospects" onClick={()=>open("lead",demoLeads[0])}/><Tile title="Won opportunities" value={demoLeads.filter(l=>l.stage==="Won").length} detail="Illustrative conversion" onClick={()=>open("lead",demoLeads[0])}/><Tile title="Referrals" value={demoLeads.filter(l=>l.source==="Referral").length} detail="Organic acquisition" onClick={()=>open("lead",demoLeads[0])}/></div><Card title="Sales pipeline">{demoLeads.map(l=><Row key={l.id} onClick={()=>open("lead",l)}><span className="sterling-row-main"><strong>{l.name}</strong><small>{l.source} · {l.stage}</small></span><strong>{money(l.value)}</strong></Row>)}</Card></>}
+     {section==="finance" && <><div className="sterling-stats"><Tile title="Total invoiced" value={money(kpi.invoiced)} detail="Sample invoice ledger" onClick={()=>showSection("reports")}/><Tile title="Payments received" value={money(kpi.collected)} detail="Simulated transactions" onClick={()=>showSection("reports")}/><Tile title="Accounts receivable" value={money(kpi.outstanding)} detail="Unpaid and partial" onClick={()=>showSection("reports")}/><Tile title="Paid invoices" value={kpi.paid} detail="Settled sample invoices" onClick={()=>showSection("reports")}/></div><Card title="Payments and invoices" action={<button onClick={()=>showSection("reports")}>Export <Download size={15}/></button>}>{demoInvoices.map(inv=><Row key={inv.id} onClick={()=>open("invoice",inv)}><span className="sterling-row-main"><strong>{inv.id} · {inv.customer}</strong><small>{inv.status} · Paid {money(inv.paid)} of {money(inv.total)}</small></span><strong>{money(inv.total-inv.paid)} due</strong></Row>)}</Card></>}
+     {section==="property" && <><div className="sterling-stats"><Tile title="Managed units" value={demoProperties.reduce((s,p)=>s+p.units,0)} detail="Four communities" onClick={()=>open("property",demoProperties[0])}/><Tile title="Occupied units" value={demoProperties.reduce((s,p)=>s+p.occupied,0)} detail="94.2% portfolio occupancy" onClick={()=>open("property",demoProperties[0])}/><Tile title="Monthly rent roll" value={money(demoProperties.reduce((s,p)=>s+p.rent,0))} detail="Fictional scheduled charges" onClick={()=>open("property",demoProperties[0])}/><Tile title="Open maintenance" value={demoProperties.reduce((s,p)=>s+p.open,0)} detail="Connected workflow concept" onClick={()=>showSection("tickets")}/></div><Card title="Sterling Property Management"><div className="sterling-property-grid">{demoProperties.map(p=><button key={p.name} onClick={()=>open("property",p)}><Building2 size={23}/><strong>{p.name}</strong><small>{p.occupied}/{p.units} occupied · {p.open} maintenance</small><span>{money(p.rent)} rent roll</span></button>)}</div></Card></>}
+     {section==="ceo" && <><div className="sterling-stats"><Tile title="Revenue" value={money(kpi.invoiced)} detail="Simulated invoice-ledger total" onClick={()=>showSection("finance")}/><Tile title="Collected" value={money(kpi.collected)} detail="Simulated cash receipts" onClick={()=>showSection("finance")}/><Tile title="Jobs completed" value={kpi.completed} detail="Calculated from ticket states" onClick={()=>showSection("tickets")}/><Tile title="Receivables" value={money(kpi.outstanding)} detail="Invoiced minus collected" onClick={()=>showSection("finance")}/></div><div className="sterling-grid-two"><Card title="Revenue & growth"><div className="sterling-progress"><span>Monthly goal</span><strong>{money(kpi.invoiced)} / $60,000</strong><div><i style={{width:Math.min(100,kpi.invoiced/60000*100)+"%"}}/></div></div><p className="sterling-muted">Profit and net margins require a complete expense ledger; not shown as verified.</p></Card><Card title="Executive briefing"><p>Victoria's simulated briefing: {kpi.active} jobs remain in the active queue, {money(kpi.outstanding)} in invoice balances is awaiting collection, and {demoLeads.filter(l=>l.stage==="New").length} leads need initial follow-up.</p><button className="sterling-inline-link" onClick={()=>open("briefing")}>Open business briefing <ArrowRight size={15}/></button></Card></div><Card title="Performance navigation"><PanelGroup items={sections.filter(([id])=>["dispatch","team","leads","finance","property","reports"].includes(id))} onSelect={showSection}/></Card></>}
+     {section==="reports" && <><Card title="Export business records" action={<Chip tone="private">Fake records only</Chip>}><p className="sterling-muted">Select a report and export the simulated records as a real CSV. PDF, Excel, QuickBooks and tax-app formats are not wired yet.</p><div className="sterling-export"><select value={activeReport} onChange={e=>setActiveReport(e.target.value)} aria-label="Select report">{["Job & Dispatch Report","Payments & Receivables","Technician Productivity","Property Portfolio"].map(s=><option key={s}>{s}</option>)}</select><button onClick={downloadReport}><Download size={17}/> Export CSV</button></div></Card><Card title="Report categories"><PanelGroup items={[["finance","Financials",Wallet],["team","Technicians",Users],["dispatch","Operations",Activity],["property","Property Management",Building2],["leads","Sales Intelligence",TrendingUp]]} onSelect={showSection}/></Card></>}
+     {section==="ai" && <Card title="SYNC Assist · Employee roster"><p className="sterling-muted">These are fictional demonstration roles. No autonomous agents or external messages are executed in this private workspace.</p><div className="sterling-team-grid">{[["Victoria","Chief of Staff"],["Elizabeth","Marketing"],["Adrian","Dispatch"],["Sophia","Sales"],["Morgan","Finance"],["Evelyn","PM Assistant"]].map(([name,role])=><button key={name} onClick={()=>open("agent",{name,role})}><span className="sterling-avatar">{name[0]}</span><strong>{name}</strong><small>{role}</small><span>Open simulated briefing</span></button>)}</div></Card>}
+     {notice&&<div className="sterling-notice" role="status">{notice}<button onClick={()=>setNotice("")} aria-label="Dismiss notification"><X size={15}/></button></div>}
     </div>
-  </main>;
+   </div>
+   <footer className="sterling-footer">STERLING GROUP · PRIVATE PRESENTATION · 100% FICTIONAL DATA · NO LIVE SYNCWORKS ACTIONS</footer>
+  </div>
+  {drawer&&<div className="sterling-drawer-backdrop" onMouseDown={()=>setDrawer(null)}><aside className="sterling-drawer" role="dialog" aria-modal="true" aria-label="Sterling detail" onMouseDown={e=>e.stopPropagation()}><header><span className="sterling-eyebrow">SYNCWORKS / PRIVATE</span><button onClick={()=>setDrawer(null)} aria-label="Close drawer"><X size={21}/></button></header>
+   {drawer.kind==="job"&&<><h2>{drawer.data.id}</h2><p>{drawer.data.customer}</p><dl><dt>Service</dt><dd>{drawer.data.service}</dd><dt>Technician</dt><dd>{demoPeople.find(t=>t.id===drawer.data.technicianId)?.name}</dd><dt>Amount</dt><dd>{money(drawer.data.amount)}</dd><dt>Travel</dt><dd>{drawer.data.travelMinutes} min</dd><dt>Time on site</dt><dd>{drawer.data.siteMinutes} min</dd><dt>Status</dt><dd>{rawStatus(jobs.find(j=>j.id===drawer.data.id)?.status)}</dd></dl><h3>Move job through workflow</h3><div className="sterling-drawer-actions">{statusOptions.map(st=><button key={st} onClick={()=>updateJob(drawer.data.id,st)} disabled={jobs.find(j=>j.id===drawer.data.id)?.status===st}>{rawStatus(st)}</button>)}</div></>}
+   {drawer.kind==="person"&&<><h2>{drawer.data.name}</h2><p>{drawer.data.trade} · {drawer.data.status}</p><dl><dt>Jobs completed</dt><dd>{drawer.data.completed}</dd><dt>Average travel</dt><dd>{drawer.data.travel} min</dd><dt>Average on-site</dt><dd>{drawer.data.onSite} min</dd><dt>SLA attainment</dt><dd>{drawer.data.sla}%</dd></dl><h3>Assigned service tickets</h3>{jobRows(jobs.filter(j=>j.technicianId===drawer.data.id),8)}</>}
+   {drawer.kind==="invoice"&&<><h2>{drawer.data.id}</h2><p>{drawer.data.customer}</p><dl><dt>Invoice total</dt><dd>{money(drawer.data.total)}</dd><dt>Collected</dt><dd>{money(drawer.data.paid)}</dd><dt>Balance due</dt><dd>{money(drawer.data.total-drawer.data.paid)}</dd><dt>Status</dt><dd>{drawer.data.status}</dd></dl><p className="sterling-muted">Payment processing is disabled in this simulator.</p></>}
+   {drawer.kind==="lead"&&<><h2>{drawer.data.name}</h2><p>Sales opportunity</p><dl><dt>Lead source</dt><dd>{drawer.data.source}</dd><dt>Pipeline stage</dt><dd>{drawer.data.stage}</dd><dt>Potential value</dt><dd>{money(drawer.data.value)}</dd></dl><p className="sterling-muted">No real customer outreach is sent.</p></>}
+   {drawer.kind==="property"&&<><h2>{drawer.data.name}</h2><p>Managed residential portfolio</p><dl><dt>Total units</dt><dd>{drawer.data.units}</dd><dt>Occupied</dt><dd>{drawer.data.occupied}</dd><dt>Vacant</dt><dd>{drawer.data.units-drawer.data.occupied}</dd><dt>Rent roll</dt><dd>{money(drawer.data.rent)}</dd><dt>Open requests</dt><dd>{drawer.data.open}</dd></dl></>}
+   {drawer.kind==="briefing"&&<><h2>Victoria · Business Briefing</h2><p>This presentation briefing is calculated from local fictional records, not sent by a live agent.</p><div className="sterling-brief"><p><strong>{kpi.active} active service jobs</strong> in the field and scheduling queue.</p><p><strong>{money(kpi.outstanding)}</strong> remains in sample invoice receivables.</p><p><strong>{demoPeople.length} technicians</strong> are rostered across HVAC, Plumbing, Electrical and Maintenance.</p><p><strong>{demoLeads.length} leads</strong> in the simulated growth pipeline.</p></div></>}
+   {drawer.kind==="agent"&&<><h2>{drawer.data.name}</h2><p>{drawer.data.role} · Simulated agent</p><div className="sterling-brief"><p>Example assignments and approvals will appear here once the isolated AI workflow is implemented.</p></div></>}
+   {drawer.kind==="reset"&&<><h2>Reset presentation?</h2><p>This resets only the locally simulated Sterling job statuses on this device. Real data is untouched.</p><div className="sterling-drawer-actions"><button onClick={reset}>Reset Sterling demo</button><button onClick={()=>setDrawer(null)}>Cancel</button></div></>}
+  </aside></div>}
+ </main>;
 }
