@@ -92,7 +92,7 @@ export default function PrivateShowcase(){
      {section==="reports" && <><Card title="Export business records" action={<Chip tone="private">Fake records only</Chip>}><p className="sterling-muted">Select a report and export the simulated records as a real CSV. PDF, Excel, QuickBooks and tax-app formats are not wired yet.</p><div className="sterling-export"><select value={activeReport} onChange={e=>setActiveReport(e.target.value)} aria-label="Select report">{["Job & Dispatch Report","Payments & Receivables","Technician Productivity","Property Portfolio"].map(s=><option key={s}>{s}</option>)}</select><button onClick={downloadReport}><Download size={17}/> Export CSV</button></div></Card><Card title="Report categories"><PanelGroup items={[["finance","Financials",Wallet],["team","Technicians",Users],["dispatch","Operations",Activity],["property","Property Management",Building2],["leads","Sales Intelligence",TrendingUp]]} onSelect={showSection}/></Card></>}
      {section==="ai" && <ExecutiveBotsDemo jobs={jobs} hr={hr} onModule={showSection} selectedEmployee={selectedBot}/>}
      {notice&&<div className="sterling-notice" role="status">{notice}<button onClick={()=>setNotice("")} aria-label="Dismiss notification"><X size={15}/></button></div>}
-    </div>
+    </div>}
    </div>
    <footer className="sterling-footer">STERLING GROUP · PRIVATE PRESENTATION · FICTIONAL DATA · NO LIVE ACTIONS</footer>
 
