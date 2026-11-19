@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Bell, Check, Clock3, MessageCircle, UserRound, X } from "lucide-react";
+import { Bell, Check } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import { AVATARS, getAvatarPhotoForUser } from "./JarvisAvatar";
@@ -23,7 +23,6 @@ export default function SyncAssistantLauncher() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [chiefOpen, setChiefOpen] = useState(false);
   const [commandOpen,setCommandOpen]=useState(false);
 
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
@@ -31,8 +30,7 @@ export default function SyncAssistantLauncher() {
     const onDialog = (event) => {
       const opened = Boolean(event?.detail?.open);
       setTaskDialogOpen(opened);
-      if (opened) setChiefOpen(false);
-    };
+      };
     window.addEventListener("sync-assist:task-dialog", onDialog);
     return () => window.removeEventListener("sync-assist:task-dialog", onDialog);
   }, []);
@@ -95,20 +93,6 @@ export default function SyncAssistantLauncher() {
     }
   }, [seenKey, showChief]);
 
-  const toggleChief = () => {
-    const next = !chiefOpen;
-    setChiefOpen(next);
-    if (next && workdayStatus.available) {
-      try {
-        const seen = JSON.parse(window.localStorage.getItem(seenKey) || "[]");
-        const ids = Array.isArray(seen) ? seen.filter((id) => typeof id === "string") : [];
-        const all = [...new Set([...ids, ...workdayStatus.receipts.map((receipt) => receipt.id)])].slice(-300);
-        window.localStorage.setItem(seenKey, JSON.stringify(all));
-        setWorkdayStatus((previous) => ({ ...previous, unread: 0 }));
-      } catch { /* Do not prevent opening the assistant if storage is blocked. */ }
-    }
-  };
-
   useEffect(() => {
     if (!showChief) return;
     loadWorkday();
@@ -155,7 +139,7 @@ export default function SyncAssistantLauncher() {
       <div className={`fixed bottom-24 right-4 z-[260] flex flex-col items-end gap-3 lg:bottom-6 lg:right-6 ${taskDialogOpen && showChief ? "hidden" : mobileVisible ? "" : "hidden lg:flex"}`}>
         {showChief && (
           <>
-            <button type="button" aria-haspopup="dialog" aria-label="Open Victoria Chief of Staff briefing" title="Victoria — Chief of Staff" onClick={() => {setChiefOpen(false);setCommandOpen(true);}}
+            <button type="button" aria-haspopup="dialog" aria-label="Open Victoria Chief of Staff briefing" title="Victoria — Chief of Staff" onClick={() => setCommandOpen(true)}
               className="group flex min-h-12 items-center gap-2 rounded-full border border-cyan-300/45 bg-[#061327]/95 py-1 pl-1 pr-2 text-left text-white shadow-[0_0_26px_rgba(34,211,238,.22)] transition hover:border-cyan-300">
               <span className="relative block h-11 w-11 shrink-0"><img src={getAvatarPhotoForUser(chiefAvatar, user)} alt="" className="h-11 w-11 rounded-full border border-cyan-300/55 object-cover object-top" />
                 {workdayStatus.available && workdayStatus.unread > 0 && <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white ring-2 ring-slate-950" aria-label={`${workdayStatus.unread} new workday results`}>{workdayStatus.unread > 99 ? "99+" : workdayStatus.unread}</span>}
