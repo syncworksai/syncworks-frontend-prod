@@ -57,8 +57,7 @@ export default function SyncAssistChiefOfStaff(){
         voiceContext.current=context;
       }
       await context.resume();
-      const status=await api.get("/sync-ai/voice/status/",{timeout:12000});
-      if(!status.data?.roles?.female_assistant?.configured)throw new Error("Voice service unavailable.");
+      // Request audio directly: a separate status check can time out on a cold server.
       const response=await api.post("/sync-ai/voice/synthesize/",{
         role:"female_assistant",
         text:"Good morning. I am Victoria, your SyncWorks chief of staff. Let us review your priorities."
