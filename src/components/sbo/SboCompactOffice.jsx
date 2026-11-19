@@ -8,6 +8,7 @@ import TicketQuickMessage from "../tickets/TicketQuickMessage";
 import SubcontractorQuickInvite from "./SubcontractorQuickInvite";
 
 const links = {
+  more: [["Team & employees","/team/invites"],["HR & timeclock","/sbo/settings/workforce"],["Finance","/sbo/finance"],["Invoices","/sbo/invoices"],["Customers","/sbo/customers"],["Leads & growth","/sbo/leads"],["Social marketing","/sbo/growth"],["Reports","/sbo/reports"],["Partners & subcontractors","/sbo/partners"],["Catalog & pricing","/sbo/catalog"],["Business settings","/sbo/settings"]],
   jobs: [["Job board","/tickets"],["New phone request","/sbo/quick-intake"],["Dispatch","/sbo/dispatch"],["Technician board","/sbo/tech-board"]],
   schedule: [["Calendar","/calendar"],["Appointments","/sbo/appointments"]],
   team: [["Employees","/team/invites"],["HR & availability","/sbo/settings/workforce"],["Technician board","/sbo/tech-board"],["Customers","/sbo/customers"],["Import customers","/sbo/customers/import"]],
@@ -24,6 +25,7 @@ const menu = [
   {id:"finance",title:"Finance",icon:DollarSign},
   {id:"growth",title:"Growth",icon:Megaphone},
   {id:"tools",title:"Tools & settings",icon:Settings2},
+  {id:"more",title:"More business tools",icon:Settings2},
 ];
 const readTheme=()=>{try{return JSON.parse(localStorage.getItem("sw_workspace_appearance_v1")||"{}").theme||"legacy";}catch{return "legacy";}};
 const fmt=(n)=>new Intl.NumberFormat("en-US").format(Number(n||0));
@@ -41,6 +43,54 @@ function MiniBars({rows}) {
 export default function SboCompactOffice({businessName,loading,err,ticketRows=[],kpiRows=[],openTickets,revenueThisMonth,completedJobs,onRefresh,activeBusinessId}) {
   const nav=useNavigate();
   const [panel,setPanel]=useState(null);
+  // Lock only the SBO landing office: the header, main canvas, and dock
+  // keep independent fixed anchors instead of moving with document scroll.
+  useEffect(()=>{
+    const body=document.body;
+    const html=document.documentElement;
+    body.classList.add("sw-sbo-mobile-locked");
+    html.classList.add("sw-sbo-mobile-locked");
+    let frame=0;
+    const update=()=>{
+      window.cancelAnimationFrame(frame);
+      frame=window.requestAnimationFrame(()=>{
+        const header=document.querySelector(".sw-modebar");
+        const dock=document.querySelector(".sw-role-mobile-nav");
+        const headH=header?.getBoundingClientRect().height||0;
+        const dockH=dock?.getBoundingClientRect().height||0;
+        body.style.setProperty("--sw-sbo-header-height",headH+"px");
+        body.style.setProperty("--sw-sbo-dock-reserve",(dockH+18)+"px");
+      });
+    };
+    const observer=typeof ResizeObserver!=="undefined"?new ResizeObserver(update):null;
+    const header=document.querySelector(".sw-modebar");
+    const dock=document.querySelector(".sw-role-mobile-nav");
+    if(header)observer?.observe(header);
+    if(dock)observer?.observe(dock);
+    window.addEventListener("resize",update);
+    window.visualViewport?.addEventListener("resize",update);
+    update();
+    return()=>{
+      window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+      window.removeEventListener("resize",update);
+      window.visualViewport?.removeEventListener("resize",update);
+      body.classList.remove("sw-sbo-mobile-locked");
+      html.classList.remove("sw-sbo-mobile-locked");
+      body.style.removeProperty("--sw-sbo-header-height");
+      body.style.removeProperty("--sw-sbo-dock-reserve");
+    };
+  },[]);
+
+  useEffect(()=>{
+    const openMore=()=>setPanel("more");
+    window.addEventListener("sw:sbo-more-open",openMore);
+    if(new URLSearchParams(window.location.search).get("panel")==="more") {
+      setPanel("more");
+      window.history.replaceState(window.history.state,"",window.location.pathname);
+    }
+    return()=>window.removeEventListener("sw:sbo-more-open",openMore);
+  },[]);
   const [quickMessageTicket,setQuickMessageTicket]=useState(null);
   const [theme,setTheme]=useState(readTheme);
   const [ops,setOps]=useState(null);
@@ -88,14 +138,14 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
   const room=({future:"syncworks-future",classic:"classic-office",modern:"modern-dark",light:"clean-light",legacy:"syncworks-future"}[theme]||"syncworks-future");
   const tile="sw-sbo-glass-tile rounded-2xl px-3 py-3 text-left transition hover:border-cyan-300/70";
   const button=(label,url)=><button key={url} type="button" onClick={()=>nav(url)} className="flex items-center justify-between rounded-xl border border-cyan-400/20 bg-white/[.045] px-3 py-3 text-left text-sm text-white hover:bg-cyan-500/10">{label}<ChevronRight size={16} className="text-cyan-200"/></button>;
-  return <div className={`sw-sbo-compact relative isolate h-[calc(100dvh-172px)] min-h-[380px] overflow-hidden text-white sm:h-[calc(100dvh-110px)] ${theme==="light"?"sw-sbo-light":""}`} style={{"--sw-sbo-room":`url("/office-themes/${room}.webp")`}}>
+  return <div className={`sw-sbo-compact relative isolate h-[calc(100dvh-172px)] min-h-0 overflow-hidden text-white sm:h-[calc(100dvh-110px)] ${theme==="light"?"sw-sbo-light":""}`} style={{"--sw-sbo-room":`url("/office-themes/${room}.webp")`}}>
     <div aria-hidden="true" className="sw-sbo-room-art absolute inset-0 -z-20"/><div aria-hidden="true" className="sw-sbo-room-shade absolute inset-0 -z-10"/>
     <div className="mx-auto grid h-full max-w-[1540px] grid-cols-1 gap-3 px-3 py-3 md:grid-cols-[165px_minmax(0,1fr)_225px] md:px-5 lg:grid-cols-[205px_minmax(0,1fr)_270px]">
       <aside className="sw-sbo-rail hidden min-h-0 flex-col gap-2 rounded-2xl p-3 md:flex">
         <div className="mb-2 text-[10px] font-bold uppercase tracking-[.2em] text-cyan-300">Business workspace</div>
         {menu.map(item=><button key={item.id} onClick={()=>setPanel(item.id)} className="sw-sbo-rail-link flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-left text-sm"><item.icon size={17} className="shrink-0 text-cyan-300"/><span>{item.title}</span><ChevronRight size={13} className="ml-auto shrink-0 text-slate-400"/></button>)}
       </aside>
-      <main className="flex min-h-0 flex-col gap-3">
+      <main className="sw-sbo-office-canvas flex min-h-0 flex-col gap-3">
         <header className="sw-sbo-topbar flex shrink-0 items-start justify-between gap-2 rounded-2xl p-3">
           <div className="min-w-0"><span className="text-[10px] font-bold uppercase tracking-[.16em] text-cyan-300">Your office · Today</span><h1 className="truncate text-xl font-semibold sm:text-2xl">{businessName||"Business"}</h1><p className="hidden text-xs text-slate-300 sm:block">One command center. Your next action is one tap away.</p></div>
           <div className="flex gap-2">{lastTicketId&&<button type="button" title="Message latest ticket" onClick={()=>setQuickMessageTicket(lastTicketId)} className="rounded-xl border border-cyan-400/35 px-3 py-2 text-xs text-cyan-200">Message</button>}<button aria-label="Refresh dashboard" title="Refresh metrics" onClick={()=>{onRefresh?.();setRefreshKey(v=>v+1);}} className="rounded-xl border border-white/15 p-2"><RefreshCw size={17} className={loading?"animate-spin":""}/></button><button onClick={()=>nav("/sbo/quick-intake")} className="flex items-center gap-1.5 rounded-xl border border-cyan-300/60 bg-cyan-500/25 px-3 py-2 text-xs font-bold text-cyan-50"><Plus size={17}/>New Call</button></div>
@@ -105,18 +155,18 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
           <div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-widest text-cyan-300">Operations pulse</div><div className="truncate text-xs text-slate-200">{summary.at_risk_or_late ? `${summary.at_risk_or_late} job(s) at risk` : ops && unassignedStaff.length ? `${unassignedStaff.length} schedulable technician(s) have no assigned jobs today` : "Review calls, scheduling and team performance"}</div></div>
           <button onClick={()=>setPanel("operations")} className="shrink-0 text-xs font-semibold text-cyan-200">Details →</button>
         </section>
-        <div className="grid shrink-0 grid-cols-3 gap-2">
+        <div className="sw-sbo-kpis grid shrink-0 grid-cols-3 gap-2">
           <button className="sw-sbo-stat rounded-xl p-2 text-left" onClick={()=>setPanel("jobs")}><strong className="block text-lg text-cyan-200">{fmt(openTickets)}</strong><small className="text-[10px] text-slate-300">Open jobs</small></button>
           <button className="sw-sbo-stat rounded-xl p-2 text-left" onClick={()=>setPanel("operations")}><strong className="block text-lg text-amber-200">{ops?fmt(summary.at_risk_or_late):"—"}</strong><small className="text-[10px] text-slate-300">At risk</small></button>
           <button className="sw-sbo-stat rounded-xl p-2 text-left" onClick={()=>setPanel("operations")}><strong className="block text-lg text-emerald-200">{ops?fmt(summary.active_clocks):"—"}</strong><small className="text-[10px] text-slate-300">Active clocks</small></button>
         </div>
-        <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-2">
+        <div className="sw-sbo-action-grid grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-2">
           <button className={tile} onClick={()=>nav("/sbo/quick-intake")}><Plus className="mb-2 text-cyan-200" size={23}/><div className="font-semibold">New request</div><p className="text-xs text-slate-300">Customer calling in</p></button>
           <button className={tile} onClick={()=>setPanel("schedule")}><CalendarDays className="mb-2 text-cyan-200" size={23}/><div className="font-semibold">Schedule</div><p className="text-xs text-slate-300">Jobs and appointments</p></button>
           <button className={tile} onClick={()=>setPanel("operations")}><Route className="mb-2 text-cyan-200" size={23}/><div className="font-semibold">Tech routes</div><p className="text-xs text-slate-300">Timing and risk</p></button>
           <button className={tile} onClick={()=>setPanel("jobs")}><ClipboardList className="mb-2 text-cyan-200" size={23}/><div className="font-semibold">Job board</div><p className="text-xs text-slate-300">Assignments and follow-ups</p></button>
         </div>
-        <div className="flex shrink-0 justify-between gap-2 md:hidden"><button onClick={()=>setPanel("team")} className="sw-sbo-stat flex-1 rounded-xl p-2 text-xs">Team</button><button onClick={()=>setPanel("finance")} className="sw-sbo-stat flex-1 rounded-xl p-2 text-xs">Finance</button><button onClick={()=>setPanel("tools")} className="sw-sbo-stat flex-1 rounded-xl p-2 text-xs">More</button></div>
+
       </main>
       <aside className="sw-sbo-rail hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-3 md:flex">
         <div className="flex items-center justify-between"><strong className="text-sm">Quick intelligence</strong><button onClick={()=>setPanel("operations")} aria-label="Open KPI details" className="text-cyan-200"><ChevronRight size={17}/></button></div>
@@ -126,7 +176,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
       </aside>
     </div>
     {quickMessageTicket&&<TicketQuickMessage ticketId={quickMessageTicket} onClose={()=>setQuickMessageTicket(null)}/>}
-    {panel&&<div className="absolute inset-0 z-40 flex items-end justify-end bg-[#010513]/65 p-2 backdrop-blur-sm sm:p-4" onClick={()=>setPanel(null)}>
+    {panel&&<div className="sw-sbo-panel-shade absolute inset-0 z-40 flex items-end justify-end bg-[#010513]/65 p-2 backdrop-blur-sm sm:p-4" onClick={()=>setPanel(null)}>
       <section role="dialog" aria-modal="true" aria-label={panel==="subcontractors"?"Subcontractors":menu.find(m=>m.id===panel)?.title||"Operations"} onClick={e=>e.stopPropagation()} className="sw-sbo-drawer flex h-auto max-h-[96%] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-cyan-300/40 p-4 text-white shadow-2xl">
         <div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-semibold">{panel==="subcontractors"?"Subcontractors":menu.find(m=>m.id===panel)?.title||"Operations"}</h2><button aria-label="Close drawer" onClick={()=>setPanel(null)} className="rounded-xl border border-white/15 p-2"><X size={18}/></button></div>
         {panel==="operations"&&<div className="mb-3 space-y-3 overflow-y-auto text-sm">
