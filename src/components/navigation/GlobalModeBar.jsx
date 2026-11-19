@@ -169,7 +169,7 @@ export default function GlobalModeBar() {
           {menuSection === "private" && isGodMode ? <>
             <Link to="/private" onClick={() => setOpen(false)} className={linkClass(location.pathname.startsWith("/private"))}><span className="sw-global-menu-symbol">◈</span><span className="sw-global-menu-text"><strong>Sterling Showcase</strong><small>Isolated sample business, property management, CEO and reports</small></span><span className="sw-global-menu-chevron">›</span></Link>
             <div className="rounded-xl border border-amber-400/25 bg-amber-400/10 p-3 text-xs text-amber-100">PRIVATE SANDBOX · Simulated records only. Does not change your live business or customer workspace.</div>
-          </> : {menuSection === "dashboards" ? <>
+          </> : menuSection === "dashboards" ? <>
             <Link to="/customer" onClick={() => chooseMode("CUSTOMER")} className={linkClass(mode === "CUSTOMER")}><span className="sw-global-menu-symbol">⌂</span><span className="sw-global-menu-text"><strong>Personal</strong><small>Home and daily life</small></span>{mode === "CUSTOMER" ? <em>Current</em> : <span className="sw-global-menu-chevron">›</span>}</Link>
             {businessWorkspaces.length > 0 && <div className="sw-global-menu-group">
               <button type="button" className="sw-global-menu-group-toggle" onClick={() => setBusinessExpanded(value => !value)} aria-expanded={businessExpanded}><span className="sw-global-menu-symbol">▦</span><span className="sw-global-menu-text"><strong>Businesses</strong><small>{businessWorkspaces.length} connected workspace{businessWorkspaces.length === 1 ? "" : "s"}</small></span><span className="sw-global-menu-chevron">{businessExpanded ? "⌃" : "⌄"}</span></button>
