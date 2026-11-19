@@ -1,6 +1,6 @@
 import React,{useEffect,useState} from "react";
 import {useNavigate} from "react-router-dom";
-import {ArrowLeft,RefreshCw,Plus,ChevronDown,Mail,CheckCircle2,Palette} from "lucide-react";
+import {ArrowLeft,RefreshCw,Plus,ChevronDown,Mail,CheckCircle2,Palette,BookOpen,X,ExternalLink} from "lucide-react";
 import api from "../api/client";
 import {JarvisAvatar} from "../components/sync/JarvisAvatar";
 import "./SyncAssistChiefOfStaff.css";
@@ -32,6 +32,8 @@ export default function SyncAssistChiefOfStaff(){
   const voiceRequest=React.useRef(0);
   const [voiceLoading,setVoiceLoading]=useState(false);
   const [voiceError,setVoiceError]=useState(false);
+  const [readingBrief,setReadingBrief]=useState(false);
+  const ticketLink=(title)=>{const match=/^Review ticket #(\d+)\b/i.exec(String(title||""));return match?`/tickets/${match[1]}`:null;};
   function stopVoice(){
     voiceRequest.current+=1;
     try{voiceSource.current?.stop();}catch{}
@@ -146,7 +148,8 @@ export default function SyncAssistChiefOfStaff(){
         <p className={`text-[11px] font-black uppercase tracking-widest ${isLight?"text-slate-700":design.accent}`}>Your Chief of Staff</p>
         <p className={`text-sm font-bold ${textColor}`}>Victoria — Chief of Staff</p>
         <button type="button" onClick={previewAssistant} aria-busy={voiceLoading} className={`sw-chief-voice-button min-h-11 w-full rounded-xl border px-4 text-xs font-black ${isLight?"border-slate-400 bg-white text-slate-900":"border-cyan-400/40 bg-cyan-500/10 text-cyan-100"}`}>{avatarTalking||voiceLoading?"Stop":"Speak"}</button>
-        {voiceError&&<p role="status" className="sw-chief-voice-error text-[11px]">Voice unavailable. Tap Speak to retry.</p>}
+        <button type="button" onClick={()=>setReadingBrief(true)} className="sw-chief-read-button min-h-10 w-full rounded-xl border border-white/20 px-3 text-xs font-bold"><BookOpen size={16}/> Read Briefing</button>
+        {voiceError&&<p role="status" className="sw-chief-voice-error text-[11px]">Voice unavailable. You can read the briefing instead.</p>}
       </div>
     </section>
     <section className={`sw-chief-overview rounded-3xl border p-5 shadow-2xl backdrop-blur-xl ${design.border} ${design.panel}`}>
@@ -169,7 +172,7 @@ export default function SyncAssistChiefOfStaff(){
       </button>
       {expanded===s.key&&<div className="border-t border-white/10 p-4">
         <p className="text-xs leading-5 text-slate-400">Source: {s.scope}</p>
-        {(s.items||[]).map((x,i)=><div key={i} className="mt-3 rounded-xl border border-white/10 p-3"><p className={`text-sm font-bold ${textColor}`}>{x.title}</p><p className="mt-1 text-xs text-cyan-200">{x.next_action}</p></div>)}
+        {(s.items||[]).map((x,i)=><div key={i} className="mt-3 rounded-xl border border-white/10 p-3"><p className={`text-sm font-bold ${textColor}`}>{x.title}</p><p className="mt-1 text-xs text-cyan-200">{x.next_action}</p>{ticketLink(x.title)&&<button type="button" onClick={()=>navigate(ticketLink(x.title))} className="mt-2 inline-flex min-h-9 items-center gap-2 rounded-lg border border-cyan-400/35 px-3 text-xs text-cyan-100"><ExternalLink size={14}/> Review ticket</button>}</div>)}
         {s.key==="email"&&<button onClick={()=>navigate("/sync/assist/email")} className="mt-3 flex min-h-11 items-center gap-2 rounded-xl border border-cyan-400/30 px-4 text-sm text-cyan-200"><Mail size={16}/> Open Mail Desk</button>}
         {s.key==="today"&&<button onClick={()=>navigate("/sync/assist/daily")} className="mt-3 min-h-11 rounded-xl border border-cyan-400/30 px-4 text-sm text-cyan-200">Open task list</button>}
         {s.key==="cases"&&<button onClick={()=>{setActivePanel("register");setAdding(true);}} className="mt-3 flex min-h-11 items-center gap-2 rounded-xl border border-cyan-400/30 px-4 text-sm text-cyan-200"><Plus size={16}/> Track an issue</button>}
@@ -206,6 +209,16 @@ export default function SyncAssistChiefOfStaff(){
       </article>)}
     </section>
     </div>
+    {readingBrief&&<div className="sw-chief-reading-overlay" role="presentation" onMouseDown={e=>{if(e.currentTarget===e.target)setReadingBrief(false);}}>
+      <section role="dialog" aria-modal="true" aria-label="Daily briefing in text" className="sw-chief-reading-dialog">
+        <header><div><p className="text-xs uppercase tracking-widest text-cyan-200">SYNC Assist</p><h2 className="text-xl font-bold">Daily Briefing</h2><p className="text-xs text-slate-300">{brief?.date||"Today"} · Live records available to this account</p></div><button type="button" aria-label="Close briefing" onClick={()=>setReadingBrief(false)}><X size={22}/></button></header>
+        <div className="sw-chief-reading-content">
+          <p className="text-sm text-slate-300">{brief?.counts?.tasks_open??"—"} open tasks · {brief?.counts?.cases_open??"—"} open cases · {brief?.counts?.cases_high??"—"} high priority cases</p>
+          {(brief?.sections||[]).map(section=><div key={section.key} className="sw-chief-reading-section"><h3 className="font-bold">{section.title}</h3><p className="text-sm text-slate-300">{section.headline}</p>{(section.items||[]).map((item,i)=><div key={i} className="sw-chief-reading-item"><strong>{item.title}</strong><p>{item.next_action}</p>{ticketLink(item.title)&&<button type="button" onClick={()=>navigate(ticketLink(item.title))}><ExternalLink size={14}/> Open ticket</button>}</div>)}{section.key==="today"&&<button type="button" onClick={()=>navigate("/sync/assist/daily")}>Open task list</button>}{section.key==="email"&&<button type="button" onClick={()=>navigate("/sync/assist/email")}>Open Mail Desk</button>}</div>)}
+          <p className="text-xs text-slate-400">This is an on-demand summary of available SyncWorks records, not a confirmed scheduled inbox scan.</p>
+        </div>
+      </section>
+    </div>}
     <p className="sw-chief-disclaimer mt-4 text-xs leading-5 text-slate-400">This briefing is generated only when opened or refreshed. It does not prove email scanning, verified infrastructure health monitoring, background execution, or automated message delivery.</p>
   </div></main>;
 }

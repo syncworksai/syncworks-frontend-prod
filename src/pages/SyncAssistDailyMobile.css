@@ -1,0 +1,34 @@
+/* Single-screen mobile Daily Briefing. Long content scrolls inside focused drawers only. */
+.sw-daily-drawer-heading,.sw-daily-actions{display:none}
+@media(max-width:767px){
+ .sw-daily-page{height:calc(100dvh - 112px);min-height:0!important;overflow:hidden;padding:8px 12px 112px!important;overscroll-behavior:none}
+ .sw-daily-layout{height:100%;min-height:0;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+ .sw-daily-layout>header{margin:0!important;flex:none}
+ .sw-daily-hero{flex:none;padding:14px!important;border-radius:20px!important;background:linear-gradient(125deg,rgba(6,39,59,.66),rgba(25,14,53,.67))!important;backdrop-filter:blur(18px)}
+ .sw-daily-hero h1{font-size:20px;line-height:1.2}
+ .sw-daily-hero>p{margin-top:5px;font-size:12px;line-height:18px}
+ .sw-daily-hero>.mt-5{margin-top:9px}
+ .sw-daily-hero .grid>div{padding:7px}
+ .sw-daily-hero .grid .text-2xl{font-size:20px}
+ .sw-daily-hero .grid .mt-1{font-size:10px}
+ .sw-daily-hero>.mt-3{margin-top:9px}
+ .sw-daily-hero>.mt-3 button{min-height:39px;padding:0 12px;font-size:12px}
+ .sw-daily-link{flex:none;margin:0!important;min-height:58px!important;padding:10px 13px!important;font-size:14px}
+ .sw-daily-link span span{font-size:10px}
+ .sw-daily-actions{display:flex;gap:9px;flex:none}
+ .sw-daily-actions button{min-height:41px;flex:1;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;border:1px solid rgba(90,202,244,.36);background:rgba(3,23,46,.56);font-size:12px;font-weight:700;color:#d7eeff}
+ .sw-daily-form,.sw-daily-connections,.sw-daily-tasks{display:none!important;position:fixed;z-index:220;top:112px;bottom:92px;left:10px;right:10px;max-height:none;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin:0!important;padding:16px!important;border-radius:18px!important;border:1px solid rgba(91,207,242,.42)!important;background:linear-gradient(135deg,rgba(5,20,43,.97),rgba(11,16,37,.97))!important;box-shadow:0 0 0 100vmax rgba(0,4,12,.65),0 12px 50px rgba(0,0,0,.45);backdrop-filter:blur(22px)}
+ .sw-daily-page[data-drawer="tasks"] .sw-daily-tasks,.sw-daily-page[data-drawer="connections"] .sw-daily-connections,.sw-daily-page[data-drawer="add"] .sw-daily-form{display:block!important;animation:sw-daily-slide .24s ease-out both}
+ .sw-daily-drawer-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:16px;margin-bottom:12px}
+ .sw-daily-drawer-heading button{display:grid;place-items:center;width:42px;height:42px;border:1px solid rgba(150,203,227,.36);border-radius:12px}
+ .sw-daily-diagnostics,.sw-daily-monitoring{display:none}
+ .sw-daily-connections .sw-daily-drawer-heading{display:flex}
+ .sw-daily-record-link{position:relative}
+ @keyframes sw-daily-slide{from{opacity:0;transform:translateY(16px) scale(.99)}to{opacity:1;transform:none}}
+}
+@media(max-width:767px) and (max-height:745px){
+ .sw-daily-hero>p{display:none}
+ .sw-daily-hero h1{font-size:17px}
+ .sw-daily-link{min-height:49px!important}
+}
+@media(prefers-reduced-motion:reduce){.sw-daily-page .sw-daily-form,.sw-daily-page .sw-daily-connections,.sw-daily-page .sw-daily-tasks{animation:none!important}}
