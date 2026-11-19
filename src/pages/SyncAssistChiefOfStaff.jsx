@@ -20,28 +20,46 @@ export default function SyncAssistChiefOfStaff(){
   const [brief,setBrief]=useState(null),[cases,setCases]=useState([]),[busy,setBusy]=useState(false);
   const [error,setError]=useState(""),[notice,setNotice]=useState("");
   const [expanded,setExpanded]=useState("cases"),[adding,setAdding]=useState(false);
+  const [activePanel,setActivePanel]=useState("today");
   const [theme,setTheme]=useState(()=>{
     try {const saved=window.localStorage.getItem("sw-assist-chief-theme");return THEMES[saved]?saved:"future";}catch{return "future";}
   });
   const [themeOpen,setThemeOpen]=useState(false);
   const avatarId = "executive-female"; // Victoria is permanently assigned to Chief of Staff.
   const [avatarTalking,setAvatarTalking]=useState(false);
-  const avatarSpeech=React.useRef(null);
-  useEffect(()=>()=>{try{if(avatarSpeech.current&&window.speechSynthesis?.speaking)window.speechSynthesis.cancel();}catch{}},[]);
-  function previewAssistant(){
-    if(avatarTalking){window.speechSynthesis?.cancel();setAvatarTalking(false);avatarSpeech.current=null;return;}
-    if(!window.speechSynthesis||typeof window.SpeechSynthesisUtterance!=="function"){setNotice("Audio preview is unavailable in this browser.");return;}
-    const utterance=new window.SpeechSynthesisUtterance("Good morning. I am your SyncWorks chief of staff. Let us review your priorities.");
-    utterance.lang="en-US";utterance.rate=.98;
-    const voices=window.speechSynthesis.getVoices()||[];
-    const feminine=avatarId.includes("female");
-    const hints=feminine?["samantha","jenny","aria","zira","female"]:["guy","daniel","alex","david","male"];
-    const selected=voices.find(v=>v.lang?.toLowerCase().startsWith("en")&&hints.some(h=>v.name.toLowerCase().includes(h)));
-    if(selected)utterance.voice=selected;
-    utterance.onstart=()=>setAvatarTalking(true);
-    utterance.onend=()=>{setAvatarTalking(false);avatarSpeech.current=null;};
-    utterance.onerror=()=>{setAvatarTalking(false);avatarSpeech.current=null;};
-    avatarSpeech.current=utterance;window.speechSynthesis.speak(utterance);
+  const avatarAudio=React.useRef(null);
+  const avatarAudioUrl=React.useRef(null);
+  const [voiceLoading,setVoiceLoading]=useState(false);
+  function stopVoice(){
+    avatarAudio.current?.pause();
+    avatarAudio.current=null;
+    if(avatarAudioUrl.current) URL.revokeObjectURL(avatarAudioUrl.current);
+    avatarAudioUrl.current=null;
+    setAvatarTalking(false);
+  }
+  useEffect(()=>()=>{avatarAudio.current?.pause();if(avatarAudioUrl.current)URL.revokeObjectURL(avatarAudioUrl.current);},[]);
+  async function previewAssistant(){
+    if(avatarTalking||voiceLoading){stopVoice();return;}
+    setVoiceLoading(true);setNotice("");
+    try {
+      const status=await api.get("/sync-ai/voice/status/",{timeout:12000});
+      if(!status.data?.roles?.female_assistant?.configured)throw new Error("Victoria's ElevenLabs Gemma voice is not configured on Render.");
+      const response=await api.post("/sync-ai/voice/synthesize/",{
+        role:"female_assistant",
+        text:"Good morning. I am Victoria, your SyncWorks chief of staff. Let us review your priorities."
+      },{responseType:"blob",timeout:90000});
+      const url=URL.createObjectURL(response.data);
+      avatarAudioUrl.current=url;
+      const audio=new Audio(url);
+      avatarAudio.current=audio;
+      audio.onplaying=()=>setAvatarTalking(true);
+      audio.onended=()=>stopVoice();
+      audio.onerror=()=>{stopVoice();setNotice("ElevenLabs audio could not be played on this device.");};
+      await audio.play();
+    }catch(e){
+      stopVoice();
+      setNotice(e?.message||"Victoria's ElevenLabs voice is unavailable. Check the Render voice configuration.");
+    }finally{setVoiceLoading(false);}
   }
   const design=THEMES[theme]||THEMES.future;
   const isLight=theme==="daylight";
@@ -78,10 +96,10 @@ export default function SyncAssistChiefOfStaff(){
   }
   const open=cases.filter(x=>x.status!=="RESOLVED");
   const areas=["PROPERTY","BUSINESS","FINANCE","GROWTH","PERSONAL"];
-  return <main className={`relative min-h-dvh px-4 pb-32 pt-28 sm:px-6 ${textColor} ${isLight?"sw-chief-light":""}`} style={{backgroundColor:isLight?"#e6eef5":"#020617"}}>
+  return <main className={`sw-chief-page relative min-h-dvh px-4 pb-32 pt-28 sm:px-6 ${textColor} ${isLight?"sw-chief-light":""}`} style={{backgroundColor:isLight?"#e6eef5":"#020617"}}>
     <div aria-hidden="true" className="sw-chief-wallpaper pointer-events-none fixed inset-0 z-0" style={{backgroundImage:`${design.cover},url("${design.image}")`,backgroundSize:"cover",backgroundPosition:"center center"}}/>
-    <div className="relative z-10 mx-auto w-full max-w-6xl">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+    <div className="sw-chief-layout relative z-10 mx-auto w-full max-w-6xl">
+      <div className="sw-chief-theme-row mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className={`text-[10px] font-black uppercase tracking-[.2em] ${isLight?"text-slate-700":design.accent}`}>Your workspace · {design.label}</div>
         <button type="button" onClick={()=>setThemeOpen(v=>!v)} aria-expanded={themeOpen} className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 text-xs font-bold backdrop-blur-xl ${design.border} ${design.panel}`}><Palette size={17}/> Change theme</button>
       </div>
@@ -92,20 +110,20 @@ export default function SyncAssistChiefOfStaff(){
         </button>)}
         <p className={`sm:col-span-3 text-xs ${subText}`}>Saved on this device. Only the appearance changes; Jarvis data, permissions and actions stay the same.</p>
       </div>}
-    <div className="mb-4 flex items-center justify-between gap-2">
+    <div className="sw-chief-actions mb-4 flex items-center justify-between gap-2">
       <button type="button" onClick={()=>navigate("/sync/assist/daily")} className="flex min-h-11 items-center gap-2 rounded-xl border border-white/20 px-3 text-sm"><ArrowLeft size={17}/> Jarvis Daily</button>
       <button type="button" onClick={refresh} disabled={busy||!authorized} className="flex min-h-11 items-center gap-2 rounded-xl border border-cyan-400/30 px-3 text-sm"><RefreshCw size={16}/> Refresh</button>
     </div>
-    <section aria-label="My Jarvis animated assistant" className={`mb-4 flex flex-col items-center gap-3 rounded-3xl border p-3 shadow-xl backdrop-blur-xl sm:flex-row sm:justify-center sm:p-4 ${design.border} ${design.panel}`}>
+    <section aria-label="My Jarvis animated assistant" className={`sw-chief-avatar-card mb-4 flex flex-col items-center gap-3 rounded-3xl border p-3 shadow-xl backdrop-blur-xl sm:flex-row sm:justify-center sm:p-4 ${design.border} ${design.panel}`}>
       <JarvisAvatar id={avatarId} state={avatarTalking?"speaking":"idle"} size="hero"/>
       <div className="w-full max-w-md space-y-2">
         <p className={`text-[11px] font-black uppercase tracking-widest ${isLight?"text-slate-700":design.accent}`}>Your Chief of Staff</p>
         <p className={`text-sm font-bold ${textColor}`}>Victoria — Chief of Staff</p>
-        <button type="button" onClick={previewAssistant} className={`min-h-11 w-full rounded-xl border px-4 text-xs font-black ${isLight?"border-slate-400 bg-white text-slate-900":"border-cyan-400/40 bg-cyan-500/10 text-cyan-100"}`}>{avatarTalking?"Stop voice preview":"Hear your assistant speak"}</button>
-        <p className={`text-[11px] ${subText}`}>Choose from four animated assistants. The preview uses available device voices.</p>
+        <button type="button" onClick={previewAssistant} className={`min-h-11 w-full rounded-xl border px-4 text-xs font-black ${isLight?"border-slate-400 bg-white text-slate-900":"border-cyan-400/40 bg-cyan-500/10 text-cyan-100"}`}>{voiceLoading?"Preparing Gemma voice…":avatarTalking?"Stop Victoria":"Hear Victoria · ElevenLabs"}</button>
+        <p className={`text-[11px] ${subText}`}>Victoria uses the Gemma ElevenLabs voice. Playback requires the configured backend voice service.</p>
       </div>
     </section>
-    <section className={`rounded-3xl border p-5 shadow-2xl backdrop-blur-xl ${design.border} ${design.panel}`}>
+    <section className={`sw-chief-overview rounded-3xl border p-5 shadow-2xl backdrop-blur-xl ${design.border} ${design.panel}`}>
       <p className={`text-xs font-black uppercase tracking-widest ${isLight?"text-slate-700":design.accent}`}>Jarvis · Chief of Staff</p>
       <h1 className="mt-2 text-2xl font-black">Your daily intelligence</h1>
       <p className={`mt-2 text-sm leading-6 ${subText}`}>What needs attention, what remains unresolved, and where to go next.</p>
@@ -117,7 +135,9 @@ export default function SyncAssistChiefOfStaff(){
     {error&&<p role="alert" className="mt-3 rounded-xl border border-rose-400/40 p-3 text-sm text-rose-200">{error}</p>}
     {notice&&<p role="status" className="mt-3 rounded-xl border border-emerald-400/30 p-3 text-sm text-emerald-200">{notice}</p>}
     {!authorized&&<p className="mt-3 text-rose-200">Private pilot account only.</p>}
-    {brief?.sections?.map(s=><section key={s.key} className={`mt-3 overflow-hidden rounded-2xl border shadow-lg backdrop-blur-xl ${design.border} ${design.panel}`}>
+    <nav className="sw-chief-mobile-tabs" aria-label="Chief of Staff sections">{[...(brief?.sections||[]).map(s=>({key:s.key,label:s.title})),{key:"register",label:"Issue register"}].map(tab=><button key={tab.key} type="button" aria-pressed={activePanel===tab.key} onClick={()=>{setActivePanel(tab.key);setExpanded(tab.key);}}>{tab.label}</button>)}</nav>
+    <div className="sw-chief-mobile-detail">
+    {brief?.sections?.map(s=><section key={s.key} className={`sw-chief-section ${activePanel===s.key?"sw-chief-section-active":""} mt-3 overflow-hidden rounded-2xl border shadow-lg backdrop-blur-xl ${design.border} ${design.panel}`}>
       <button type="button" onClick={()=>setExpanded(v=>v===s.key?"":s.key)} aria-expanded={expanded===s.key} className="flex min-h-16 w-full items-center justify-between gap-3 p-4 text-left">
         <span className="min-w-0"><strong className={`block text-sm ${textColor}`}>{s.title}</strong><span className={`mt-1 block text-xs leading-5 ${subText}`}>{s.headline}</span></span><ChevronDown size={18} className={expanded===s.key?"rotate-180 text-cyan-200":"text-slate-400"}/>
       </button>
@@ -129,7 +149,7 @@ export default function SyncAssistChiefOfStaff(){
         {s.key==="cases"&&<button onClick={()=>setAdding(true)} className="mt-3 flex min-h-11 items-center gap-2 rounded-xl border border-cyan-400/30 px-4 text-sm text-cyan-200"><Plus size={16}/> Track an issue</button>}
       </div>}
     </section>)}
-    <section className={`mt-5 rounded-2xl border p-4 shadow-lg backdrop-blur-xl ${design.border} ${design.panel}`}>
+    <section className={`sw-chief-register ${activePanel==="register"?"sw-chief-section-active":""} mt-5 rounded-2xl border p-4 shadow-lg backdrop-blur-xl ${design.border} ${design.panel}`}>
       <div className="flex items-center justify-between gap-2"><h2 className="text-lg font-black">Unresolved issue register</h2><button onClick={()=>setAdding(v=>!v)} className="flex min-h-10 items-center gap-1 rounded-lg bg-cyan-900 px-3 text-xs font-bold"><Plus size={15}/> Add case</button></div>
       <p className="mt-2 text-xs leading-5 text-slate-400">Owner-entered facts only. Jarvis will never assume a payment dispute is resolved from silence.</p>
       {adding&&<form onSubmit={create} className="mt-4 space-y-3 rounded-xl border border-white/10 p-3">
@@ -159,6 +179,7 @@ export default function SyncAssistChiefOfStaff(){
         </>}
       </article>)}
     </section>
-    <p className="mt-4 text-xs leading-5 text-slate-400">This briefing is generated only when opened or refreshed. It does not prove email scanning, verified infrastructure health monitoring, background execution, or automated message delivery.</p>
+    </div>
+    <p className="sw-chief-disclaimer mt-4 text-xs leading-5 text-slate-400">This briefing is generated only when opened or refreshed. It does not prove email scanning, verified infrastructure health monitoring, background execution, or automated message delivery.</p>
   </div></main>;
 }
