@@ -17,7 +17,7 @@ const sources = [
 export default function MessageSourceTabs({ active, onTickets, onEmail, onProperty, onBusiness }) {
   const navigate = useNavigate();
   const { mode } = useAuth();
-  const businessRoute = String(mode || "").toUpperCase() === "EMPLOYEE" ? "/employee/inbox" : "/sbo/inbox";
+  const businessRoute = String(mode || "").toUpperCase() === "SBO" ? "/sbo/inbox" : "/employee/inbox";
   const actions = {
     tickets: onTickets || (() => navigate("/customer/inbox")),
     email: onEmail || (() => navigate("/customer/inbox?quick=email")),
