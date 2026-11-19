@@ -118,6 +118,10 @@ export default function EmployeeLiveOperations() {
           <div className={`rounded-2xl border p-4 ${active ? "border-emerald-400/25 bg-emerald-500/[.06]" : "border-white/10 bg-white/[.025]"}`}><TimerReset className="h-5 w-5 text-emerald-200"/><div className="mt-2 text-sm font-black text-white">{active ? active.title : "No active clock"}</div><div className="text-xs text-slate-500">{active ? "Work timer running" : "Start a job when work begins"}</div></div>
         </section>
 
+        {(data.jobs || []).some(job => ["LATE","AT_RISK"].includes(String(job.risk||"").toUpperCase())) ? <section className="rounded-2xl border border-amber-400/30 bg-amber-500/[.07] p-4" aria-label="Important job notifications">
+          <div className="flex items-center gap-2 text-sm font-black text-amber-100"><AlertTriangle className="h-5 w-5" />Important notifications · Action needed</div>
+          <div className="mt-3 grid gap-2">{(data.jobs||[]).filter(job=>["LATE","AT_RISK"].includes(String(job.risk||"").toUpperCase())).map(job=><button key={job.ticket_id} type="button" onClick={()=>nav(`/tickets/${job.ticket_id}`)} className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-amber-400/20 bg-black/20 px-3 text-left text-xs text-amber-50"><span className="min-w-0 truncate"><strong>{String(job.risk).replaceAll("_"," ")}</strong> · {job.title} · {fmtTime(job.scheduled_start)}</span><span className="shrink-0 text-amber-200">Open job →</span></button>)}</div>
+        </section> : null}
         {notice ? <div className="rounded-2xl border border-amber-400/20 bg-amber-500/[.06] p-4 text-sm text-amber-100">{notice}</div> : null}
         {loading ? <div className="grid min-h-48 place-items-center"><LoaderCircle className="h-8 w-8 animate-spin text-cyan-200" /></div> : null}
         {!loading && !(data.jobs || []).length ? <div className="rounded-2xl border border-white/10 bg-white/[.025] p-6 text-sm text-slate-400">No scheduled jobs are assigned to you today.</div> : null}
