@@ -77,3 +77,20 @@
 @media(prefers-reduced-motion:reduce){
   .sw-chief-section.sw-chief-section-active,.sw-chief-register.sw-chief-section-active{animation:none}
 }
+
+/* Final customer-facing controls: no provider/model terminology or oversized diagnostics. */
+.sw-chief-voice-button{position:relative;overflow:hidden;transition:background .2s ease,box-shadow .2s ease}
+.sw-chief-voice-button[aria-busy="true"]::after{
+ content:"";position:absolute;left:0;bottom:0;width:35%;height:2px;
+ background:currentColor;opacity:.75;animation:sw-chief-audio-loading 1.1s ease-in-out infinite alternate;
+}
+.sw-chief-voice-error{color:#fbc1b9;margin-top:5px}
+@keyframes sw-chief-audio-loading{from{transform:translateX(-100%)}to{transform:translateX(300%)}}
+@media(max-width:767px){
+ .sw-chief-voice-button{min-height:38px!important}
+ .sw-chief-voice-error{font-size:10px;line-height:14px}
+ .sw-chief-notice{font-size:11px;padding:7px;margin:0}
+ .sw-chief-page:has(.sw-chief-theme-button) .sw-chief-mobile-detail{min-height:0}
+ .sw-chief-page:has(.sw-chief-theme-button) .sw-chief-overview{display:none}
+}
+@media(prefers-reduced-motion:reduce){.sw-chief-voice-button[aria-busy="true"]::after{animation:none;width:100%}}
