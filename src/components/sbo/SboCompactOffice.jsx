@@ -1,7 +1,7 @@
 import "./SboCompactOffice.css";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays, ClipboardList, DollarSign, Users, X, Settings2, Megaphone, BarChart3, Clock3, Route, Plus, ChevronRight, RefreshCw, Activity, Wrench, PanelLeftClose } from "lucide-react";
+import { CalendarDays, ClipboardList, DollarSign, Users, X, Settings2, Megaphone, BarChart3, Clock3, Route, Plus, ChevronRight, RefreshCw, Activity, Wrench, PanelLeftClose, Crown } from "lucide-react";
 import api from "../../api/client";
 import { getLiveOperations } from "../../api/dispatch";
 import TicketQuickMessage from "../tickets/TicketQuickMessage";
@@ -46,6 +46,18 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
   const [ops,setOps]=useState(null);
   const [opsError,setOpsError]=useState("");
   const [team,setTeam]=useState([]);
+  const [isVerifiedOwner,setIsVerifiedOwner]=useState(false);
+  useEffect(()=>{
+    let mounted=true;
+    setIsVerifiedOwner(false);
+    if (!activeBusinessId) return ()=>{mounted=false;};
+    api.get("/businesses/access-contexts/").then(res=>{
+      if(!mounted)return;
+      const entries=Array.isArray(res.data?.businesses)?res.data.businesses:[];
+      setIsVerifiedOwner(entries.some(entry=>String(entry.business_id)===String(activeBusinessId)&&entry.can_access_ceo===true));
+    }).catch(()=>{if(mounted)setIsVerifiedOwner(false);});
+    return ()=>{mounted=false;};
+  },[activeBusinessId]);
   const [refreshKey,setRefreshKey]=useState(0);
   useEffect(()=>{
     const sync=()=>setTheme(readTheme());
@@ -94,9 +106,10 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
       <aside className="sw-sbo-rail hidden min-h-0 flex-col gap-2 rounded-2xl p-3 md:flex">
         <div className="mb-2 text-[10px] font-bold uppercase tracking-[.2em] text-cyan-300">Business workspace</div>
         {menu.map(item=><button key={item.id} onClick={()=>setPanel(item.id)} className="sw-sbo-rail-link flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-left text-sm"><item.icon size={17} className="shrink-0 text-cyan-300"/><span>{item.title}</span><ChevronRight size={13} className="ml-auto shrink-0 text-slate-400"/></button>)}
+        {isVerifiedOwner&&<button type="button" onClick={()=>nav("/ceo")} className="sw-sbo-rail-link mt-2 flex items-center gap-2 rounded-xl border border-amber-300/45 bg-amber-300/10 px-3 py-3 text-left text-sm font-semibold text-amber-100" aria-label="Open CEO Command Center"><Crown size={18}/><span>CEO Command Center</span><ChevronRight size={13} className="ml-auto"/></button>}
       </aside>
       <main className="flex min-h-0 flex-col gap-3">
-        <header className="sw-sbo-topbar flex shrink-0 items-start justify-between gap-2 rounded-2xl p-3">
+        <header className="sw-sbo-topbar flex shrink-0 items-start justify-between gap-2 rounded-2xl p-3">{isVerifiedOwner&&<button type="button" className="shrink-0 rounded-xl border border-amber-300/40 bg-amber-300/10 p-2 text-amber-200 md:hidden" onClick={()=>nav("/ceo")} aria-label="CEO Command Center"><Crown size={19}/></button>}
           <div className="min-w-0"><span className="text-[10px] font-bold uppercase tracking-[.16em] text-cyan-300">Your office · Today</span><h1 className="truncate text-xl font-semibold sm:text-2xl">{businessName||"Business"}</h1><p className="hidden text-xs text-slate-300 sm:block">One command center. Your next action is one tap away.</p></div>
           <div className="flex gap-2">{lastTicketId&&<button type="button" title="Message latest ticket" onClick={()=>setQuickMessageTicket(lastTicketId)} className="rounded-xl border border-cyan-400/35 px-3 py-2 text-xs text-cyan-200">Message</button>}<button aria-label="Refresh dashboard" title="Refresh metrics" onClick={()=>{onRefresh?.();setRefreshKey(v=>v+1);}} className="rounded-xl border border-white/15 p-2"><RefreshCw size={17} className={loading?"animate-spin":""}/></button><button onClick={()=>nav("/sbo/quick-intake")} className="flex items-center gap-1.5 rounded-xl border border-cyan-300/60 bg-cyan-500/25 px-3 py-2 text-xs font-bold text-cyan-50"><Plus size={17}/>New Call</button></div>
         </header>
