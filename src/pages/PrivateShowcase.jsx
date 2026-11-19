@@ -5,6 +5,7 @@ import { useWorkspaceAppearance } from "../components/customer/CustomerWorkspace
 import { Activity, ArrowLeft, ArrowRight, BarChart3, Bell, BriefcaseBusiness, Building2, CalendarDays, CheckCircle2, ChevronRight, ClipboardList, Clock3, Download, FileText, Filter, LayoutDashboard, Mail, Menu, RotateCcw, Settings2, ShieldCheck, Sparkles, TrendingUp, Truck, Users, Wallet, X } from "lucide-react";
 import { demoPeople, demoCustomers, demoJobs, demoProperties, demoLeads, demoInvoices, money, statusSteps, summarize } from "./sterlingDemoData";
 import "./PrivateSterlingWorkspace.css";
+import "./PrivateSterlingOneScreen.css";
 import {useSterlingHR,WorkforceDemo,ExecutiveBotsDemo,rosterSnapshot} from "./SterlingWorkforceDemo";
 import {AVATARS,getAvatarPhotoForUser} from "../components/sync/JarvisAvatar";
 import "./SterlingWorkforceDemo.css";
