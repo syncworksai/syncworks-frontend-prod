@@ -463,3 +463,6 @@
 .sw-mobile-hour-row.has-event .sw-mobile-hour-events small{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .sw-mobile-hour-row.has-event.is-business .sw-mobile-hour-events small{color:#ffcf8d!important;}
 .sw-mobile-hour-row.has-event.is-personal .sw-mobile-hour-events small{color:#a5f3e3!important;}
+
+/* Founder command shortcuts stay inside the locked home viewport. */
+.sw-mobile-victoria-shortcuts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:7px 0}.sw-mobile-victoria-shortcuts button{display:flex;align-items:center;justify-content:center;gap:7px;min-height:37px;padding:5px 7px;font-size:11px;font-weight:800;border-radius:12px;color:#d1edff;border:1px solid rgba(93,192,236,.45);background:rgba(4,29,53,.55);backdrop-filter:blur(14px)}.sw-mobile-task-attention{margin:9px 0;padding:10px 8px;border:1px solid rgba(83,190,234,.26);border-radius:13px;background:rgba(7,26,49,.54)}.sw-mobile-task-attention>strong{font-size:13px;color:#effaff}.sw-mobile-task-attention>p{margin:6px 0;font-size:11px;color:#b2c6d8}.sw-mobile-task-attention .sw-mobile-attention-entry-label{flex:1;min-width:0;font-size:12px;overflow-wrap:anywhere}
