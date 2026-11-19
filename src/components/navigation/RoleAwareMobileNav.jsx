@@ -250,6 +250,14 @@ export default function RoleAwareMobileNav() {
     return { id: itemId, label: item?.label || itemId, Icon: item?.icon || Home, target, active: routeMatches(pathname, target), badge: itemId === "inbox" ? unread : 0 };
   });
   const openItem = (item) => {
+    if (navMode === "SBO" && item.id === "more") {
+      if (pathname === "/sbo") {
+        window.dispatchEvent(new Event("sw:sbo-more-open"));
+      } else {
+        navigate("/sbo?panel=more");
+      }
+      return;
+    }
     const target = item.target;
     const query = new URL(target, window.location.origin);
     const drawer = query.searchParams.get("workspace");
