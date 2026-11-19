@@ -125,9 +125,9 @@ export default function SyncAssistPilot() {
   return (
     <main data-assist-theme={workspaceAppearance.theme} data-assist-motion={workspaceAppearance.motion ? "on" : "off"} className="sw-assist-themed relative h-[calc(100dvh-115px)] min-h-0 overflow-hidden bg-[#020617] px-3 pb-3 pt-3 text-white sm:h-[calc(100dvh-57px)]">
       <div className="mx-auto flex h-full max-w-7xl flex-col gap-2 overflow-hidden">
-        <div className="flex shrink-0 items-center justify-between gap-2"><button type="button" onClick={() => navigate("/sync")} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-xs text-slate-200"><ArrowLeft size={15}/> Back to SYNC</button><button type="button" onClick={() => setToolsOpen(true)} className="min-h-10 rounded-xl border border-cyan-400/35 bg-slate-950/80 px-3 text-xs font-bold text-cyan-100">More pilot tools</button></div>
+        <div className="flex shrink-0 items-center justify-between gap-2"><button type="button" onClick={() => navigate("/sync")} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-xs text-slate-200"><ArrowLeft size={15}/> Back to SYNC</button><button type="button" onClick={() => setToolsOpen(true)} className="min-h-10 rounded-xl border border-cyan-400/35 bg-slate-950/80 px-3 text-xs font-bold text-cyan-100">More tools</button></div>
         <header className="sw-assist-panel sw-assist-banner shrink-0 rounded-2xl border border-cyan-300/25 p-3">
-          <div className="flex items-center gap-3"><Bot className="h-6 w-6 text-cyan-300"/><div><p className="text-[10px] font-black uppercase tracking-[.17em] text-cyan-200">Private pilot</p><h1 className="text-lg font-black">Sync Assist · Workday Test Center</h1></div></div>
+          <div className="flex items-center gap-3"><Bot className="h-6 w-6 text-cyan-300"/><div><p className="text-[10px] font-black uppercase tracking-[.17em] text-cyan-200">Private pilot</p><h1 className="text-lg font-black">SYNC Assist · Workday</h1></div></div>
           <p className="mt-1 text-[11px] leading-4 text-slate-300">Assign employees, run an authorized internal step, inspect receipts, and review work history.</p>
           <div className="mt-1 flex items-center gap-2 text-[11px] font-bold text-amber-200"><ShieldCheck size={13}/> Private pilot · Unattended worker not verified</div>
         </header>
@@ -141,10 +141,10 @@ export default function SyncAssistPilot() {
           {error && <div role="alert" className="mb-4 rounded-xl border border-rose-400/40 bg-rose-950/30 p-3 text-sm text-rose-200">{error}</div>}
           <div className="min-h-0 flex-1 overflow-hidden"><SyncAssistWorkdayPanel /></div>
           {toolsOpen && <div className="fixed inset-0 z-[260] flex justify-end bg-slate-950/75 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) setToolsOpen(false); }}><section role="dialog" aria-modal="true" aria-label="Additional Sync Assist pilot tools" className="flex h-full w-full max-w-xl flex-col border-l border-cyan-300/30 bg-[#061327] text-white"><div className="flex shrink-0 items-center justify-between border-b border-white/10 p-4"><h2 className="text-lg font-black">Other pilot tools</h2><button type="button" onClick={() => setToolsOpen(false)} className="min-h-11 rounded-xl border border-white/20 px-4 text-sm">Close</button></div><div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-          <button type="button" onClick={() => navigate("/sync/assist/daily")} className="mb-4 flex min-h-16 w-full items-center justify-between rounded-2xl border border-cyan-400/35 bg-gradient-to-r from-cyan-700/25 to-violet-700/20 p-4 text-left font-black text-cyan-100"><span>Jarvis Daily · My to-do list<span className="block text-xs font-normal text-slate-400">Today's priorities · Property · Business · Personal</span></span><span aria-hidden="true">→</span></button>
+          <button type="button" onClick={() => navigate("/sync/assist/daily")} className="mb-4 flex min-h-16 w-full items-center justify-between rounded-2xl border border-cyan-400/35 bg-gradient-to-r from-cyan-700/25 to-violet-700/20 p-4 text-left font-black text-cyan-100"><span>Daily Briefing · My to-do list<span className="block text-xs font-normal text-slate-400">Today's priorities · Property · Business · Personal</span></span><span aria-hidden="true">→</span></button>
           <section className="mb-4 rounded-2xl border border-cyan-400/25 bg-slate-900/50 p-4">
             <button type="button" aria-expanded={operationsOpen} onClick={() => { setOperationsOpen(!operationsOpen); if (!operationsOpen) loadOperations(); }} className="flex min-h-11 w-full items-center justify-between gap-2 text-left font-black text-cyan-100">
-              <span>Jarvis Operations Brief <span className="block text-xs font-normal text-slate-400">Internal business, invoices, maintenance and property tasks</span></span>
+              <span>Operations Briefing <span className="block text-xs font-normal text-slate-400">Internal business, invoices, maintenance and property tasks</span></span>
               <span aria-hidden="true">{operationsOpen ? "−" : "+"}</span>
             </button>
             {operationsOpen && <div className="mt-3 space-y-3">
@@ -161,7 +161,7 @@ export default function SyncAssistPilot() {
               </>}
             </div>}
           </section>
-          <button type="button" onClick={() => navigate("/sync/assist/growth")} className="mb-4 flex min-h-14 w-full items-center justify-between rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-emerald-500/15 to-cyan-600/10 p-4 text-left font-black text-cyan-100"><span>Jarvis Growth Center <span className="block text-xs font-normal text-slate-400">Business prospects · Personalized outreach drafts · Pipeline</span></span><span aria-hidden="true">→</span></button>
+          <button type="button" onClick={() => navigate("/sync/assist/growth")} className="mb-4 flex min-h-14 w-full items-center justify-between rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-emerald-500/15 to-cyan-600/10 p-4 text-left font-black text-cyan-100"><span>Growth Center <span className="block text-xs font-normal text-slate-400">Business prospects · Personalized outreach drafts · Pipeline</span></span><span aria-hidden="true">→</span></button>
           <section className="mb-4 rounded-2xl border border-cyan-400/25 bg-slate-900/50 p-4">
             <button type="button" aria-expanded={showConnections} onClick={() => { setShowConnections(!showConnections); if (!showConnections) loadConnections(); }} className="flex min-h-11 w-full items-center justify-between gap-2 text-left font-black text-cyan-100">
               <span>My SyncWorks businesses <span className="block text-xs font-normal text-slate-400">Internal CRM + property management · Social setup saved for later</span></span>
@@ -182,7 +182,7 @@ export default function SyncAssistPilot() {
               </article>)}
             </div>}
           </section>
-          <button type="button" onClick={() => navigate("/sync/assist/communications")} className="mb-4 flex min-h-14 w-full items-center justify-between rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/15 to-violet-600/10 p-4 text-left font-black text-cyan-100"><span>Jarvis Communications Hub <span className="block text-xs font-normal text-slate-400">WhatsApp · SMS · Phone setup and inbox</span></span><span aria-hidden="true">→</span></button>
+          <button type="button" onClick={() => navigate("/sync/assist/communications")} className="mb-4 flex min-h-14 w-full items-center justify-between rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/15 to-violet-600/10 p-4 text-left font-black text-cyan-100"><span>Communications Hub <span className="block text-xs font-normal text-slate-400">WhatsApp · SMS · Phone setup and inbox</span></span><span aria-hidden="true">→</span></button>
           <div className="mb-5 grid grid-cols-3 gap-2">
             {[[Clock3, "Pending", data?.counts?.pending ?? "—"],[CheckCircle2, "Approved", data?.counts?.approved ?? "—"],[XCircle, "Rejected", data?.counts?.rejected ?? "—"]].map(([Icon,label,count]) => <div key={label} className="rounded-2xl border border-slate-700/70 bg-slate-900/50 p-3"><Icon size={20} className="text-cyan-300"/><div className="mt-2 text-2xl font-black">{count}</div><p className="text-xs text-slate-400">{label}</p></div>)}
           </div>
