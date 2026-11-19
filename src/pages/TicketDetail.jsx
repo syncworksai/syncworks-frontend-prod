@@ -1012,14 +1012,23 @@ export default function TicketDetail() {
     }
   }
 
-  function saveAssignedProvider() {
+  async function saveAssignedProvider() {
     const provider = providerFromTicket(ticket);
     if (!provider) {
       setErr("This ticket does not have a provider to save yet.");
       return;
     }
-    saveProvider(provider);
-    setErr("");
+    saveProvider(provider); // legacy/offline fallback
+    try {
+      await api.post("/me/favorites/businesses/", { business_id: provider.id });
+      setErr("");
+    } catch (error) {
+      // Avoid suggesting account sync succeeded if the server rejected it.
+      const message = error?.response?.status === 400
+        ? "Provider saved on this device. If it was already in your Rolodex, no change is needed."
+        : "Provider saved on this device, but account sync could not finish. Try again when online.";
+      setErr(message);
+    }
   }
 
   async function declineMarketplace() {
