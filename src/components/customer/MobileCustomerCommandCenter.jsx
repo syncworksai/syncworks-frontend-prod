@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertTriangle, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, CloudSun, Clock3, Grid2X2, Inbox, LayoutGrid, MapPin, Plus, Sparkles, WalletCards, Archive, RotateCcw, X } from "lucide-react";
+import { AlertTriangle, Bell, BriefcaseBusiness, CalendarDays, ChevronRight, CloudSun, Clock3, Grid2X2, Inbox, LayoutGrid, MapPin, Plus, Sparkles, WalletCards, Archive, RotateCcw, CheckCircle2, X } from "lucide-react";
 import "./MobileCustomerCommandCenter.css";
+import {markWorkspaceTask} from "../../api/syncWorkspaceRecords";
 import "./MobileAttentionTopV35.css";
 
 function shortDate(date) {
@@ -24,9 +25,11 @@ function weatherLocation(weather) {
   const place = weather?.location || {};
   return [place.city || place.name || place.locality, place.state || place.region].filter(Boolean).join(", ") || "Your location";
 }
-export default function MobileCustomerCommandCenter({ name, brief, attentionCount, todayEvents, calendarEvents = [], openTickets, weather, weatherState, notifications = [], workout, minimums, businessConnected, pmConnected, tenantConnected, onNavigate, onOpenWorkspace, theme, attentionUserKey = "local" }) {
+export default function MobileCustomerCommandCenter({ name, brief, attentionCount, todayEvents, calendarEvents = [], openTickets, weather, weatherState, notifications = [], workout, minimums, businessConnected, pmConnected, tenantConnected, onNavigate, onOpenWorkspace, theme, attentionUserKey = "local", taskRows = [] }) {
   const [now, setNow] = useState(() => new Date());
   const [activePanel, setActivePanel] = useState(null);
+  const [taskError,setTaskError]=useState(""),[taskBusy,setTaskBusy]=useState(null);
+  async function finishTask(item){setTaskBusy(item.id);setTaskError("");try{await markWorkspaceTask(item,"DONE");}catch{setTaskError("Could not save task completion. Try again.");}finally{setTaskBusy(null);}}
   const archiveKey = `sw_home_attention_archive_v1:${attentionUserKey}`;
   const [archivedNotices, setArchivedNotices] = useState(() => {
     try { const rows = JSON.parse(localStorage.getItem(archiveKey) || "[]"); return Array.isArray(rows) ? rows : []; }
@@ -101,6 +104,10 @@ export default function MobileCustomerCommandCenter({ name, brief, attentionCoun
           </button>
         </div>
       </div>
+      <div className="sw-mobile-victoria-shortcuts">
+        <button type="button" onClick={()=>window.dispatchEvent(new Event("syncworks:victoria-open"))}><Sparkles size={16}/> Morning Briefing <ChevronRight size={15}/></button>
+        <button type="button" onClick={()=>open("/customer/projects")}><BriefcaseBusiness size={16}/> Projects <ChevronRight size={15}/></button>
+      </div>
       <section className="sw-mobile-hourly-agenda" aria-label="My Day hourly calendar">
         <div className="sw-mobile-hourly-heading">
           <span><CalendarDays size={17}/> MY DAY <small>Hourly agenda</small></span>
@@ -149,6 +156,15 @@ export default function MobileCustomerCommandCenter({ name, brief, attentionCoun
                 <span>{attentionItems.length} to review</span>
                 <button type="button" onClick={() => setActivePanel("archive")}><Archive size={15}/> Archive ({archivedNotices.length})</button>
                 {attentionItems.length > 0 && <button type="button" onClick={() => archiveAll(attentionItems)}>Clear All</button>}
+              </div>
+              <div className="sw-mobile-task-attention">
+                <strong>Today's open to-dos ({taskRows.length})</strong>
+                <p>Uncompleted tasks stay open tomorrow. Complete them here, or open your full To-do list.</p>
+                {taskError&&<p role="alert">{taskError}</p>}
+                {taskRows.slice(0,8).map(task=><div className="sw-mobile-attention-entry" key={task.id}>
+                  <span className="sw-mobile-attention-entry-label">{task.title}</span>
+                  <button type="button" className="sw-mobile-attention-dismiss" disabled={taskBusy===task.id} onClick={()=>finishTask(task)} aria-label={`Complete ${task.title}`}><CheckCircle2 size={18}/></button>
+                </div>)}
               </div>
               {attentionItems.length ? attentionItems.map(item =>
                 <div className="sw-mobile-attention-entry" key={item.id}>
