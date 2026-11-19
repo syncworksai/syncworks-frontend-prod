@@ -88,10 +88,12 @@ export function ExecutiveBotsDemo({jobs,hr,onModule,selectedEmployee="Victoria"}
  React.useEffect(()=>setSelected(selectedEmployee),[selectedEmployee]);
  const roster=rosterSnapshot(jobs,hr.state.clockEvents);
  const idle=roster.filter(x=>x.idle);
- const bots=[["Victoria","Chief of Staff"],["Elizabeth","Marketing"],["Adrian","Dispatch"],["Sophia","Sales"],["Morgan","Finance"],["Evelyn","Property Management"]];
+ const bots=[["Victoria","Chief of Staff"],["James","Sales Manager"],["Elizabeth","Marketing"],["William","Research Analyst"],["Adrian","Dispatch"],["Morgan","Finance"],["Evelyn","Property Management"]];
  const brief={
  Victoria:[idle.length+" technicians have under 3 hours of assigned work or no current ticket.",jobs.filter(j=>j.priority==="P1"&&!["PAID","COMPLETED"].includes(j.status)).length+" priority-one requests need attention.","Review dispatch gaps before approving new commitments."],
+ James:["Prioritize qualified maintenance leads by expected value and response deadline.","Demonstration only: prepare proposals for owner approval, without contacting actual prospects."],
  Elizabeth:["Draft a campaign to the 180-client illustrative customer base.","Campaign drafts require approval; no real messages are sent."],
+ William:["Review service-area demand, technician utilization and recurring maintenance opportunities.","Source-backed research and external browsing are not enabled in this fictional preview."],
  Adrian:[idle.map(p=>p.name).slice(0,5).join(", ")+" may be available for reassignment.","Evaluate trade, route, shift and job priority before dispatch."],
  Sophia:["New marketplace and web leads should receive a first-response SLA.","No live lead messages are sent by this preview."],
  Morgan:["Reconcile sample receivables against the private invoice ledger.","Estimated margins are intentionally withheld until expenses are complete."],
@@ -99,6 +101,6 @@ export function ExecutiveBotsDemo({jobs,hr,onModule,selectedEmployee="Victoria"}
  };
  return <div className="sterling-hr">
   <section className="sterling-panel"><header className="sterling-panel-head"><h2>SYNC Assist · Private business AI office</h2></header><p className="sterling-muted">Choose an employee to demonstrate role-specific recommendations. These are deterministic previews, not active autonomous agents.</p><div className="sterling-team-grid">{bots.map(([name,role])=><button key={name} onClick={()=>setSelected(name)} aria-pressed={selected===name} className={selected===name?"sterling-hr-selected":""}><span className="sterling-avatar">{name[0]}</span><strong>{name}</strong><small>{role}</small><span>{selected===name?"Briefing open":"View briefing"}</span></button>)}</div></section>
-  <section className="sterling-panel"><header className="sterling-panel-head"><h2>{selected} · Business briefing</h2><span className="sterling-chip sterling-chip-private">SIMULATED</span></header><div className="sterling-brief">{(brief[selected]||[]).map(t=><p key={t}>{t}</p>)}</div><div className="sterling-hr-actions"><button onClick={()=>onModule(selected==="Adrian"?"dispatch":selected==="Morgan"?"finance":selected==="Evelyn"?"property":selected==="Sophia"?"leads":"team")}>Open related workspace</button></div></section>
+  <section className="sterling-panel"><header className="sterling-panel-head"><h2>{selected} · Business briefing</h2><span className="sterling-chip sterling-chip-private">SIMULATED</span></header><div className="sterling-brief">{(brief[selected]||[]).map(t=><p key={t}>{t}</p>)}</div><div className="sterling-hr-actions"><button onClick={()=>onModule(selected==="Adrian"?"dispatch":selected==="Morgan"?"finance":selected==="Evelyn"?"property":selected==="James"?"leads":selected==="William"?"ceo":"team")}>Open related workspace</button></div></section>
  </div>;
 }
