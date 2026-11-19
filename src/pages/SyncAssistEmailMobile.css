@@ -1,0 +1,27 @@
+
+/* Mobile mail desk: the page remains locked; only one focus panel scrolls. */
+.sw-mail-mobile-tabs{display:none}
+@media(max-width:767px){
+ .sw-mail-page{height:calc(100dvh - 112px);min-height:0!important;overflow:hidden;padding:8px 12px 112px!important;overscroll-behavior:none}
+ .sw-mail-layout{height:100%;min-height:0;display:flex;flex-direction:column;gap:9px;overflow:hidden}
+ .sw-mail-layout>button:first-child{flex:none;margin:0!important;align-self:flex-start;min-height:39px;font-size:12px}
+ .sw-mail-hero{flex:none;padding:12px!important;border-radius:18px!important;background:linear-gradient(130deg,rgba(9,48,72,.64),rgba(22,18,54,.66))!important;backdrop-filter:blur(20px)}
+ .sw-mail-hero h1{font-size:19px;margin-top:3px}
+ .sw-mail-hero p:nth-of-type(2){font-size:11px;line-height:17px;margin-top:5px}
+ .sw-mail-hero p:last-child{display:none}
+ .sw-mail-mobile-tabs{display:flex;gap:7px;flex:none;overflow-x:auto;scrollbar-width:none}
+ .sw-mail-mobile-tabs button{white-space:nowrap;min-height:40px;padding:0 13px;border-radius:12px;font-size:12px;font-weight:700;border:1px solid rgba(83,191,240,.35);background:rgba(4,20,43,.75);color:#c5d9e7}
+ .sw-mail-mobile-tabs button[aria-pressed="true"]{background:rgba(45,154,201,.3);border-color:rgba(95,215,246,.8);color:#fff}
+ .sw-mail-connection,.sw-mail-preferences,.sw-mail-inbox,.sw-mail-brief,.sw-mail-compose{display:none!important;flex:1;min-height:0;overflow:auto!important;overscroll-behavior:contain;margin:0!important;padding:14px!important;border:1px solid rgba(78,181,229,.36)!important;border-radius:18px!important;background:rgba(6,20,43,.72)!important;backdrop-filter:blur(20px)}
+ .sw-mail-page[data-mobile-panel="connection"] .sw-mail-connection,
+ .sw-mail-page[data-mobile-panel="preferences"] .sw-mail-preferences,
+ .sw-mail-page[data-mobile-panel="inbox"] .sw-mail-inbox,
+ .sw-mail-page[data-mobile-panel="brief"] .sw-mail-brief,
+ .sw-mail-page[data-mobile-panel="compose"] .sw-mail-compose{display:block!important;animation:sw-mail-panel-in .22s ease both}
+ .sw-mail-page[data-mobile-panel="compose"] .sw-mail-compose{flex:1}
+ .sw-mail-page[data-mobile-panel="inbox"]:not(:has(.sw-mail-inbox)) .sw-mail-connection{display:block!important}
+ .sw-mail-layout>p:last-child{display:none}
+ .sw-mail-layout>p[role="alert"],.sw-mail-layout>p[role="status"]{flex:none;font-size:11px;padding:7px;margin:0!important}
+ @keyframes sw-mail-panel-in{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+}
+@media(prefers-reduced-motion:reduce){.sw-mail-connection,.sw-mail-preferences,.sw-mail-inbox,.sw-mail-brief,.sw-mail-compose{animation:none!important}}

@@ -1,0 +1,22 @@
+/* Mobile communication hub: channel setup and inbox are independent panels. */
+.sw-comms-tabs{display:none}
+@media(max-width:767px){
+ .sw-comms-page{height:calc(100dvh - 112px);min-height:0!important;overflow:hidden;padding:8px 12px 112px!important}
+ .sw-comms-layout{display:flex;flex-direction:column;gap:8px;height:100%;min-height:0;overflow:hidden}
+ .sw-comms-layout>button:first-child{align-self:flex-start;min-height:38px;margin:0!important;font-size:12px}
+ .sw-comms-hero{flex:none;margin:0!important;padding:12px!important;border-radius:18px!important;background:linear-gradient(120deg,rgba(11,33,56,.65),rgba(20,12,41,.67))!important;backdrop-filter:blur(18px)}
+ .sw-comms-hero h1{font-size:18px}
+ .sw-comms-hero p:nth-of-type(2){font-size:11px;line-height:17px;margin-top:5px}
+ .sw-comms-hero>div:last-child{display:none}
+ .sw-comms-tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;flex:none}
+ .sw-comms-tabs button{min-height:41px;border-radius:11px;border:1px solid rgba(94,185,229,.35);background:rgba(5,27,51,.68);color:#d3e6f1;font-size:12px;font-weight:700}
+ .sw-comms-tabs button[aria-pressed="true"]{border-color:rgba(91,215,251,.8);background:rgba(44,155,200,.24);color:white}
+ .sw-comms-channels{flex:none;gap:6px;margin:0!important}
+ .sw-comms-channels button{min-height:52px!important;gap:4px!important;font-size:11px;border-radius:13px!important}
+ .sw-comms-channels button svg{width:17px;height:17px}
+ .sw-comms-setup,.sw-comms-inbox{display:none!important;flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:13px!important;margin:0!important;background:rgba(5,21,42,.68)!important;backdrop-filter:blur(20px)}
+ .sw-comms-page[data-mobile-view="setup"] .sw-comms-setup,.sw-comms-page[data-mobile-view="inbox"] .sw-comms-inbox{display:block!important;animation:sw-comms-enter .22s ease both}
+ .sw-comms-page[data-mobile-view="inbox"] .sw-comms-channels{display:none}
+ @keyframes sw-comms-enter{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+}
+@media(prefers-reduced-motion:reduce){.sw-comms-setup,.sw-comms-inbox{animation:none!important}}
