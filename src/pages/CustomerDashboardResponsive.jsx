@@ -126,7 +126,8 @@ export default function CustomerDashboardResponsive() {
   useEffect(() => {
     const refreshCalendar = () => { fetchPersonalCalendarEvents().then(setCalendarEvents).catch(() => {}); };
     window.addEventListener("focus", refreshCalendar);
-    return () => window.removeEventListener("focus", refreshCalendar);
+    window.addEventListener("syncworks:tasks-changed",refreshCalendar);
+    return () => {window.removeEventListener("focus", refreshCalendar);window.removeEventListener("syncworks:tasks-changed",refreshCalendar);};
   }, []);
   useEffect(() => {
     if (!phoneMode) return undefined;
@@ -144,7 +145,7 @@ export default function CustomerDashboardResponsive() {
   const dueInvoices = useMemo(() => invoices.filter((item) => !["PAID", "VOID"].includes(String(item?.derived_state || item?.status || "").toUpperCase())), [invoices]);
   const totalDue = useMemo(() => dueInvoices.reduce((sum, item) => sum + Number(item?.balance_due ?? item?.total ?? 0), 0), [dueInvoices]);
   const profilePhotoUrl = String(identity?.identity?.profile_photo_url || "").trim();
-  const todayEvents = calendarEvents.filter(item => String(item?.metadata?.entity_type || "").toUpperCase() !== "TASK" && item?.start_at && new Date(item.start_at).toDateString() === new Date().toDateString());
+  const todayEvents = calendarEvents.filter(item => !["TASK","PROJECT"].includes(String(item?.metadata?.entity_type || "").toUpperCase()) && item?.start_at && new Date(item.start_at).toDateString() === new Date().toDateString());
   const overdueCount = dueInvoices.filter(item => ["OVERDUE", "PAST_DUE"].includes(String(item?.derived_state || item?.status || "").toUpperCase())).length;
   const weatherAlerts = Array.isArray(liveWeather?.alerts) ? liveWeather.alerts : [];
   const calendarTasks = calendarEvents.filter(item => String(item?.metadata?.entity_type || "").toUpperCase() === "TASK" && String(item?.metadata?.task_status || "OPEN").toUpperCase() === "OPEN");
@@ -155,7 +156,7 @@ export default function CustomerDashboardResponsive() {
     localTasks = Array.isArray(saved) ? saved.filter(item => !item.done && !item.archived) : [];
   } catch { /* blocked storage */ }
   const futureEvents = calendarEvents.filter(item => {
-    if (!item?.start_at || String(item?.metadata?.entity_type || "").toUpperCase() === "TASK") return false;
+    if (!item?.start_at || ["TASK","PROJECT"].includes(String(item?.metadata?.entity_type || "").toUpperCase())) return false;
     const time = new Date(item.start_at).getTime();
     return time > Date.now() && time <= Date.now() + 7 * 86400000;
   }).sort((a,b) => new Date(a.start_at) - new Date(b.start_at));
@@ -195,6 +196,7 @@ export default function CustomerDashboardResponsive() {
         weather={liveWeather}
         weatherState={weatherState}
         notifications={notificationItems}
+        taskRows={calendarTasks}
         workout={null}
         minimums={totalDue.toLocaleString("en-US", { style: "currency", currency: "USD" })}
         businessConnected={false}
