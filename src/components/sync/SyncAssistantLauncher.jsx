@@ -177,6 +177,7 @@ export default function SyncAssistantLauncher() {
                     </div>
                   ))}
                 </div>
+                <button type="button" onClick={() => { setChiefOpen(false); navigate("/sync",{state:{victoriaPrompt:"Victoria, give me my morning briefing based on verified connected records. Check calendar, tasks, health, businesses, money, and only connected email. Ask me what I need to focus on and help me create a realistic plan with delegation and approvals."}}); }} className="mb-2 flex min-h-11 w-full items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 text-left text-xs font-bold text-white"><Clock3 size={16}/> Morning briefing</button>
                 <button type="button" onClick={() => { setChiefOpen(false);setCommandOpen(true); }} className="mb-2 flex min-h-11 w-full items-center gap-2 rounded-xl border border-cyan-400/50 bg-cyan-400/15 px-3 text-left text-xs font-bold text-white"><Clock3 size={16}/> Plan my day, week, or month</button>
                 <button type="button" onClick={() => { setChiefOpen(false); navigate("/sync/assist/chief"); }} className="mb-2 flex min-h-11 w-full items-center gap-2 rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-3 text-left text-xs font-bold text-cyan-100 hover:bg-cyan-400/20">
                   <UserRound size={16} /> Open Chief of Staff
