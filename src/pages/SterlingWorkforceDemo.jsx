@@ -1,13 +1,11 @@
 import React,{useMemo,useState} from "react";
-import {Clock3,CheckCircle2,AlertTriangle,ShoppingCart,Camera,ClipboardList,HardHat,Route,Play,Square,Users,TrendingUp,Sparkles} from "lucide-react";
-import {demoPeople,demoJobs,money} from "./sterlingDemoData";
+import {Clock3,ShoppingCart,Camera,ClipboardList} from "lucide-react";
+import {demoPeople} from "./sterlingDemoData";
 const KEY="sw-private-sterling-hr-v1";
 const now=()=>new Date().toISOString();
-const initial=()=>({clockEvents:[],jobNotes:{},parts:[],notifications:[]});
+const initial=()=>({clockEvents:demoPeople.slice(0,12).map((p,i)=>{const shift=new Date();shift.setHours(7+Math.floor(i/6),i%6*5,0,0);return {employeeId:p.id,at:shift.toISOString(),action:"CLOCK_IN",jobId:null,simulated:true}}),jobNotes:{},parts:[],notifications:[]});
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||"null");return v&&Array.isArray(v.clockEvents)?{...initial(),...v}:initial()}catch{return initial()}}
 function formatStamp(value){return value?new Date(value).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"Not recorded";}
-const seededClock=demoPeople.map((p,i)=>({employeeId:p.id,at:"2026-11-19T14:"+String(i%6*7).padStart(2,"0")+":00Z",action:"CLOCK_IN",jobId:null,simulated:true}));
-const phases=["CLOCK_IN","EN_ROUTE","ARRIVED","START_WORK","COMPLETED","CLOCK_OUT"];
 export function useSterlingHR(){
  const [state,setState]=useState(load);
  const update=fn=>setState(old=>{const next=fn(old);try{localStorage.setItem(KEY,JSON.stringify(next))}catch{/* temporary browser simulator */}return next});
@@ -23,7 +21,7 @@ export function rosterSnapshot(jobs,events=[]){
  return demoPeople.map(person=>{
   const assignments=open.filter(j=>j.technicianId===person.id);
   const latest=lastEvent(events,person.id);
-  const active=latest ? latest.action!=="CLOCK_OUT":person.status!=="Available";
+  const active=latest ? latest.action!=="CLOCK_OUT":false;
   const scheduledMinutes=assignments.reduce((sum,j)=>sum+(j.siteMinutes||60)+(j.travelMinutes||0),0);
   return {...person,assignments,latest,clockedIn:active,scheduledMinutes,capacityMinutes:480,idle:assignments.length===0||scheduledMinutes<180,utilization:Math.min(100,Math.round(scheduledMinutes/480*100))};
  });
