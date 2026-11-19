@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ArrowLeft, MessageCircle, Phone, MessagesSquare, RefreshCcw, ShieldCheck, ExternalLink, PlugZap, Inbox, Info } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
+import "./SyncAssistCommunicationsMobile.css";
 import { useAuth } from "../auth/AuthContext";
 
 const META = "https://business.facebook.com/";
@@ -16,6 +17,7 @@ export default function SyncAssistCommunications() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [panel, setPanel] = useState("whatsapp");
+  const [mobileView,setMobileView]=useState("setup");
 
   async function refresh() {
     setLoading(true);
@@ -33,24 +35,25 @@ export default function SyncAssistCommunications() {
     { id: "voice", name: "Phone", Icon: Phone, detail: "AI receptionist & call transfers" },
   ];
 
-  return <main className="min-h-dvh bg-[#020617] px-4 pb-36 pt-28 text-white">
-    <div className="mx-auto max-w-4xl">
+  return <main data-mobile-view={mobileView} className="sw-comms-page min-h-dvh bg-[#020617] px-4 pb-36 pt-28 text-white">
+    <div className="sw-comms-layout mx-auto max-w-4xl">
       <button onClick={() => navigate("/sync/assist")} type="button" className="mb-4 flex min-h-11 items-center gap-2 rounded-xl border border-slate-700 px-4 text-sm text-slate-200"><ArrowLeft size={17}/> Control Center</button>
-      <header className="mb-4 rounded-3xl border border-cyan-400/25 bg-gradient-to-br from-[#0b2138] to-[#140c29] p-5">
+      <header className="sw-comms-hero mb-4 rounded-3xl border border-cyan-400/25 bg-gradient-to-br from-[#0b2138] to-[#140c29] p-5">
         <p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">Private pilot</p>
-        <h1 className="mt-1 text-2xl font-black">Jarvis Communications</h1>
+        <h1 className="mt-1 text-2xl font-black">SYNC Communications</h1>
         <p className="mt-2 text-sm leading-6 text-slate-300">One inbox for WhatsApp, SMS and phone. Connect a verified number first; all outbound communication is off during setup.</p>
         <div className="mt-3 flex items-center gap-2 text-xs font-bold text-amber-200"><ShieldCheck size={17}/> No automatic messages or calls</div>
       </header>
       {!pilot ? <p role="alert" className="rounded-xl border border-rose-400/40 p-4 text-sm">Private pilot account only.</p> : <>
         {error && <div role="alert" className="mb-3 rounded-xl border border-rose-400/40 p-3 text-sm text-rose-200">{error}</div>}
-        <div className="mb-3 grid grid-cols-3 gap-2">
+        <div className="sw-comms-tabs"><button type="button" onClick={()=>setMobileView("setup")} aria-pressed={mobileView==="setup"}>Channels</button><button type="button" onClick={()=>setMobileView("inbox")} aria-pressed={mobileView==="inbox"}>Inbox</button></div>
+        <div className="sw-comms-channels mb-3 grid grid-cols-3 gap-2">
           {channels.map(({id,name,Icon}) => <button type="button" key={id} onClick={() => setPanel(id)}
             className={`flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border p-2 text-xs font-black ${panel === id ? "border-cyan-400/60 bg-cyan-500/15 text-cyan-100" : "border-white/10 bg-slate-900/50 text-slate-300"}`}>
             <Icon size={22}/>{name}
           </button>)}
         </div>
-        <section className="mb-4 rounded-2xl border border-cyan-400/20 bg-slate-900/45 p-4">
+        <section className="sw-comms-setup mb-4 rounded-2xl border border-cyan-400/20 bg-slate-900/45 p-4">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-lg font-black">{channels.find(c => c.id === panel)?.name} setup</h2>
             <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-3 py-1 text-[10px] font-bold text-amber-200">
@@ -66,7 +69,7 @@ export default function SyncAssistCommunications() {
             </div>
           </> : <p className="mt-2 flex gap-2 text-sm text-slate-300"><Info className="h-5 w-5 shrink-0 text-cyan-200"/> {panel === "sms" ? "SMS will share the communications inbox once a verified business messaging number and consent handling are configured." : "Phone calls will require a dedicated voice number, an AI voice agent and clear transfer/escalation controls. This channel is not live yet."}</p>}
         </section>
-        <section className="rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+        <section className="sw-comms-inbox rounded-2xl border border-white/10 bg-slate-900/40 p-4">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 font-black"><Inbox size={19} className="text-cyan-200"/> Communications inbox</h2>
             <button type="button" onClick={refresh} disabled={loading} className="flex min-h-10 items-center gap-1 rounded-xl border border-cyan-400/30 px-3 text-xs font-bold text-cyan-200 disabled:opacity-50"><RefreshCcw size={14}/> Refresh</button>
