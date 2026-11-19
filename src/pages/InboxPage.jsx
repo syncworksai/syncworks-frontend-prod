@@ -167,7 +167,7 @@ export default function InboxPage() {
 
         {scope === "BUSINESS" && !activeBusinessId ? <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-100">Select a business to open its inbox.</div> : (
           <>
-          <MessageSourceTabs active={mobileSource} onTickets={() => {setMobileSource("tickets");setMobileConversationOpen(false);}} onEmail={() => {setMobileSource("email");setMobileConversationOpen(false);}} />
+          <MessageSourceTabs active={scope === "BUSINESS" ? "business" : mobileSource} onTickets={() => { if (scope === "BUSINESS") navigate("/customer/inbox"); else {setMobileSource("tickets");setMobileConversationOpen(false);} }} onEmail={() => {if (scope === "BUSINESS") navigate("/customer/inbox?quick=email"); else {setMobileSource("email");setMobileConversationOpen(false);}}} />
           {mobileSource === "email" && scope === "PERSONAL" ? <div className="sw-inbox-email-view"><SyncUnifiedInboxCard inboxPanel /></div> : null}
           <div className="sw-inbox-workspace grid min-h-[68vh] gap-4 lg:grid-cols-[390px_minmax(0,1fr)]">
             <aside className="sw-inbox-thread-list rounded-[1.7rem] border border-white/10 bg-slate-950/55 p-3">
