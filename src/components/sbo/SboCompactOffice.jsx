@@ -72,6 +72,8 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
   },[panel]);
   const staff=ops?.staff||[];
   const summary=ops?.summary||{};
+  const unassignedStaff=ops ? staff.filter(person=>!(person.jobs||[]).length) : [];
+  const assignedStaff=ops ? staff.filter(person=>(person.jobs||[]).length>0) : [];
   const leaderboard=useMemo(()=>{
     const map=new Map();
     for(const m of team){const id=String(m.user||m.user_id||"");if(id)map.set(id,{name:m.user_name||[m.user_first_name,m.user_last_name].filter(Boolean).join(" ")||m.user_email||"Employee",count:0});}
@@ -100,7 +102,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
         </header>
         {err&&<p role="alert" className="shrink-0 truncate rounded-lg bg-rose-900/45 p-2 text-xs">{err}</p>}
         <section className="sw-sbo-briefing flex shrink-0 items-center justify-between gap-2 rounded-2xl p-3">
-          <div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-widest text-cyan-300">Operations pulse</div><div className="truncate text-xs text-slate-200">{summary.at_risk_or_late ? `${summary.at_risk_or_late} job(s) at risk`:"Review calls, scheduling and team performance"}</div></div>
+          <div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-widest text-cyan-300">Operations pulse</div><div className="truncate text-xs text-slate-200">{summary.at_risk_or_late ? `${summary.at_risk_or_late} job(s) at risk` : ops && unassignedStaff.length ? `${unassignedStaff.length} schedulable technician(s) have no assigned jobs today` : "Review calls, scheduling and team performance"}</div></div>
           <button onClick={()=>setPanel("operations")} className="shrink-0 text-xs font-semibold text-cyan-200">Details →</button>
         </section>
         <div className="grid shrink-0 grid-cols-3 gap-2">
@@ -131,6 +133,12 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
           <div className="grid grid-cols-3 gap-2 text-center"><div className="rounded-xl bg-white/5 p-2"><strong className="block text-xl">{ops?summary.scheduled_jobs:"—"}</strong><small>Scheduled</small></div><div className="rounded-xl bg-white/5 p-2"><strong className="block text-xl">{ops?summary.route_conflicts:"—"}</strong><small>Conflicts</small></div><div className="rounded-xl bg-white/5 p-2"><strong className="block text-xl">{averageMinutes??"—"}</strong><small>Avg clock min*</small></div></div>
           {opsError&&<div className="text-xs text-amber-200">{opsError}</div>}
           <div className="text-xs text-slate-400">*Average elapsed time across available job clocks. Not a completed-call average.</div>
+          <div className="rounded-xl border border-cyan-300/20 bg-cyan-500/[.055] p-3">
+            <div className="flex items-center justify-between gap-2"><h3 className="font-semibold">Technician availability · today</h3><button type="button" onClick={()=>nav("/sbo/settings/workforce")} className="text-xs font-bold text-cyan-200">HR settings →</button></div>
+            <div className="mt-2 grid grid-cols-2 gap-2"><div className="rounded-lg border border-white/10 p-2"><strong className="block text-lg">{ops?unassignedStaff.length:"—"}</strong><span className="text-xs text-slate-300">No assigned jobs</span></div><div className="rounded-lg border border-white/10 p-2"><strong className="block text-lg">{ops?assignedStaff.length:"—"}</strong><span className="text-xs text-slate-300">Assigned today</span></div></div>
+            {unassignedStaff.length ? <div className="mt-2 max-h-32 overflow-auto">{unassignedStaff.map(person=><div key={person.member_id||person.user_id} className="border-t border-white/10 py-2 text-xs">{person.name} <span className="text-slate-400">· {person.title||"Team member"}</span></div>)}</div> : <p className="mt-2 text-xs text-slate-400">{ops?"All schedulable team members have assignments in today's dispatch plan.":"Dispatch availability has not loaded."}</p>}
+            <p className="mt-2 text-[10px] text-slate-400">No assignment is not the same as clocked-in idle time. Check availability and shift attendance before reassigning staff.</p>
+          </div>
           <h3 className="font-semibold">Technician routes today</h3>
           {staff.length?staff.map(p=><div key={p.user_id} className="rounded-xl border border-white/15 bg-white/5 p-3"><div className="flex justify-between"><strong>{p.name}</strong><span>{p.jobs?.length||0} jobs</span></div>{(p.jobs||[]).map(j=><button key={j.ticket_id} onClick={()=>nav(`/tickets/${j.ticket_id}`)} className="mt-2 flex w-full justify-between gap-2 border-t border-white/10 pt-2 text-left text-xs"><span className="truncate">{j.title}</span><span className="shrink-0 text-cyan-200">{j.travel?.minutes??"—"} min travel · {j.risk||"—"}</span></button>)}</div>):<p className="text-slate-400">No schedulable technician routes returned for today.</p>}
         </div>}
