@@ -5,6 +5,8 @@ import { CalendarDays, ClipboardList, DollarSign, Users, X, Settings2, Megaphone
 import api from "../../api/client";
 import { getLiveOperations } from "../../api/dispatch";
 import TicketQuickMessage from "../tickets/TicketQuickMessage";
+import { AVATARS, getAvatarPhotoForUser } from "../sync/JarvisAvatar";
+import { useAuth } from "../../auth/AuthContext";
 import SubcontractorQuickInvite from "./SubcontractorQuickInvite";
 
 const links = {
@@ -42,6 +44,8 @@ function MiniBars({rows}) {
 
 export default function SboCompactOffice({businessName,loading,err,ticketRows=[],kpiRows=[],openTickets,revenueThisMonth,completedJobs,onRefresh,activeBusinessId}) {
   const nav=useNavigate();
+  const {user}=useAuth();
+  const isPilot=String(user?.email||"").trim().toLowerCase()==="jacoblord7@outlook.com";
   const [panel,setPanel]=useState(null);
   // Lock only the SBO landing office: the header, main canvas, and dock
   // keep independent fixed anchors instead of moving with document scroll.
@@ -148,7 +152,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
       <main className="sw-sbo-office-canvas flex min-h-0 flex-col gap-3">
         <header className="sw-sbo-topbar flex shrink-0 items-start justify-between gap-2 rounded-2xl p-3">
           <div className="min-w-0"><span className="text-[10px] font-bold uppercase tracking-[.16em] text-cyan-300">Your office · Today</span><h1 className="truncate text-xl font-semibold sm:text-2xl">{businessName||"Business"}</h1><p className="hidden text-xs text-slate-300 sm:block">One command center. Your next action is one tap away.</p></div>
-          <div className="flex gap-2">{lastTicketId&&<button type="button" title="Message latest ticket" onClick={()=>setQuickMessageTicket(lastTicketId)} className="rounded-xl border border-cyan-400/35 px-3 py-2 text-xs text-cyan-200">Message</button>}<button aria-label="Refresh dashboard" title="Refresh metrics" onClick={()=>{onRefresh?.();setRefreshKey(v=>v+1);}} className="rounded-xl border border-white/15 p-2"><RefreshCw size={17} className={loading?"animate-spin":""}/></button><button onClick={()=>nav("/sbo/quick-intake")} className="flex items-center gap-1.5 rounded-xl border border-cyan-300/60 bg-cyan-500/25 px-3 py-2 text-xs font-bold text-cyan-50"><Plus size={17}/>New Call</button></div>
+          <div className="flex gap-2">{lastTicketId&&<button type="button" title="Message latest ticket" onClick={()=>setQuickMessageTicket(lastTicketId)} className="rounded-xl border border-cyan-400/35 px-3 py-2 text-xs text-cyan-200">Message</button>}<button aria-label="Refresh dashboard" title="Refresh metrics" onClick={()=>{onRefresh?.();setRefreshKey(v=>v+1);}} className="rounded-xl border border-white/15 p-2"><RefreshCw size={17} className={loading?"animate-spin":""}/></button><button onClick={()=>nav("/sbo/quick-intake")} className="hidden items-center gap-1.5 rounded-xl border border-cyan-300/60 bg-cyan-500/25 px-3 py-2 text-xs font-bold text-cyan-50 md:flex"><Plus size={17}/>New Call</button></div>
         </header>
         {err&&<p role="alert" className="shrink-0 truncate rounded-lg bg-rose-900/45 p-2 text-xs">{err}</p>}
         <section className="sw-sbo-briefing flex shrink-0 items-center justify-between gap-2 rounded-2xl p-3">
@@ -161,11 +165,18 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
           <button className="sw-sbo-stat rounded-xl p-2 text-left" onClick={()=>setPanel("operations")}><strong className="block text-lg text-emerald-200">{ops?fmt(summary.active_clocks):"—"}</strong><small className="text-[10px] text-slate-300">Active clocks</small></button>
         </div>
         <div className="sw-sbo-action-grid grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-2">
-          <button className={tile} onClick={()=>nav("/sbo/quick-intake")}><Plus className="mb-2 text-cyan-200" size={23}/><div className="font-semibold">New request</div><p className="text-xs text-slate-300">Customer calling in</p></button>
-          <button className={tile} onClick={()=>setPanel("schedule")}><CalendarDays className="mb-2 text-cyan-200" size={23}/><div className="font-semibold">Schedule</div><p className="text-xs text-slate-300">Jobs and appointments</p></button>
-          <button className={tile} onClick={()=>setPanel("operations")}><Route className="mb-2 text-cyan-200" size={23}/><div className="font-semibold">Tech routes</div><p className="text-xs text-slate-300">Timing and risk</p></button>
-          <button className={tile} onClick={()=>setPanel("jobs")}><ClipboardList className="mb-2 text-cyan-200" size={23}/><div className="font-semibold">Job board</div><p className="text-xs text-slate-300">Assignments and follow-ups</p></button>
+          <button className={tile} onClick={()=>nav("/sbo/tech-board")}><Users className="mb-2 text-cyan-200" size={23}/><div className="font-semibold">Tech Board</div><p className="text-xs text-slate-300">Staff & job progress</p></button>
+          <button className={tile} onClick={()=>setPanel("schedule")}><CalendarDays className="mb-2 text-cyan-200" size={23}/><div className="font-semibold">Schedule</div><p className="text-xs text-slate-300">Jobs & appointments</p></button>
+          <button className={tile} onClick={()=>nav("/sbo/invoices")}><DollarSign className="mb-2 text-cyan-200" size={23}/><div className="font-semibold">Invoicing</div><p className="text-xs text-slate-300">Billing & payments</p></button>
+          <button className={tile} onClick={()=>nav("/sbo/leads")}><BarChart3 className="mb-2 text-cyan-200" size={23}/><div className="font-semibold">Leads</div><p className="text-xs text-slate-300">Sales opportunities</p></button>
         </div>
+        <button type="button" className="sw-sbo-growth-link flex shrink-0 items-center justify-between gap-3 rounded-xl border border-cyan-300/25 bg-slate-900/45 px-3 py-2 text-left" onClick={()=>nav("/sbo/growth")}><span className="flex min-w-0 items-center gap-2"><Megaphone size={19} className="shrink-0 text-cyan-200"/><span className="min-w-0"><strong className="block text-sm">Growth & Marketing</strong><span className="block truncate text-xs text-slate-300">Social, campaigns & outreach</span></span></span><ChevronRight size={17} className="shrink-0 text-cyan-200"/></button>
+        {isPilot&&<div className="sw-sbo-ai-dock shrink-0" role="group" aria-label="Business AI assistants">
+          <span className="sw-sbo-ai-label">AI TEAM</span>
+          {AVATARS.map(agent=><button type="button" key={agent.id} className="sw-sbo-ai-worker" title={agent.name+" · "+agent.role} aria-label={"Open "+agent.name+", "+agent.role} onClick={()=>agent.id==="executive-female"?window.dispatchEvent(new Event("syncworks:victoria-open")):nav(agent.id==="executive-male"?"/sbo/leads":agent.id==="future-female"?"/sbo/growth":"/sbo/reports")}>
+            <img src={getAvatarPhotoForUser(agent,user)} alt="" loading="lazy"/><span>{agent.name}</span>
+          </button>)}
+        </div>}
 
       </main>
       <aside className="sw-sbo-rail hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-3 md:flex">
