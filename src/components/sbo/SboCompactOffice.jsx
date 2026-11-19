@@ -10,7 +10,7 @@ import SubcontractorQuickInvite from "./SubcontractorQuickInvite";
 const links = {
   jobs: [["Job board","/tickets"],["New phone request","/sbo/quick-intake"],["Dispatch","/sbo/dispatch"],["Technician board","/sbo/tech-board"]],
   schedule: [["Calendar","/calendar"],["Appointments","/sbo/appointments"]],
-  team: [["Employees","/team/invites"],["Customers","/sbo/customers"],["Import customers","/sbo/customers/import"]],
+  team: [["Employees","/team/invites"],["HR & availability","/sbo/settings/workforce"],["Technician board","/sbo/tech-board"],["Customers","/sbo/customers"],["Import customers","/sbo/customers/import"]],
   finance: [["Invoices","/sbo/invoices"],["Financial overview","/sbo/finance"],["Reports","/sbo/reports"]],
   growth: [["Leads","/sbo/leads"],["Social media","/sbo/growth"]],
   tools: [["Services & pricing","/sbo/catalog"],["Business settings","/sbo/settings"],["Business setup","/sbo/settings/general?setup=1"]],
