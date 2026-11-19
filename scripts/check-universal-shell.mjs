@@ -64,26 +64,32 @@ test("Messages is reachable from Personal and mobile inbox has two views", () =>
 });
 
 
-test("Inbox mobile layout uses full-width panes and differentiates message sources", () => {
+test("Messages share one source navigation and bounded mobile presentation", () => {
   const inbox = readFileSync(new URL("../src/pages/InboxPage.jsx", import.meta.url), "utf8");
-  const css = readFileSync(new URL("../src/pages/InboxMobileShell.css", import.meta.url), "utf8");
-  assert.match(inbox, /Ticket Chats/);
-  assert.match(inbox, /Email & SYNC/);
-  assert.match(inbox, /\/pm\/settings\?view=messages/);
+  const pm = readFileSync(new URL("../src/pages/PMMessages.jsx", import.meta.url), "utf8");
+  const nav = readFileSync(new URL("../src/components/messages/MessageSourceTabs.jsx", import.meta.url), "utf8");
+  const inboxCss = readFileSync(new URL("../src/pages/InboxMobileShell.css", import.meta.url), "utf8");
+  const pmCss = readFileSync(new URL("../src/pages/PMMessagesMobile.css", import.meta.url), "utf8");
+  for (const page of [inbox, pm]) assert.match(page, /<MessageSourceTabs/);
+  for (const label of ["Tickets", "Email", "Property", "Business"]) assert.ok(nav.includes(label));
+  for (const css of [inboxCss, pmCss]) {
+    assert.match(css, /inset:108px 0 103px 0!important/);
+    assert.match(css, /overflow:hidden!important/);
+  }
   assert.match(inbox, /timeout: 15000/);
-  assert.match(inbox, /Ticket messages took too long to load/);
-  assert.match(css, /\.sw-inbox-workspace > :is\(\.sw-inbox-thread-list, \.sw-inbox-conversation\)/);
-  assert.match(css, /width:100%!important/);
-  assert.match(css, /data-sw-inbox-source="email"/);
+  assert.match(pm, /Promise.allSettled/);
+  assert.match(pm, /sw-pm-action-drawer/);
+  const email = readFileSync(new URL("../src/components/sync/SyncUnifiedInboxCard.jsx", import.meta.url), "utf8");
+  assert.match(email, /inboxPanel/);
+  assert.match(email, /sw-email-list-entries/);
 });
 
 test("PM Messages uses anchored panels without blocking thread loading on related record requests", () => {
   const page = readFileSync(new URL("../src/pages/PMMessages.jsx", import.meta.url), "utf8");
   const css = readFileSync(new URL("../src/pages/PMMessagesMobile.css", import.meta.url), "utf8");
   assert.match(page, /data-sw-pm-messages="true"/);
-  assert.match(page, /sw-pm-message-shortcuts/);
-  assert.match(page, /Sync Email/);
-  assert.match(page, /Business Inbox/);
+  assert.match(page, /<MessageSourceTabs/);
+  assert.match(page, /sw-pm-views/);
   assert.match(page, /Promise.allSettled/);
   assert.match(page, /sw-pm-action-drawer/);
   assert.match(css, /data-sw-pm-chat="list"/);

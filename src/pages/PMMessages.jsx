@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./PMMessagesMobile.css";
+import MessageSourceTabs from "../components/messages/MessageSourceTabs";
 import api from "../api/client";
 
 const categories = ["ALL", "TENANT", "INVESTOR", "MAINTENANCE", "INTERNAL", "COLLECTIONS"];
@@ -56,6 +57,7 @@ export default function PMMessages() {
       const rows = list(messageRes.data);
       setThreads(rows);
       setSelected((current) => rows.find((item) => item.id === current?.id) || rows[0] || null);
+      setLoading(false); // message list is ready; related records may still load
       const extras = await Promise.allSettled([
         api.get("/pm-hub/tenants/", { headers, timeout: 12000 }),
         api.get("/pm-hub/properties/", { headers, timeout: 12000 }),
@@ -136,12 +138,8 @@ export default function PMMessages() {
       </div>
     </div>
     {loadError ? <div role="alert" className="sw-pm-messages-error">{loadError}<button type="button" onClick={load}>Retry</button></div> : null}
-    <div className="sw-pm-message-shortcuts">
-      <button type="button" onClick={()=>setView("messages")} aria-pressed={view==="messages"}>Messages</button>
-      <button type="button" onClick={()=>{setView("records");setMobileThreadOpen(false);}} aria-pressed={view==="records"}>Occupancy & Cases</button>
-      <button type="button" onClick={()=>navigate("/settings?tab=CONNECTIONS")}>Sync Email</button>
-      <button type="button" onClick={()=>navigate("/sbo/inbox")}>Business Inbox</button>
-    </div>
+    <MessageSourceTabs active="property" onProperty={() => {setView("messages");setMobileThreadOpen(false);}} />
+    <div className="sw-pm-views" role="group" aria-label="Property message views"><button type="button" aria-pressed={view==="messages"} onClick={()=>{setView("messages");setMobileThreadOpen(false);}}>Conversations</button><button type="button" aria-pressed={view==="records"} onClick={()=>{setView("records");setMobileThreadOpen(false);}}>Occupancy & Cases</button></div>
     {actionsOpen ? <div className="sw-pm-action-backdrop" onClick={()=>setActionsOpen(false)}><section className="sw-pm-action-drawer" role="dialog" aria-modal="true" aria-label="Property message actions" onClick={e=>e.stopPropagation()}>
       <div className="sw-pm-action-drawer-heading"><strong>Communications</strong><button type="button" onClick={()=>setActionsOpen(false)}>Close</button></div>
       <button type="button" onClick={()=>{setCompose(true);setActionsOpen(false);}}>New Message</button>

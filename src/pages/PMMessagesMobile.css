@@ -245,3 +245,104 @@
 @media(prefers-reduced-motion:reduce) {
   [data-pm-command-shell] .sw-pm-action-drawer {animation:none}
 }
+
+
+/* V3 — PM and Personal inbox share the exact mobile frame.
+ * PM root escapes the legacy vertically stacked report, while original
+ * desktop reporting and existing actions remain available. */
+@media(max-width:767px) {
+  body:has([data-sw-pm-messages="true"]){overflow:hidden!important}
+  [data-pm-command-shell] .sw-pm-messages-root {
+    position:fixed!important;
+    inset:108px 0 103px 0!important;
+    z-index:12;
+    display:flex!important;
+    width:100vw!important;
+    height:auto!important;
+    max-height:none!important;
+    max-width:100vw!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:8px 12px 0!important;
+    overflow:hidden!important;
+    gap:9px;
+  }
+  [data-pm-command-shell] .sw-pm-messages-mobile-header {
+    min-height:52px!important;
+    padding:1px 2px!important;
+    flex:0 0 auto;
+  }
+  [data-pm-command-shell] .sw-pm-messages-mobile-header h1 {
+    font-size:clamp(19px,5.8vw,24px);
+    margin:2px 0;
+  }
+  [data-pm-command-shell] .sw-message-sources {
+    flex:0 0 auto;
+  }
+  [data-pm-command-shell] .sw-pm-views {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:7px;
+    flex:0 0 auto;
+    min-width:0;
+  }
+  [data-pm-command-shell] .sw-pm-views button {
+    min-height:44px;
+    border-radius:12px;
+    border:1px solid var(--pm-scene-line,rgba(121,216,250,.50));
+    background:var(--pm-scene-glass,rgba(6,19,43,.36));
+    -webkit-backdrop-filter:blur(12px);
+    backdrop-filter:blur(12px);
+    color:#ddecf7;
+    font-size:12px;
+    font-weight:800;
+  }
+  [data-pm-command-shell] .sw-pm-views button[aria-pressed="true"] {
+    background:rgba(49,182,235,.25);
+    color:white;
+    box-shadow:inset 0 1px rgba(255,255,255,.1);
+  }
+  [data-pm-command-shell] .sw-pm-message-filters{
+    flex:0 0 auto;
+    padding:7px!important;
+  }
+  [data-pm-command-shell] .sw-pm-message-filters > div:first-child{
+    max-height:43px;
+  }
+  [data-pm-command-shell] .sw-pm-message-filters > div:last-child{
+    margin-top:6px;
+  }
+  [data-pm-command-shell] .sw-pm-message-filters input{
+    min-height:44px;
+  }
+  [data-pm-command-shell] .sw-pm-message-columns{
+    flex:1 1 auto;
+    min-height:0!important;
+    height:auto!important;
+    overflow:hidden;
+  }
+  [data-pm-command-shell] .sw-pm-message-columns > section{
+    height:100%!important;
+    min-height:0!important;
+    max-height:100%!important;
+  }
+  [data-pm-command-shell] .sw-pm-messages-root[data-sw-pm-chat="open"] .sw-pm-message-filters {
+    display:none!important;
+  }
+  [data-pm-command-shell] .sw-pm-messages-root[data-sw-pm-chat="open"] .sw-pm-views {
+    display:none!important;
+  }
+  [data-pm-command-shell] .sw-pm-messages-root:has(.sw-pm-action-backdrop){
+    z-index:350;
+  }
+  [data-pm-command-shell] .sw-pm-messages-root:has(> .fixed){
+    z-index:350;
+  }
+  [data-pm-command-shell] .sw-pm-messages-root .sw-pm-action-backdrop{
+    position:fixed!important;
+    z-index:600;
+  }
+}
+@media(min-width:768px){
+  .sw-pm-views{display:none!important}
+}
