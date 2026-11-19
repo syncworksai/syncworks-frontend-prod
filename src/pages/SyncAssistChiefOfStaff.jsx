@@ -109,7 +109,7 @@ export default function SyncAssistChiefOfStaff(){
   useEffect(()=>{if(authorized)refresh();},[authorized]);
   async function create(e){
     e.preventDefault();setBusy(true);setError("");setNotice("");
-    try{const r=await api.post(BASE+"cases/",form);setCases(r.data.cases);setAdding(false);setForm(EMPTY);setNotice("Case registered. Jarvis will keep it visible until you resolve it.");await refresh();}
+    try{const r=await api.post(BASE+"cases/",form);setCases(r.data.cases);setAdding(false);setForm(EMPTY);setNotice("Case registered. SYNC Assist will keep it visible until you resolve it.");await refresh();}
     catch(e){setError(e?.response?.data?.detail||"Case could not be saved.");}
     finally{setBusy(false);}
   }
@@ -135,13 +135,13 @@ export default function SyncAssistChiefOfStaff(){
           <img src={value.image} alt="" loading="lazy" className="h-20 w-full object-cover"/>
           <span className={`block px-3 py-2 text-xs font-bold ${isLight?"bg-white text-slate-900":"bg-slate-950 text-white"}`}>{value.label}{theme===key?" · Selected":""}</span>
         </button>)}
-        <p className={`sm:col-span-3 text-xs ${subText}`}>Saved on this device. Only the appearance changes; Jarvis data, permissions and actions stay the same.</p>
+        <p className={`sm:col-span-3 text-xs ${subText}`}>Saved on this device. Only the appearance changes; SYNC Assist data and permissions and actions stay the same.</p>
       </div>}
     <div className="sw-chief-actions mb-4 flex items-center justify-between gap-2">
-      <button type="button" onClick={()=>navigate("/sync/assist/daily")} className="flex min-h-11 items-center gap-2 rounded-xl border border-white/20 px-3 text-sm"><ArrowLeft size={17}/> Jarvis Daily</button>
+      <button type="button" onClick={()=>navigate("/sync/assist/daily")} className="flex min-h-11 items-center gap-2 rounded-xl border border-white/20 px-3 text-sm"><ArrowLeft size={17}/> Daily Briefing</button>
       <button type="button" onClick={refresh} disabled={busy||!authorized} className="flex min-h-11 items-center gap-2 rounded-xl border border-cyan-400/30 px-3 text-sm"><RefreshCw size={16}/> Refresh</button>
     </div>
-    <section aria-label="My Jarvis animated assistant" className={`sw-chief-avatar-card mb-4 flex flex-col items-center gap-3 rounded-3xl border p-3 shadow-xl backdrop-blur-xl sm:flex-row sm:justify-center sm:p-4 ${design.border} ${design.panel}`}>
+    <section aria-label="My SYNC assistant" className={`sw-chief-avatar-card mb-4 flex flex-col items-center gap-3 rounded-3xl border p-3 shadow-xl backdrop-blur-xl sm:flex-row sm:justify-center sm:p-4 ${design.border} ${design.panel}`}>
       <JarvisAvatar id={avatarId} state={avatarTalking?"speaking":"idle"} size="hero"/>
       <div className="w-full max-w-md space-y-2">
         <p className={`text-[11px] font-black uppercase tracking-widest ${isLight?"text-slate-700":design.accent}`}>Your Chief of Staff</p>
@@ -151,7 +151,7 @@ export default function SyncAssistChiefOfStaff(){
       </div>
     </section>
     <section className={`sw-chief-overview rounded-3xl border p-5 shadow-2xl backdrop-blur-xl ${design.border} ${design.panel}`}>
-      <p className={`text-xs font-black uppercase tracking-widest ${isLight?"text-slate-700":design.accent}`}>Jarvis · Chief of Staff</p>
+      <p className={`text-xs font-black uppercase tracking-widest ${isLight?"text-slate-700":design.accent}`}>SYNC · Chief of Staff</p>
       <h1 className="mt-2 text-2xl font-black">Your daily intelligence</h1>
       <p className={`mt-2 text-sm leading-6 ${subText}`}>What needs attention, what remains unresolved, and where to go next.</p>
       <div className="mt-4 grid grid-cols-3 gap-2 text-center">
