@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Activity, ArrowLeft, BriefcaseBusiness, CalendarDays, Crown, DollarSign, FileText, RefreshCw, ShieldCheck, Users } from "lucide-react";
 import api from "../api/client";
+import { getInvoiceCenter } from "../api/invoices";
 import { useAuth } from "../auth/AuthContext";
 import "../components/sbo/SboCompactOffice.css";
 
@@ -37,20 +38,26 @@ export default function CeoCommandCenter() {
       const settled = await Promise.allSettled([
         api.get("/kpis/business/", {params:{days:30}}),
         api.get("/tickets/"),
-        api.get(`/businesses/${activeBusinessId}/members/`)
+        api.get(`/businesses/${activeBusinessId}/members/`),
+        getInvoiceCenter()
       ]);
-      const [kpi, tickets, employees] = settled;
-      if (kpi.status !== "fulfilled" || tickets.status !== "fulfilled" || employees.status !== "fulfilled") {
+      const [kpi, tickets, employees, invoices] = settled;
+      if (kpi.status !== "fulfilled" || tickets.status !== "fulfilled" || employees.status !== "fulfilled" || invoices.status !== "fulfilled") {
         setDataError("Some business metrics could not be verified. Unavailable fields are hidden.");
       }
       const rows = kpi.status === "fulfilled" ? list(kpi.value.data) : null;
       const jobs = tickets.status === "fulfilled" ? list(tickets.value.data) : null;
       const memberRows = employees.status === "fulfilled" ? list(employees.value.data) : null;
+      const invoiceSummary = invoices.status === "fulfilled" ? invoices.value.summary : null;
       setMetrics({
         revenue: rows === null ? null : rows.reduce((sum, item) => sum + Number(item.gmv_paid_cents || 0), 0),
         openJobs: jobs === null ? null : jobs.filter(ticket => !isClosed(ticket)).length,
         completedJobs: jobs === null ? null : jobs.filter(ticket => String(ticket.status || "").toUpperCase() === "COMPLETED").length,
         teamSize: memberRows === null ? null : memberRows.filter(item => item.is_active && item.role !== "OWNER").length,
+        outstanding: invoiceSummary ? Number(invoiceSummary.outstanding || 0) : null,
+        overdue: invoiceSummary ? Number(invoiceSummary.overdue_count || 0) : null,
+        paidThisMonth: invoiceSummary ? Number(invoiceSummary.paid_this_month || 0) : null,
+        readyToBill: invoiceSummary ? Number(invoiceSummary.ready_to_bill_count || 0) : null,
       });
       setUpdated(new Date());
     } catch (error) {
@@ -64,6 +71,10 @@ export default function CeoCommandCenter() {
     {title:"Open jobs", value: metrics?.openJobs ?? "—", icon:BriefcaseBusiness, path:"/tickets"},
     {title:"Completed jobs · loaded", value:metrics?.completedJobs ?? "—", icon:Activity, path:"/sbo/reports"},
     {title:"Employees", value:metrics?.teamSize ?? "—", icon:Users, path:"/team/invites"},
+    {title:"Outstanding invoices",value:metrics?.outstanding == null ? "—" : Number(metrics.outstanding).toLocaleString("en-US",{style:"currency",currency:"USD"}),icon:FileText,path:"/sbo/invoices"},
+    {title:"Overdue invoices",value:metrics?.overdue ?? "—",icon:Activity,path:"/sbo/invoices"},
+    {title:"Paid invoices · month",value:metrics?.paidThisMonth == null ? "—" : Number(metrics.paidThisMonth).toLocaleString("en-US",{style:"currency",currency:"USD"}),icon:DollarSign,path:"/sbo/invoices"},
+    {title:"Ready to bill",value:metrics?.readyToBill ?? "—",icon:FileText,path:"/sbo/invoices"},
   ], [metrics]);
 
   const room = ({future:"syncworks-future", classic:"classic-office", modern:"modern-dark", light:"clean-light", legacy:"syncworks-future"}[theme] || "syncworks-future");
