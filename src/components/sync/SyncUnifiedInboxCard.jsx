@@ -13,7 +13,7 @@ function when(value) {
   }
 }
 
-export default function SyncUnifiedInboxCard({ compact = false }) {
+export default function SyncUnifiedInboxCard({ compact = false, inboxPanel = false }) {
   const nav = useNavigate();
   const [state, setState] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -35,6 +35,16 @@ export default function SyncUnifiedInboxCard({ compact = false }) {
   const external = state?.external_email || {};
   const conversations = syncworks.conversations || [];
   const messages = external.messages || [];
+
+  if (inboxPanel) return (
+    <section className="sw-email-messages-list" aria-label="Connected email">
+      <div className="sw-email-list-toolbar"><div><span>EMAIL & SYNC</span><strong>Connected inbox</strong><small>{state?.total_unread || 0} unread · {messages.length} recent messages</small></div><button type="button" onClick={load} disabled={loading}>{loading ? "Loading…" : "Refresh"}</button></div>
+      <div className="sw-email-list-entries">
+        {loading ? <p role="status">Loading connected email…</p> : messages.length ? messages.map((row) => <article key={`${row.mailbox}-${row.id}`} className="sw-email-list-entry"><div><strong>{row.subject || "Untitled"}</strong>{row.priority === "high" ? <em>Priority</em> : null}</div><small>{row.sender_name || row.sender_email || row.mailbox} · {when(row.received_at)}</small>{row.preview ? <p>{row.preview}</p> : null}</article>) : <div className="sw-email-empty"><strong>No synced email snapshot</strong><p>{external.available ? "Refresh your connected email from SYNC to see recent messages." : "Connect Gmail or Outlook to bring your email into SyncWorks."}</p></div>}
+      </div>
+      <button type="button" className="sw-email-connect" onClick={() => nav("/settings?tab=CONNECTIONS")}>Manage email connections</button>
+    </section>
+  );
 
   if (compact) {
     const important = messages.filter((row) => row.priority === "high").slice(0, 2);
