@@ -117,3 +117,28 @@ test("New Request marketplace search declares its prefill argument", () => {
   assert.match(panel, /useState\(\(\) => String\(initialSearchQuery \|\| ""\)\)/);
   assert.match(parent, /initialSearchQuery=\{initialSearchQuery\}/);
 });
+
+
+test("Rolodex connects backend business cards, official QR and new requests", () => {
+  const fs = readFileSync(new URL("../src/pages/CustomerBusinessCards.jsx", import.meta.url), "utf8");
+  const request = readFileSync(new URL("../src/components/requests/new-request/UniversalTicketCreator.jsx", import.meta.url), "utf8");
+  const business = readFileSync(new URL("../src/components/business/BusinessDigitalCardPreview.jsx", import.meta.url), "utf8");
+  const settings = readFileSync(new URL("../src/pages/SboSettings.jsx", import.meta.url), "utf8");
+  const launcher = readFileSync(new URL("../src/components/customer/CustomerWorkspace.jsx", import.meta.url), "utf8");
+  assert.match(fs, /me\/favorites\/businesses/);
+  assert.match(fs, /me\/business-cards\/resolve/);
+  assert.match(fs, /Save to Rolodex/);
+  assert.match(request, /accountSavedProviders/);
+  assert.match(request, /me\/favorites\/businesses/);
+  assert.match(business, /customer\/rolodex\?code=/);
+  assert.match(business, /businessCardCode/);
+  assert.match(settings, /businessCardCode=\{business\?\.business_card_code/);
+  assert.match(launcher, /"Rolodex","\/customer\/rolodex"/);
+  assert.match(launcher, /"My QR","\/customer\/my-qr"/);
+});
+test("pilot Wallet never accepts identity document uploads client-side", () => {
+  const wallet = readFileSync(new URL("../src/pages/SecureWalletPilot.jsx", import.meta.url), "utf8");
+  assert.match(wallet, /jacoblord7@outlook.com/);
+  assert.match(wallet, /STORAGE DISABLED/);
+  assert.doesNotMatch(wallet, /type="file"|FormData\(|api.post\(/);
+});
