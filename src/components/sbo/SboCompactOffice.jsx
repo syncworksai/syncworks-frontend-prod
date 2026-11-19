@@ -173,7 +173,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
         <button type="button" className="sw-sbo-growth-link flex shrink-0 items-center justify-between gap-3 rounded-xl border border-cyan-300/25 bg-slate-900/45 px-3 py-2 text-left" onClick={()=>nav("/sbo/growth")}><span className="flex min-w-0 items-center gap-2"><Megaphone size={19} className="shrink-0 text-cyan-200"/><span className="min-w-0"><strong className="block text-sm">Growth & Marketing</strong><span className="block truncate text-xs text-slate-300">Social, campaigns & outreach</span></span></span><ChevronRight size={17} className="shrink-0 text-cyan-200"/></button>
         {isPilot&&<div className="sw-sbo-ai-dock shrink-0" role="group" aria-label="Business AI assistants">
           <span className="sw-sbo-ai-label">AI TEAM</span>
-          {AVATARS.map(agent=><button type="button" key={agent.id} className="sw-sbo-ai-worker" title={agent.name+" · "+agent.role} aria-label={"Open "+agent.name+", "+agent.role} onClick={()=>agent.id==="executive-female"?window.dispatchEvent(new Event("syncworks:victoria-open")):nav(agent.id==="executive-male"?"/sbo/leads":agent.id==="future-female"?"/sbo/growth":"/sbo/reports")}>
+          {AVATARS.map(agent=><button type="button" key={agent.id} className="sw-sbo-ai-worker" title={agent.name+" · "+agent.role} aria-label={"Open "+agent.name+", "+agent.role} onClick={()=>agent.id==="executive-female"?window.dispatchEvent(new Event("syncworks:victoria-open")):nav("/sync/assist")}>
             <img src={getAvatarPhotoForUser(agent,user)} alt="" loading="lazy"/><span>{agent.name}</span>
           </button>)}
         </div>}
