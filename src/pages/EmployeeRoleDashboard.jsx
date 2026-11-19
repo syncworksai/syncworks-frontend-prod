@@ -50,13 +50,13 @@ export default function EmployeeRoleDashboard() {
     } finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
-  const role = String(membership?.role || "TECHNICIAN").toUpperCase();
+  const role = membership ? String(membership.role || "TECHNICIAN").toUpperCase() : "";
   const name = [membership?.user_first_name, membership?.user_last_name].filter(Boolean).join(" ") || membership?.user_name || membership?.user_email || "Employee";
   const allowed = membership ? actions.filter(([key]) => membership[key] === true) : [];
   return (
     <main className="mx-auto flex h-[calc(100dvh-100px)] min-h-0 w-full max-w-6xl flex-col gap-3 overflow-hidden px-4 py-4 text-slate-100">
       <header className="flex items-center justify-between gap-3">
-        <div><p className="text-xs text-cyan-200">SYNCWORKS / EMPLOYEE OFFICE</p><h1 className="text-xl font-bold">{loading ? "Verifying access…" : name}</h1><p className="text-xs text-slate-400">{labels[role] || role} · Your available work tools</p></div>
+        <div><p className="text-xs text-cyan-200">SYNCWORKS / EMPLOYEE OFFICE</p><h1 className="text-xl font-bold">{loading ? "Verifying access…" : name}</h1><p className="text-xs text-slate-400">{role ? (labels[role] || role) + " · Your available work tools" : "Your business workspaces"}</p></div>
         <button onClick={load} className="rounded-xl border border-cyan-400/30 px-3 py-2 text-sm">Refresh access</button>
       </header>
       {error && <p role="alert" className="rounded-xl border border-amber-500/30 p-3 text-sm text-amber-200">{error}</p>}
