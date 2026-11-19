@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
-import { Palette, LayoutGrid, X, CalendarDays, ListTodo, Inbox, BriefcaseBusiness, Building2, Wallet, Heart, Flame, TrendingUp, Spade, ShoppingBag, Users, CloudSun, MapPinned, Settings, RotateCcw } from "lucide-react";
+import { Palette, LayoutGrid, X, CalendarDays, ListTodo, Inbox, BriefcaseBusiness, Building2, Wallet, QrCode, ContactRound, Heart, Flame, TrendingUp, Spade, ShoppingBag, Users, CloudSun, MapPinned, Settings, RotateCcw } from "lucide-react";
 import { MobileNavSettings } from "../navigation/RoleAwareMobileNav";
 import "./CustomerWorkspace.css";
 import "./OfficeThemeIntegrationV16.css";
@@ -14,13 +14,13 @@ const SETTINGS_KEY = "sw_workspace_appearance_v1";
 const DEFAULTS = { theme: "legacy", motion: true, compact: false };
 export const OFFICE_CATEGORIES = [
   {id:"daily",name:"Daily",description:"Your agenda, tasks, messages and requests",items:[["Calendar","/calendar",CalendarDays],["Tasks","/customer/tasks",ListTodo],["Inbox","/customer/inbox",Inbox],["New service request","/customer/new-request",LayoutGrid]]},
-  {id:"personal",name:"Personal",description:"Money, wellbeing and your connections",items:[["Finance","/customer/finance",Wallet],["Messages","/customer/inbox",Inbox],["Health","/customer/health",Heart],["Connections","/settings?tab=CONNECTIONS",Settings]]},
+  {id:"personal",name:"Personal",description:"Money, wellbeing and your connections",items:[["Finance","/customer/finance",Wallet],["Messages","/customer/inbox",Inbox],["Health","/customer/health",Heart],["Connections","/settings?tab=CONNECTIONS",Settings],["Rolodex","/customer/rolodex",ContactRound],["My QR","/customer/my-qr",QrCode]]},
   {id:"business",name:"Business",description:"Work, properties and service operations",items:[["Business","/sbo",BriefcaseBusiness],["Property","/pm",Building2],["Services","/customer/marketplace",LayoutGrid]]},
-  {id:"apps",name:"Apps",description:"Games, local discovery, weather and tools",items:[["Games","/customer/games",Spade],["Social","/connect",Users],["Shop Assist","/customer/store",ShoppingBag],["Weather","/customer/weather",CloudSun],["Traffic","/customer/traffic",MapPinned],["Local","/customer/discover",MapPinned],["Day Trade","/customer/day-trading-futures",TrendingUp]]},
+  {id:"apps",name:"Apps",description:"Games, local discovery, weather and tools",items:[["Games","/customer/games",Spade],["Social","/connect",Users],["Rolodex","/customer/rolodex",ContactRound],["My QR","/customer/my-qr",QrCode],["Shop Assist","/customer/store",ShoppingBag],["Weather","/customer/weather",CloudSun],["Traffic","/customer/traffic",MapPinned],["Local","/customer/discover",MapPinned],["Day Trade","/customer/day-trading-futures",TrendingUp]]},
 ];
 const APPS = [
   ["Calendar", "/calendar", CalendarDays], ["Tasks", "/customer/tasks", ListTodo],
-  ["Messages", "/customer/inbox", Inbox], ["Business", "/sbo", BriefcaseBusiness],
+  ["Messages", "/customer/inbox", Inbox], ["Rolodex", "/customer/rolodex", ContactRound], ["My QR", "/customer/my-qr", QrCode], ["Business", "/sbo", BriefcaseBusiness],
   ["Property", "/pm", Building2], ["Finance", "/customer/finance", Wallet],
   ["Health", "/customer/health", Heart], ["Day Trade", "/customer/day-trading-futures", TrendingUp],
   ["Games", "/customer/games", Spade], ["Shop Assist", "/customer/store", ShoppingBag],
@@ -96,7 +96,7 @@ export default function CustomerWorkspace({ settings, update, phoneMode = false,
   const apps = [
     ...(activeCategory ? activeCategory.items : APPS).filter(([name]) => dayTradingEnabled || name !== "Day Trade"),
     ...(dayTradingEnabled && (panel === "business" || panel === "apps") ? [["Freelance Work", "/customer/freelance/overview", BriefcaseBusiness]] : []),
-    ...(forgeEnabled && (panel === "apps" || panel === "personal") ? [["The Forge", "/customer/forge", Flame]] : []),
+    ...(forgeEnabled && (panel === "apps" || panel === "personal") ? [["The Forge", "/customer/forge", Flame],["Secure Wallet (Pilot)", "/customer/secure-wallet", Wallet]] : []),
   ];
   const motionActive = settings.motion && !(typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const close = () => { setClosing(true); window.setTimeout(() => { setPanel(null); setClosing(false); }, motionActive ? 360 : 0); };
