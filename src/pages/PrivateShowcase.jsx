@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
@@ -50,7 +50,6 @@ export default function PrivateShowcase() {
   const [year,setYear] = useState("2026");
   const [format,setFormat] = useState("CSV");
   const isOwner = String(user?.email||"").trim().toLowerCase() === PRIVATE_EMAIL;
-  const selected = useMemo(()=>reports.find(x=>x.name === notice),[notice]);
   if (!isAuthed || !isOwner) return <Navigate to="/customer" replace />;
   const exportPreview = () => {
     if(format!=="CSV") {setNotice("PDF, Excel and Google Sheets exports require the isolated reporting backend. No file has been generated.");return;}
