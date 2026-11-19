@@ -7,6 +7,7 @@ import { useAuth } from "../auth/AuthContext";
 import ModeBar from "../components/ModeBar";
 import BusinessPicker from "../components/BusinessPicker";
 import SyncUnifiedInboxCard from "../components/sync/SyncUnifiedInboxCard";
+import MessageSourceTabs from "../components/messages/MessageSourceTabs";
 import "./InboxMobileShell.css";
 
 function cx(...parts) { return parts.filter(Boolean).join(" "); }
@@ -145,7 +146,7 @@ export default function InboxPage() {
 
       <main className="sw-inbox-main mx-auto max-w-[1500px] space-y-4 px-4 py-5 pb-28 lg:px-8">
         <div className="sw-inbox-mobile-heading"><button type="button" className="sw-inbox-return" onClick={() => setMobileConversationOpen(false)} aria-label="Back to conversation list">←</button><div><span>SYNCWORKS / MESSAGES</span><h1>{mobileConversationOpen ? (selected?.subject || "Conversation") : title}</h1><small>{mobileConversationOpen ? "Secure conversation" : `${unreadTotal} unread · ${threads.length} conversations`}</small></div><button type="button" onClick={()=>loadThreads({preserveSelection:true})} className="sw-inbox-reload" disabled={loadingThreads}>Refresh</button></div>
-        {scope === "PERSONAL" && quickMode === "email" ? <SyncUnifiedInboxCard /> : null}
+        {scope === "PERSONAL" && quickMode === "email" ? <div className="sw-inbox-desktop-quick-email"><SyncUnifiedInboxCard /></div> : null}
         {scope === "PERSONAL" ? (
           <section className="sw-inbox-intro grid gap-3 lg:grid-cols-[minmax(0,1fr)_360px]">
             <div className="rounded-[1.7rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_90%_10%,rgba(139,92,246,.14),transparent_35%),rgba(2,6,23,.88)] p-5">
@@ -166,13 +167,8 @@ export default function InboxPage() {
 
         {scope === "BUSINESS" && !activeBusinessId ? <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-100">Select a business to open its inbox.</div> : (
           <>
-          <div className="sw-inbox-mobile-sources" role="group" aria-label="Message sources">
-            <button type="button" aria-pressed={mobileSource === "tickets"} onClick={() => {setMobileSource("tickets");setMobileConversationOpen(false);}}><MessageSquareText size={16}/> Ticket Chats</button>
-            <button type="button" aria-pressed={mobileSource === "email"} onClick={() => {setMobileSource("email");setMobileConversationOpen(false);}}><Mail size={16}/> Email & SYNC</button>
-            <button type="button" onClick={() => navigate("/pm/settings?view=messages")}><MessageSquareText size={16}/> Property</button>
-            <button type="button" onClick={() => navigate("/sbo/inbox")}><MessageSquareText size={16}/> Business</button>
-          </div>
-          {mobileSource === "email" && scope === "PERSONAL" ? <div className="sw-inbox-email-view"><SyncUnifiedInboxCard /></div> : null}
+          <MessageSourceTabs active={mobileSource} onTickets={() => {setMobileSource("tickets");setMobileConversationOpen(false);}} onEmail={() => {setMobileSource("email");setMobileConversationOpen(false);}} />
+          {mobileSource === "email" && scope === "PERSONAL" ? <div className="sw-inbox-email-view"><SyncUnifiedInboxCard inboxPanel /></div> : null}
           <div className="sw-inbox-workspace grid min-h-[68vh] gap-4 lg:grid-cols-[390px_minmax(0,1fr)]">
             <aside className="sw-inbox-thread-list rounded-[1.7rem] border border-white/10 bg-slate-950/55 p-3">
               {scope === "PERSONAL" ? <p className="sw-inbox-scope-note">Ticket conversations with service providers. Email and Property Management have separate inboxes above.</p> : null}
