@@ -83,8 +83,9 @@ export function WorkforceDemo({jobs,hr,openJob}){
  <section className="sterling-panel"><header className="sterling-panel-head"><h2>Shift event history</h2></header><div className="sterling-rows">{state.clockEvents.length?state.clockEvents.slice().reverse().slice(0,18).map((e,i)=><div className="sterling-data-row" key={i}><span className="sterling-row-main"><strong>{demoPeople.find(p=>p.id===e.employeeId)?.name} · {classify(e.action)}</strong><small>{e.jobId||"Shift"} · {formatStamp(e.at)}</small></span></div>):<p className="sterling-muted">Use clock-in or milestone actions to build a fictional timesheet.</p>}</div></section></div>
  </div>;
 }
-export function ExecutiveBotsDemo({jobs,hr,onModule}){
- const [selected,setSelected]=useState("Victoria");
+export function ExecutiveBotsDemo({jobs,hr,onModule,selectedEmployee="Victoria"}){
+ const [selected,setSelected]=useState(selectedEmployee);
+ React.useEffect(()=>setSelected(selectedEmployee),[selectedEmployee]);
  const roster=rosterSnapshot(jobs,hr.state.clockEvents);
  const idle=roster.filter(x=>x.idle);
  const bots=[["Victoria","Chief of Staff"],["Elizabeth","Marketing"],["Adrian","Dispatch"],["Sophia","Sales"],["Morgan","Finance"],["Evelyn","Property Management"]];
