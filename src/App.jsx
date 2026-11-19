@@ -62,6 +62,7 @@ import AffiliateDashboard from "./pages/AffiliateDashboard";
 import DayTradingFutures from "./pages/DayTradingFutures";
 
 import SboDashboard from "./pages/SboDashboard";
+import CeoCommandCenter from "./pages/CeoCommandCenter";
 import SboGrowth from "./pages/SboGrowth";
 import SboZipLeaderboard from "./pages/SboZipLeaderboard";
 import SboSettings from "./pages/SboSettings";
@@ -302,6 +303,7 @@ export default function App() {
         <Route path="/customer/discover/professional" element={<ProtectedRoute><CustomerProfessionalDiscover /></ProtectedRoute>} />
         <Route path="/customer/appointments" element={<ProtectedRoute><CustomerAppointments /></ProtectedRoute>} />
         <Route path="/sbo/inbox" element={<ProtectedRoute><InboxPage /></ProtectedRoute>} />
+        <Route path="/ceo" element={<ProtectedRoute><CeoCommandCenter /></ProtectedRoute>} />
         <Route path="/sbo" element={<ProtectedRoute><SboDashboard /></ProtectedRoute>} />
         <Route path="/sbo/metrics/zip" element={<ProtectedRoute><SboZipLeaderboard /></ProtectedRoute>} />
         <Route path="/dashboard" element={<Navigate to="/sbo" replace />} />
