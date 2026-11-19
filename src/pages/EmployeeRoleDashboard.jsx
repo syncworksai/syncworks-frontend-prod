@@ -20,9 +20,11 @@ export default function EmployeeRoleDashboard() {
   const [membership, setMembership] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [ownerBusiness, setOwnerBusiness] = useState(false);
   const load = async () => {
     setLoading(true);
     setError("");
+    setOwnerBusiness(false);
     try {
       const res = await api.get("/business-members/me/");
       const memberships = Array.isArray(res.data) ? res.data : res.data?.results || [];
@@ -30,26 +32,35 @@ export default function EmployeeRoleDashboard() {
       const active = memberships.find((m) => String(m.business) === selectedId);
       if (!active) {
         setMembership(null);
-        setError("No active membership found for the selected business. Select the business you work for or ask its owner to verify your invite.");
+        const contexts = await api.get("/businesses/access-contexts/");
+        const entry = (contexts.data?.businesses || []).find(item => String(item.business_id) === selectedId);
+        if (entry?.can_access_ceo) {
+          setOwnerBusiness(true);
+          setError("You own this business. Open CEO or SBO Operations to work without a separate employee seat.");
+        } else {
+          setError("No employee role is active for this business. Switch workspaces or ask the owner about your invitation.");
+        }
       } else {
         setMembership(active);
       }
     } catch (err) {
       setMembership(null);
-      setError(err?.response?.data?.detail || "Unable to verify employee permissions. Access is unavailable until verification succeeds.");
+      const status = Number(err?.response?.status || 0);
+      setError(status === 403 ? "This account does not have employee access to the selected business." : status === 401 ? "Your session must be verified again. Sign in and retry." : err?.response?.data?.detail || "Employee access could not be verified. Please retry.");
     } finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
-  const role = String(membership?.role || "TECHNICIAN").toUpperCase();
+  const role = membership ? String(membership.role || "TECHNICIAN").toUpperCase() : "";
   const name = [membership?.user_first_name, membership?.user_last_name].filter(Boolean).join(" ") || membership?.user_name || membership?.user_email || "Employee";
   const allowed = membership ? actions.filter(([key]) => membership[key] === true) : [];
   return (
     <main className="mx-auto flex h-[calc(100dvh-100px)] min-h-0 w-full max-w-6xl flex-col gap-3 overflow-hidden px-4 py-4 text-slate-100">
       <header className="flex items-center justify-between gap-3">
-        <div><p className="text-xs text-cyan-200">SYNCWORKS / EMPLOYEE OFFICE</p><h1 className="text-xl font-bold">{loading ? "Verifying access…" : name}</h1><p className="text-xs text-slate-400">{labels[role] || role} · Your available work tools</p></div>
+        <div><p className="text-xs text-cyan-200">SYNCWORKS / EMPLOYEE OFFICE</p><h1 className="text-xl font-bold">{loading ? "Verifying access…" : name}</h1><p className="text-xs text-slate-400">{role ? (labels[role] || role) + " · Your available work tools" : "Your business workspaces"}</p></div>
         <button onClick={load} className="rounded-xl border border-cyan-400/30 px-3 py-2 text-sm">Refresh access</button>
       </header>
       {error && <p role="alert" className="rounded-xl border border-amber-500/30 p-3 text-sm text-amber-200">{error}</p>}
+      {ownerBusiness && <div className="flex gap-2"><Link to="/ceo" className="rounded-xl border border-amber-300/40 bg-amber-300/10 px-3 py-2 text-sm text-amber-100">CEO Command Center</Link><Link to="/sbo" className="rounded-xl border border-cyan-300/40 px-3 py-2 text-sm text-cyan-100">SBO Operations</Link></div>}
       {!loading && membership && (
         <section className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-cyan-400/25 bg-slate-950/50 p-4">
           <div className="mb-3 flex items-center justify-between"><h2 className="font-semibold">Your workspace</h2><span className="text-xs text-slate-400">{allowed.length} available tools</span></div>
