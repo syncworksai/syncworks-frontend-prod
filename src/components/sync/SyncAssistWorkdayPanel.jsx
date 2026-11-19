@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import api from "../../api/client";
 import SyncAssistWorkHistory from "./SyncAssistWorkHistory";
+import "./SyncAssistWorkdayMobile.css";
 
 const BASE = "/sync-ai/assist/pilot/workday/";
 const ROLES = [
@@ -23,6 +24,7 @@ export default function SyncAssistWorkdayPanel() {
   const [workerStatus, setWorkerStatus] = useState(null);
   const [teamEmployees, setTeamEmployees] = useState([]);
   const [goal, setGoal] = useState("");
+  const [mobileView,setMobileView]=useState("results");
   const [role, setRole] = useState("RESEARCH_ANALYST");
   const [task, setTask] = useState("");
   const [publicMode, setPublicMode] = useState(false);
@@ -170,6 +172,7 @@ export default function SyncAssistWorkdayPanel() {
       });
       setData(response.data);
       setGoal(""); setTask(""); setDraftSteps([]); setPublicMode(false); setPublicQuery("");
+      setMobileView("results");
       setLoaded(true);
     } catch (err) {
       const status = Number(err?.response?.status || 0);
@@ -267,7 +270,7 @@ export default function SyncAssistWorkdayPanel() {
   }
 
   return (
-    <section className={`sw-assist-panel sw-assist-workday flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-cyan-400/30 p-2 sm:p-3 ${selectedGoalId ? "sw-assist-modal-open" : ""}`} aria-label="AI workforce workday">
+    <section data-mobile-view={mobileView} className={`sw-assist-panel sw-assist-workday flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-cyan-400/30 p-2 sm:p-3 ${selectedGoalId ? "sw-assist-modal-open" : ""}`} aria-label="AI workforce workday">
       <div className="flex shrink-0 flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-black uppercase tracking-widest text-cyan-200">Workforce command center</p>
@@ -296,8 +299,9 @@ export default function SyncAssistWorkdayPanel() {
       </p>}
       {successMessage && <div role="status" className="mt-1 flex shrink-0 items-center justify-between gap-2 rounded-lg border border-emerald-400/35 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-100"><span>{successMessage}</span><button type="button" onClick={() => setSuccessMessage("")} aria-label="Dismiss completion confirmation" className="rounded-md border border-emerald-400/35 px-2 py-1">Dismiss</button></div>}
       {error && <div role="alert" className="mt-2 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-rose-400/30 bg-rose-950/20 p-2 text-xs text-rose-200"><span>{error}</span><button type="button" onClick={refresh} disabled={busy} className="shrink-0 rounded-lg border border-rose-400/40 px-2 py-1">Retry</button></div>}
-      <div className="mt-2 grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-y-auto lg:grid-cols-[minmax(320px,0.95fr)_minmax(360px,1.05fr)] lg:overflow-hidden">
-      <form onSubmit={createGoal} className="sw-assist-surface min-h-0 space-y-2 overflow-hidden rounded-xl border border-white/10 p-2.5">
+      <div className="sw-workday-mobile-switcher" role="group" aria-label="Workday view"><button type="button" aria-pressed={mobileView==="results"} onClick={()=>setMobileView("results")}>Assigned work</button><button type="button" aria-pressed={mobileView==="create"} onClick={()=>setMobileView("create")}>New assignment</button></div>
+      <div className="sw-workday-mobile-grid mt-2 grid min-h-0 flex-1 grid-cols-1 gap-2 overflow-y-auto lg:grid-cols-[minmax(320px,0.95fr)_minmax(360px,1.05fr)] lg:overflow-hidden">
+      <form onSubmit={createGoal} className="sw-workday-creator sw-assist-surface min-h-0 space-y-2 overflow-hidden rounded-xl border border-white/10 p-2.5">
         <label className="block text-xs font-bold text-slate-200">Business goal
           <textarea required value={goal} onChange={(event) => setGoal(event.target.value)} maxLength={500} rows={1} placeholder="e.g. Build a qualified property management lead pipeline" className="mt-1 w-full resize-none rounded-lg border border-slate-600 bg-slate-950 p-2 text-sm text-white"/>
         </label>
@@ -326,7 +330,7 @@ export default function SyncAssistWorkdayPanel() {
         <button type="submit" disabled={busy || !goal.trim() || (!task.trim() && draftSteps.length === 0) || (publicMode && (publicQuery.trim().length < 4 || !(role === "RESEARCH_ANALYST" && task.trim()) && !draftSteps.some((step) => step.role === "RESEARCH_ANALYST")))} className="min-h-10 w-full rounded-lg bg-gradient-to-r from-cyan-500 to-violet-600 px-3 py-2 text-sm font-bold disabled:opacity-40">{busy ? "Saving goal…" : "Create goal & assign employee"}</button>
 
       </form>
-      <div className="sw-assist-surface min-h-0 space-y-2 overflow-hidden rounded-xl border border-white/10 p-2.5">
+      <div className="sw-workday-results sw-assist-surface min-h-0 space-y-2 overflow-hidden rounded-xl border border-white/10 p-2.5">
         <h3 className="text-sm font-black text-white">Assigned work & results</h3>
         {!loaded && <p className="text-xs text-slate-400">Loading recorded goals…</p>}
         {loaded && data?.goals?.length === 0 && <p className="text-xs text-slate-400">No coordinated goals saved yet.</p>}
