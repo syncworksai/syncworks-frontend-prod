@@ -25,3 +25,5 @@ body[data-sw-office-theme="light"] .sw-rolodex-page{background-image:linear-grad
 @media(max-width:767px){.sw-rolodex-main{padding:calc(110px + env(safe-area-inset-top,0px) * 0) 12px calc(112px + env(safe-area-inset-bottom,0px));gap:10px}
 .sw-rolodex-head h1{font-size:23px}.sw-myqr-code svg{width:min(52vw,218px);height:auto}
 .sw-rolodex-page:has(.sw-rolodex-main .sw-rolodex-head) .sw-rolodex-main{scrollbar-width:thin}}
+
+@media(max-width:767px){.sw-rolodex-page > :first-child:not(.sw-rolodex-main){display:none!important}.sw-rolodex-page > .sw-rolodex-main{overflow-y:auto!important;max-height:100dvh;scroll-padding-bottom:130px}.sw-rolodex-page > .sw-rolodex-main > .sw-rolodex-head{flex:0 0 auto}}
