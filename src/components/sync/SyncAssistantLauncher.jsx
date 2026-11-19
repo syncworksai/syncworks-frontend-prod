@@ -24,6 +24,7 @@ export default function SyncAssistantLauncher() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [commandOpen,setCommandOpen]=useState(false);
+  useEffect(()=>{const listener=()=>setCommandOpen(true);window.addEventListener("syncworks:victoria-open",listener);return()=>window.removeEventListener("syncworks:victoria-open",listener);},[]);
 
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   useEffect(() => {
@@ -137,7 +138,7 @@ export default function SyncAssistantLauncher() {
   return (
     <>
       <div className={`fixed bottom-24 right-4 z-[260] flex flex-col items-end gap-3 lg:bottom-6 lg:right-6 ${taskDialogOpen && showChief ? "hidden" : mobileVisible ? "" : "hidden lg:flex"}`}>
-        {showChief && (
+        {showChief && !isCustomerHome && (
           <>
             <button type="button" aria-haspopup="dialog" aria-label="Open Victoria Chief of Staff briefing" title="Victoria — Chief of Staff" onClick={() => setCommandOpen(true)}
               className="group flex min-h-12 items-center gap-2 rounded-full border border-cyan-300/45 bg-[#061327]/95 py-1 pl-1 pr-2 text-left text-white shadow-[0_0_26px_rgba(34,211,238,.22)] transition hover:border-cyan-300">
