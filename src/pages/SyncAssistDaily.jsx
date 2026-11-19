@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CheckCircle2, Circle, RefreshCw, Plus, Mail, CalendarDays, Clock3, AlertTriangle, X, ListTodo, Settings2, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
+import "./SyncAssistDailyMobile.css";
 import { useAuth } from "../auth/AuthContext";
 
 const ENDPOINT = "/sync-ai/assist/pilot/daily/";
