@@ -163,9 +163,13 @@ export default function GlobalModeBar() {
           <div className="sw-global-menu-tabs" role="tablist" aria-label="Navigation groups">
             <button type="button" role="tab" aria-selected={menuSection === "dashboards"} className={menuSection === "dashboards" ? "is-active" : ""} onClick={() => setMenuSection("dashboards")}>Dashboards</button>
             <button type="button" role="tab" aria-selected={menuSection === "shortcuts"} className={menuSection === "shortcuts" ? "is-active" : ""} onClick={() => setMenuSection("shortcuts")}>Quick links</button>
+            {isGodMode ? <button type="button" role="tab" aria-selected={menuSection === "private"} className={menuSection === "private" ? "is-active" : ""} onClick={() => setMenuSection("private")}>Private</button> : null}
           </div>
           <div className="sw-global-menu-panel" role="tabpanel">
-          {menuSection === "dashboards" ? <>
+          {menuSection === "private" && isGodMode ? <>
+            <Link to="/private" onClick={() => setOpen(false)} className={linkClass(location.pathname.startsWith("/private"))}><span className="sw-global-menu-symbol">◈</span><span className="sw-global-menu-text"><strong>Sterling Showcase</strong><small>Isolated sample business, property management, CEO and reports</small></span><span className="sw-global-menu-chevron">›</span></Link>
+            <div className="rounded-xl border border-amber-400/25 bg-amber-400/10 p-3 text-xs text-amber-100">PRIVATE SANDBOX · Simulated records only. Does not change your live business or customer workspace.</div>
+          </> : {menuSection === "dashboards" ? <>
             <Link to="/customer" onClick={() => chooseMode("CUSTOMER")} className={linkClass(mode === "CUSTOMER")}><span className="sw-global-menu-symbol">⌂</span><span className="sw-global-menu-text"><strong>Personal</strong><small>Home and daily life</small></span>{mode === "CUSTOMER" ? <em>Current</em> : <span className="sw-global-menu-chevron">›</span>}</Link>
             {businessWorkspaces.length > 0 && <div className="sw-global-menu-group">
               <button type="button" className="sw-global-menu-group-toggle" onClick={() => setBusinessExpanded(value => !value)} aria-expanded={businessExpanded}><span className="sw-global-menu-symbol">▦</span><span className="sw-global-menu-text"><strong>Businesses</strong><small>{businessWorkspaces.length} connected workspace{businessWorkspaces.length === 1 ? "" : "s"}</small></span><span className="sw-global-menu-chevron">{businessExpanded ? "⌃" : "⌄"}</span></button>
