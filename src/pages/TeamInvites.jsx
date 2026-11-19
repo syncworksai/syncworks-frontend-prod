@@ -8,8 +8,7 @@ const ROLE_OPTIONS = [
   ["DISPATCH", "Dispatch"],
   ["ACCOUNTING", "Accounting"],
   ["MANAGER", "Manager"],
-  ["OWNER", "Owner"],
-  ["ADMIN", "Admin"],
+  ["HR", "Human Resources"],
 ];
 
 const PERMS = [
