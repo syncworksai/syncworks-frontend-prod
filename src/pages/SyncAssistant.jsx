@@ -121,6 +121,15 @@ export default function SyncAssistant() {
     model: "",
   });
   const [input, setInput] = useState("");
+  // Victoria's founder command center can hand off a planning request without
+  // auto-running a billable AI message or a voice request.
+  useEffect(()=>{
+    const prompt=location.state?.victoriaPrompt;
+    if(typeof prompt!=="string"||!prompt.trim())return;
+    setInput(prompt.slice(0,3000));
+    navigate(location.pathname+location.search,{replace:true,state:null});
+  },[location.state,location.pathname,location.search,navigate]);
+
   const [answer, setAnswer] = useState(null);
   const [notice, setNotice] = useState("");
   const [sending, setSending] = useState(false);
