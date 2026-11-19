@@ -176,6 +176,7 @@ export default function RoleAwareMobileNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, mode } = useAuth();
+  const founderPilot = String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com";
   const pathname = String(location.pathname || "").toLowerCase();
   const navMode = navModeFromPath(pathname, mode, location.search);
   const [items, setItems] = useState(() => navMode ? readPreference(navMode, user) : []);
