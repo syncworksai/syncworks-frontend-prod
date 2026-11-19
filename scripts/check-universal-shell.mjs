@@ -108,3 +108,12 @@ test("PM Messages has only one mobile header and Business Inbox remains reachabl
   assert.match(inbox, /sw-inbox-business-selector/);
   assert.match(inbox, /<BusinessPicker compact \/>/);
 });
+
+
+test("New Request marketplace search declares its prefill argument", () => {
+  const panel = readFileSync(new URL("../src/components/requests/new-request/MarketplaceSearchPanel.jsx", import.meta.url), "utf8");
+  const parent = readFileSync(new URL("../src/components/requests/new-request/UniversalTicketCreator.jsx", import.meta.url), "utf8");
+  assert.match(panel, /initialSearchQuery\s*=\s*""/);
+  assert.match(panel, /useState\(\(\) => String\(initialSearchQuery \|\| ""\)\)/);
+  assert.match(parent, /initialSearchQuery=\{initialSearchQuery\}/);
+});
