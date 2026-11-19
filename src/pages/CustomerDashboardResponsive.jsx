@@ -197,6 +197,7 @@ export default function CustomerDashboardResponsive() {
         weatherState={weatherState}
         notifications={notificationItems}
         taskRows={calendarTasks}
+        founderPilot={String(user?.email||"").trim().toLowerCase()==="jacoblord7@outlook.com"}
         workout={null}
         minimums={totalDue.toLocaleString("en-US", { style: "currency", currency: "USD" })}
         businessConnected={false}
