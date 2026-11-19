@@ -5,7 +5,9 @@ import { useWorkspaceAppearance } from "../components/customer/CustomerWorkspace
 import { Activity, ArrowLeft, ArrowRight, BarChart3, Bell, BriefcaseBusiness, Building2, CalendarDays, CheckCircle2, ChevronRight, ClipboardList, Clock3, Download, FileText, Filter, LayoutDashboard, Mail, Menu, RotateCcw, Settings2, ShieldCheck, Sparkles, TrendingUp, Truck, Users, Wallet, X } from "lucide-react";
 import { demoPeople, demoCustomers, demoJobs, demoProperties, demoLeads, demoInvoices, money, statusSteps, summarize } from "./sterlingDemoData";
 import "./PrivateSterlingWorkspace.css";
+import "./PrivateSterlingOneScreen.css";
 import {useSterlingHR,WorkforceDemo,ExecutiveBotsDemo,rosterSnapshot} from "./SterlingWorkforceDemo";
+import {AVATARS,getAvatarPhotoForUser} from "../components/sync/JarvisAvatar";
 import "./SterlingWorkforceDemo.css";
 
 const PILOT_EMAIL="jacoblord7@outlook.com";
@@ -31,6 +33,8 @@ export default function PrivateShowcase(){
  const owner=String(user?.email||"").trim().toLowerCase()===PILOT_EMAIL;
  const [section,setSection]=useState(()=>{const t=new URLSearchParams(window.location.search).get("tab");return sections.some(x=>x[0]===t)?t:"overview";});
  const [drawer,setDrawer]=useState(null);
+ const [selectedBot,setSelectedBot]=useState("Victoria");
+ const [overviewFocus,setOverviewFocus]=useState("dispatch");
  const [filter,setFilter]=useState("");
  const [jobs,setJobs]=useState(readJobs);
  const [activity,setActivity]=useState([]);
@@ -43,6 +47,7 @@ export default function PrivateShowcase(){
  const updateJob=(jobId,next)=>{setJobs(old=>{const updated=old.map(j=>j.id===jobId?{...j,status:next}:j);try{localStorage.setItem(STORAGE,JSON.stringify(updated));}catch{/* in-memory works */}return updated;});setActivity(a=>[{jobId,next,date:new Date().toLocaleTimeString()},...a].slice(0,12));setNotice(jobId+" moved to "+rawStatus(next)+" in this private simulation.");setDrawer(null);};
  const reset=()=>{try{localStorage.removeItem(STORAGE)}catch{/* in memory */}hr.reset();setJobs(demoJobs);setActivity([]);setNotice("Sterling presentation restored. No live data was changed.");setDrawer(null);};
  const open=(kind,data)=>setDrawer({kind,data});
+ const openBot=(name)=>{setSelectedBot(name);showSection("ai");};
  const safeCsv=cell=>'"'+String(cell??"").replace(/"/g,'""')+'"';
  const downloadReport=()=>{
   const rows=activeReport==="Job & Dispatch Report"?[["Ticket","Customer","Service","Technician","Status","Amount","Travel minutes","On-site minutes"],...jobs.map(j=>[j.id,j.customer,j.service,demoPeople.find(t=>t.id===j.technicianId)?.name,j.status,j.amount,j.travelMinutes,j.siteMinutes])]:
@@ -68,10 +73,10 @@ export default function PrivateShowcase(){
    <div className="sterling-workspace-content">
     <aside className="sterling-sidebar" aria-label="Sterling navigation">
      <div className="sterling-sidebar-title"><BriefcaseBusiness size={18}/> <span>STERLING GROUP</span></div>
-     <nav>{sections.map(([id,label,Icon])=><button type="button" key={id} className={section===id?"is-current":""} onClick={()=>showSection(id)}><Icon size={17}/><span>{label}</span></button>)}</nav>
+     <nav>{sections.filter(([id])=>["overview","tickets","dispatch","team","hr","schedule","finance"].includes(id)).map(([id,label,Icon])=><button type="button" key={id} className={section===id?"is-current":""} onClick={()=>showSection(id)}><Icon size={17}/><span>{label}</span></button>)}<button type="button" className={["leads","property","ceo","reports","ai"].includes(section)?"is-current":""} onClick={()=>open("workspaces")}><LayoutDashboard size={17}/><span>More workspaces</span><ChevronRight size={14}/></button></nav>
      <div className="sterling-sidebar-bottom"><ShieldCheck size={16}/> Private presentation data <button type="button" onClick={()=>open("reset")}>Reset demo</button></div>
     </aside>
-    <div className="sterling-main">
+    <div className={"sterling-main "+(section==="overview"?"sterling-main--overview":"")} data-focus={overviewFocus}>
      <div className="sterling-section-top"><div><span className="sterling-eyebrow">{section==="overview"?"TODAY AT A GLANCE":"STERLING OPERATIONS"}</span><h2>{section==="overview"?"Business overview":panelTitle}</h2></div><div className="sterling-section-actions"><Chip tone="good">Operating · Demo</Chip><button type="button" onClick={()=>open("briefing")} aria-label="Open briefing"><Bell size={16}/><span>Needs attention</span></button></div></div>
      {section==="overview" && <>
       <div className="sterling-stats">
@@ -80,6 +85,7 @@ export default function PrivateShowcase(){
        <Tile title="Open work orders" value={kpi.active} detail="Across all crews" onClick={()=>showSection("tickets")}/>
        <Tile title="Outstanding" value={money(kpi.outstanding)} detail="Invoices requiring collection" onClick={()=>showSection("finance")}/>
       </div>
+      <nav className="sterling-overview-pager" aria-label="Overview panels">{[["dispatch","Dispatch"],["team","Technicians"],["attention","Attention"],["schedule","Schedule"],["pulse","CEO pulse"]].map(([id,label])=><button type="button" key={id} aria-pressed={overviewFocus===id} onClick={()=>setOverviewFocus(id)}>{label}</button>)}</nav>
       <div className="sterling-grid-two">
        <Card title="Today's dispatch" action={<button onClick={()=>showSection("dispatch")}>Open board <ChevronRight size={15}/></button>}>{jobRows(jobs.filter(j=>j.dayOffset===0),5)}</Card>
        <Card title="Technician status" action={<button onClick={()=>showSection("hr")}>HR & idle techs <ChevronRight size={15}/></button>}><div className="sterling-rows">{demoPeople.slice(0,6).map(t=><Row key={t.id} onClick={()=>open("person",t)}><span className="sterling-row-main"><strong>{t.name}</strong><small>{t.trade} · Avg travel {t.travel} min</small></span><Chip tone={t.status==="Available"?"good":"info"}>{t.status}</Chip></Row>)}</div></Card>
@@ -101,11 +107,15 @@ export default function PrivateShowcase(){
      {section==="property" && <><div className="sterling-stats"><Tile title="Managed units" value={demoProperties.reduce((s,p)=>s+p.units,0)} detail="Four communities" onClick={()=>open("property",demoProperties[0])}/><Tile title="Occupied units" value={demoProperties.reduce((s,p)=>s+p.occupied,0)} detail="94.2% portfolio occupancy" onClick={()=>open("property",demoProperties[0])}/><Tile title="Monthly rent roll" value={money(demoProperties.reduce((s,p)=>s+p.rent,0))} detail="Fictional scheduled charges" onClick={()=>open("property",demoProperties[0])}/><Tile title="Open maintenance" value={demoProperties.reduce((s,p)=>s+p.open,0)} detail="Connected workflow concept" onClick={()=>showSection("tickets")}/></div><Card title="Sterling Property Management"><div className="sterling-property-grid">{demoProperties.map(p=><button key={p.name} onClick={()=>open("property",p)}><Building2 size={23}/><strong>{p.name}</strong><small>{p.occupied}/{p.units} occupied · {p.open} maintenance</small><span>{money(p.rent)} rent roll</span></button>)}</div></Card></>}
      {section==="ceo" && <><div className="sterling-stats"><Tile title="Revenue" value={money(kpi.invoiced)} detail="Simulated invoice-ledger total" onClick={()=>showSection("finance")}/><Tile title="Collected" value={money(kpi.collected)} detail="Simulated cash receipts" onClick={()=>showSection("finance")}/><Tile title="Jobs completed" value={kpi.completed} detail="Calculated from ticket states" onClick={()=>showSection("tickets")}/><Tile title="Receivables" value={money(kpi.outstanding)} detail="Invoiced minus collected" onClick={()=>showSection("finance")}/></div><div className="sterling-grid-two"><Card title="Revenue & growth"><div className="sterling-progress"><span>Monthly goal</span><strong>{money(kpi.invoiced)} / $60,000</strong><div><i style={{width:Math.min(100,kpi.invoiced/60000*100)+"%"}}/></div></div><p className="sterling-muted">Profit and net margins require a complete expense ledger; not shown as verified.</p></Card><Card title="Executive briefing"><p>Victoria's simulated briefing: {kpi.active} jobs remain in the active queue, {money(kpi.outstanding)} in invoice balances is awaiting collection, and {demoLeads.filter(l=>l.stage==="New").length} leads need initial follow-up.</p><button className="sterling-inline-link" onClick={()=>open("briefing")}>Open business briefing <ArrowRight size={15}/></button></Card></div><Card title="Performance navigation"><PanelGroup items={sections.filter(([id])=>["dispatch","team","leads","finance","property","reports"].includes(id))} onSelect={showSection}/></Card></>}
      {section==="reports" && <><Card title="Export business records" action={<Chip tone="private">Fake records only</Chip>}><p className="sterling-muted">Select a report and export the simulated records as a real CSV. PDF, Excel, QuickBooks and tax-app formats are not wired yet.</p><div className="sterling-export"><select value={activeReport} onChange={e=>setActiveReport(e.target.value)} aria-label="Select report">{["Job & Dispatch Report","Payments & Receivables","Technician Productivity","Property Portfolio"].map(s=><option key={s}>{s}</option>)}</select><button onClick={downloadReport}><Download size={17}/> Export CSV</button></div></Card><Card title="Report categories"><PanelGroup items={[["finance","Financials",Wallet],["team","Technicians",Users],["dispatch","Operations",Activity],["property","Property Management",Building2],["leads","Sales Intelligence",TrendingUp]]} onSelect={showSection}/></Card></>}
-     {section==="ai" && <ExecutiveBotsDemo jobs={jobs} hr={hr} onModule={showSection}/>}
+     {section==="ai" && <ExecutiveBotsDemo jobs={jobs} hr={hr} onModule={showSection} selectedEmployee={selectedBot}/>}
      {notice&&<div className="sterling-notice" role="status">{notice}<button onClick={()=>setNotice("")} aria-label="Dismiss notification"><X size={15}/></button></div>}
     </div>
    </div>
-   <footer className="sterling-footer">STERLING GROUP · PRIVATE PRESENTATION · 100% FICTIONAL DATA · NO LIVE SYNCWORKS ACTIONS</footer>
+   <footer className="sterling-footer">STERLING GROUP · PRIVATE PRESENTATION · FICTIONAL DATA · NO LIVE ACTIONS</footer>
+   <nav className="sterling-ai-dock" aria-label="Showcase AI employee dock">
+    {AVATARS.map(bot=><button type="button" key={bot.id} onClick={()=>openBot(bot.name)} title={bot.name+" · "+bot.role} aria-label={"Open "+bot.name+" AI employee briefing"}><img src={getAvatarPhotoForUser(bot,user)} alt="" loading="lazy" onError={e=>{e.currentTarget.style.visibility="hidden";}}/><span>{bot.name}</span></button>)}
+    <button type="button" className="sterling-ai-dock-more" onClick={()=>openBot("Victoria")} aria-label="Open all AI employees"><Sparkles size={18}/><span>Team</span></button>
+   </nav>
   </div>
   {drawer&&<div className="sterling-drawer-backdrop" onMouseDown={()=>setDrawer(null)}><aside className="sterling-drawer" role="dialog" aria-modal="true" aria-label="Sterling detail" onMouseDown={e=>e.stopPropagation()}><header><span className="sterling-eyebrow">SYNCWORKS / PRIVATE</span><button onClick={()=>setDrawer(null)} aria-label="Close drawer"><X size={21}/></button></header>
    {drawer.kind==="job"&&<><h2>{drawer.data.id}</h2><p>{drawer.data.customer}</p><dl><dt>Service</dt><dd>{drawer.data.service}</dd><dt>Technician</dt><dd>{demoPeople.find(t=>t.id===drawer.data.technicianId)?.name}</dd><dt>Amount</dt><dd>{money(drawer.data.amount)}</dd><dt>Travel</dt><dd>{drawer.data.travelMinutes} min</dd><dt>Time on site</dt><dd>{drawer.data.siteMinutes} min</dd><dt>Status</dt><dd>{rawStatus(jobs.find(j=>j.id===drawer.data.id)?.status)}</dd></dl><h3>Move job through workflow</h3><div className="sterling-drawer-actions">{statusOptions.map(st=><button key={st} onClick={()=>updateJob(drawer.data.id,st)} disabled={jobs.find(j=>j.id===drawer.data.id)?.status===st}>{rawStatus(st)}</button>)}</div></>}
@@ -115,6 +125,7 @@ export default function PrivateShowcase(){
    {drawer.kind==="property"&&<><h2>{drawer.data.name}</h2><p>Managed residential portfolio</p><dl><dt>Total units</dt><dd>{drawer.data.units}</dd><dt>Occupied</dt><dd>{drawer.data.occupied}</dd><dt>Vacant</dt><dd>{drawer.data.units-drawer.data.occupied}</dd><dt>Rent roll</dt><dd>{money(drawer.data.rent)}</dd><dt>Open requests</dt><dd>{drawer.data.open}</dd></dl></>}
    {drawer.kind==="briefing"&&<><h2>Victoria · Business Briefing</h2><p>This presentation briefing is calculated from local fictional records, not sent by a live agent.</p><div className="sterling-brief"><p><strong>{kpi.active} active service jobs</strong> in the field and scheduling queue.</p><p><strong>{money(kpi.outstanding)}</strong> remains in sample invoice receivables.</p><p><strong>{demoPeople.length} technicians</strong> are rostered across HVAC, Plumbing, Electrical and Maintenance.</p><p><strong>{demoLeads.length} leads</strong> in the simulated growth pipeline.</p></div></>}
    {drawer.kind==="agent"&&<><h2>{drawer.data.name}</h2><p>{drawer.data.role} · Simulated agent</p><div className="sterling-brief"><p>Example assignments and approvals will appear here once the isolated AI workflow is implemented.</p></div></>}
+   {drawer.kind==="workspaces"&&<><h2>Business workspaces</h2><p>Choose any Sterling module. The overview stays anchored in one screen while detailed modules open in their workspace.</p><PanelGroup items={sections} onSelect={showSection}/></>}
    {drawer.kind==="reset"&&<><h2>Reset presentation?</h2><p>This resets only the locally simulated Sterling job statuses on this device. Real data is untouched.</p><div className="sterling-drawer-actions"><button onClick={reset}>Reset Sterling demo</button><button onClick={()=>setDrawer(null)}>Cancel</button></div></>}
   </aside></div>}
  </main>;
