@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { extractBusinessCardCode } from "../utils/businessQrCodes.mjs";
+import "./CustomerRolodex.css";
 import api from "../api/client";
 import ModeBar from "../components/ModeBar";
 import Button from "../components/ui/Button";
@@ -218,6 +220,8 @@ function TrustMiniPill({ active, label }) {
 
 export default function CustomerBusinessCards() {
   const nav = useNavigate();
+  const [urlParams, setUrlParams] = useSearchParams();
+  const incomingCode = urlParams.get("code") || "";
 
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -309,9 +313,9 @@ export default function CustomerBusinessCards() {
   }, [items, activeGroup, search]);
 
   async function addByCode(codeRaw) {
-    const code = String(codeRaw || "").trim();
+    const code = extractBusinessCardCode(codeRaw);
     if (!code) {
-      throw new Error("Enter a business card code first.");
+      throw new Error("Enter a valid SyncWorks business QR or SW- code.");
     }
 
     setBusy(true);
@@ -346,6 +350,29 @@ export default function CustomerBusinessCards() {
     } finally {
       setBusy(false);
     }
+  }
+
+  // QR scans open this route. Ask for deliberate confirmation: never save a
+  // provider automatically merely because a link was opened.
+  const [qrPreview, setQrPreview] = useState(null);
+  const [qrPreviewError, setQrPreviewError] = useState("");
+  useEffect(() => {
+    const code = extractBusinessCardCode(incomingCode);
+    if (!incomingCode) { setQrPreview(null); setQrPreviewError(""); return; }
+    if (!code) { setQrPreview(null); setQrPreviewError("Unrecognized business QR. Ask the business for an updated SyncWorks code."); return; }
+    let alive = true;
+    api.get("/me/business-cards/resolve/", { params: { code } })
+      .then(({ data }) => { if(alive) {setQrPreview({ code, business:data?.business });setQrPreviewError("");} })
+      .catch((e) => {if(alive) {setQrPreview(null);setQrPreviewError(e?.response?.data?.detail || "Unable to verify this business QR.");}});
+    return () => {alive = false;};
+  }, [incomingCode]);
+
+  function clearQrPreview() {
+    setQrPreview(null);
+    setQrPreviewError("");
+    const next = new URLSearchParams(urlParams);
+    next.delete("code");
+    setUrlParams(next, { replace:true });
   }
 
   async function removeCard(fav) {
@@ -397,10 +424,13 @@ export default function CustomerBusinessCards() {
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100">
-      <ModeBar title="Business Cards" subtitle="Saved providers you trust." />
+    <div className="sw-rolodex-page min-h-screen bg-[#020617] text-slate-100">
+      <ModeBar title="My Rolodex" subtitle="Your trusted businesses, ready for direct requests." />
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+      <main className="sw-rolodex-main max-w-6xl mx-auto px-4 py-6 space-y-4">
+        <div className="sw-rolodex-head"><div><p>SYNCWORKS / APPS</p><h1>My Rolodex</h1><span>Save, discover and request service from trusted businesses.</span></div><button type="button" onClick={()=>nav("/customer/new-request")}>New Request</button></div>
+        {qrPreviewError ? <div role="alert" className="rounded-2xl border border-rose-400/40 bg-rose-950/60 p-3 text-sm text-rose-100">{qrPreviewError}<button type="button" className="ml-3 underline" onClick={clearQrPreview}>Dismiss</button></div> : null}
+        {qrPreview?.business ? <section className="rounded-3xl border border-cyan-300/60 bg-slate-950/80 p-4 shadow-xl"><div className="text-xs font-black uppercase tracking-widest text-cyan-300">Scanned business card</div><h2 className="mt-2 text-xl font-black">{qrPreview.business.name}</h2><p className="mt-1 text-xs text-slate-300">{qrPreview.business.headline || "Verify this business before saving."}</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" disabled={busy} className="min-h-11 rounded-xl bg-cyan-400 px-4 font-bold text-slate-950 disabled:opacity-60" onClick={async()=>{try{await addByCode(qrPreview.code);clearQrPreview();}catch{}}}>{busy?"Saving…":"Save to Rolodex"}</button><button type="button" onClick={clearQrPreview} className="min-h-11 rounded-xl border border-slate-500 px-4">Not now</button></div></section> : null}
         <div className="flex gap-2 flex-wrap">
           <Button tone="slate" onClick={() => nav(-1)} disabled={busy}>
             Back
@@ -630,7 +660,7 @@ export default function CustomerBusinessCards() {
       <BarcodeScannerModal
         open={scanOpen}
         onClose={() => setScanOpen(false)}
-        onDetected={(raw) => addByCode(raw)}
+        onDetected={async(raw) => { const code=extractBusinessCardCode(raw); if (!code) {setErr("Scan a valid SyncWorks business QR code.");return;} await addByCode(code); }}
       />
     </div>
   );
