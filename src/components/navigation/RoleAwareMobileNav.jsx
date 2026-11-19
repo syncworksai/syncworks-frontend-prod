@@ -112,7 +112,7 @@ function navModeFromPath(pathname, fallbackMode, search = "") {
 
 function centerConfig(mode) {
   if (mode === "CUSTOMER") return { label: "SYNC", route: "/sync", sync: true };
-  if (mode === "SBO") return { label: "Ticket", route: "/sbo/new-ticket" };
+  if (mode === "SBO") return { label: "New Call", route: "/sbo/quick-intake" };
   if (mode === "EMPLOYEE") return { label: "Ticket", route: "/tickets" };
   if (mode === "PM") return { label: "Request", route: "/tickets" };
   return null;
