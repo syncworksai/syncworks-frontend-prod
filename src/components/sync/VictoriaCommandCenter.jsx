@@ -44,10 +44,11 @@ export default function VictoriaCommandCenter({open,onClose}){
  const ask=(prompt)=>{stopSpeaking();onClose();navigate("/sync",{state:{victoriaPrompt:prompt}});};
  async function hearSnapshot(){
    if(speaking||voiceBusy){stopSpeaking();return;}
-   if(!state){setVoiceNotice("Refresh connected records first.");return;}
+   // Speech can function without the daily-state feed; never block voice on a separate API outage.
    const next=events[0];
    const spoken=[
-    "Good morning. I am Victoria, your Chief of Staff.",
+    "Hello. I am Victoria, your Chief of Staff.",
+    ...(!state?["The live briefing is not available right now. I can still help you plan once connected records load."]:[]),
     next?`Your next calendar item is ${next.title||"an event"} at ${timeLabel(next.start_at)}.`:"No calendar events were returned for today.",
     attention.length?`${attention.length} items may need attention.`:"No urgent alerts were returned in the current snapshot.",
     health.available?(today.workout_completed?"Your workout is marked complete.":workout?`Your planned workout is ${workout}.`:"No workout plan was returned."):"Health data is not available.",
@@ -57,12 +58,13 @@ export default function VictoriaCommandCenter({open,onClose}){
    setVoiceBusy(true);setVoiceNotice("");
    try{
     const blob=await synthesizeSyncSpeech(spoken,SYNC_VOICE_ROLES.femaleAssistant);
+    if(!(blob instanceof Blob)||!blob.size||!String(blob.type||"").startsWith("audio/"))throw new Error("INVALID_AUDIO_RESPONSE");
     const url=URL.createObjectURL(blob);audioUrl.current=url;
     const player=new Audio(url);audio.current=player;
     player.onended=stopSpeaking;
     player.onerror=()=>{stopSpeaking();setVoiceNotice("Audio unavailable. The written snapshot is below.");};
     await player.play();setSpeaking(true);
-   }catch{stopSpeaking();setVoiceNotice("Audio unavailable. Read the snapshot or use SYNC chat.");}
+   }catch(e){stopSpeaking();const status=e?.response?.status;setVoiceNotice(status===401||status===403?"Voice authorization unavailable. Sign in again or check voice configuration.":status===503?"Voice service not configured or temporarily unavailable.":status===429?"Voice service usage limit reached.":e?.message==="INVALID_AUDIO_RESPONSE"?"Speech service did not return playable audio.":"Voice could not play. You can still read the briefing or open SYNC chat.");}
    finally{setVoiceBusy(false);}
  }
  async function saveTask(event){event.preventDefault();setTaskSaving(true);setTaskMessage("");try{await addVictoriaTask(taskTitle);setTaskTitle("");setTaskOpen(false);setTaskMessage("Saved to your to-do list. It will stay open until completed.");await reload();}catch(e){setTaskMessage(e?.message||"Could not save task. Retry.");}finally{setTaskSaving(false);}}

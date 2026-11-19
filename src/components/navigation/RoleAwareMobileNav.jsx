@@ -286,7 +286,7 @@ export default function RoleAwareMobileNav() {
             </div>
             <div className="sw-mobile-ai-team-grid">
               {AVATARS.map((worker) => (
-                <button type="button" key={worker.id} onClick={() => navigateAssistant(worker.role === "Chief of Staff" ? "/sync/assist/chief" : "/sync/assist")} aria-label={`Open ${worker.name}, ${worker.role}`}>
+                <button type="button" key={worker.id} onClick={() => {if(founderPilot&&worker.role==="Chief of Staff")window.dispatchEvent(new Event("syncworks:victoria-open"));else navigateAssistant(worker.role === "Chief of Staff" ? "/sync/assist/chief" : "/sync/assist");}} aria-label={`Open ${worker.name}, ${worker.role}`}>
                   <img src={getAvatarPhotoForUser(worker, user)} alt="" loading="lazy" />
                   <strong>{worker.name}</strong>
                   <small>{worker.role}</small>
@@ -297,8 +297,8 @@ export default function RoleAwareMobileNav() {
           </section>
         </div>
       )}
-      {!founderPilot && navMode === "CUSTOMER" && pathname === "/customer" && (
-        <div className="sw-mobile-bots-dock lg:hidden" role="group" aria-label="Your docked AI employees">
+      {navMode === "CUSTOMER" && pathname === "/customer" && (
+        <div className={`sw-mobile-bots-dock lg:hidden ${founderPilot?"sw-mobile-bots-dock-compact":""}`} role="group" aria-label="Your docked AI employees">
           <span className="sw-mobile-bots-label">AI TEAM</span>
           <div className="sw-mobile-bots-people">
             {AVATARS.map((worker) => (
