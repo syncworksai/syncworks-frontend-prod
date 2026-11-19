@@ -99,6 +99,7 @@ export default function MarketplaceSearchPanel({
   categoryLoading = false,
   categoryLoadError = "",
   onNext = null,
+  initialSearchQuery = "",
   compact = false,
   routeChooser = null,
 }) {
