@@ -37,6 +37,7 @@ export default function SyncAssistEmployeeDashboard() {
   const [version, setVersion] = useState(0);
   const employee = team.find((row) => row.id === employeeId);
   const portrait = AVATARS.find((row) => row.id === employeeId);
+  const employeePortrait = employee?.photo || portrait?.photo;
   const role = employee?.role;
   const tasks = useMemo(() => goals.flatMap((goal) => (goal.steps || [])
     .filter((step) => step.role === role)
@@ -89,7 +90,7 @@ export default function SyncAssistEmployeeDashboard() {
           </div>
         </header>
         <section className="flex shrink-0 items-center gap-3 rounded-2xl border border-cyan-400/30 bg-slate-950/70 p-3 backdrop-blur-xl">
-          <img src={portrait.photo} alt="" className="h-16 w-16 shrink-0 rounded-full border-2 border-cyan-300 object-cover object-top shadow-[0_0_20px_rgba(34,211,238,.25)] sm:h-20 sm:w-20"/>
+          <img src={employeePortrait} alt="" className="h-16 w-16 shrink-0 rounded-full border-2 border-cyan-300 object-cover object-top shadow-[0_0_20px_rgba(34,211,238,.25)] sm:h-20 sm:w-20"/>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-black uppercase tracking-wider text-cyan-300">Sync Assist · Employee workspace</p>
             <h1 className="truncate text-xl font-black sm:text-2xl">{employee?.name || portrait.name} <span className="text-cyan-300">— {title(role || portrait.role)}</span></h1>
