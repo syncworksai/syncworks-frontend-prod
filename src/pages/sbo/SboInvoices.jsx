@@ -25,6 +25,8 @@ import { useNavigate } from "react-router-dom";
 
 import DashboardShell from "../../components/dashboard/DashboardShell";
 import "./SboInvoices.css";
+import SboNewInvoiceDrawer from "./SboNewInvoiceDrawer";
+import "./SboNewInvoiceDrawer.css";
 import {
   createInvoiceFromTicket,
   getInvoiceCenter,
@@ -276,6 +278,7 @@ export default function SboInvoices() {
   const [filter, setFilter] = useState(() => {const requested=new URLSearchParams(window.location.search).get("state")?.toUpperCase()||"ALL";return FILTERS.includes(requested)?requested:"ALL";});
   const [workspaceTab,setWorkspaceTab]=useState("invoices");
   const [selected, setSelected] = useState(null);
+  const [showNewInvoice,setShowNewInvoice]=useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
@@ -292,7 +295,12 @@ export default function SboInvoices() {
   async function load() {
     setLoading(true); setError("");
     try { setData(await getInvoiceCenter(filter === "ALL" ? "" : filter)); }
-    catch (e) { setError(e?.response?.data?.detail || "Invoice Center is temporarily unavailable."); }
+    catch (e) {
+      const status=e?.response?.status;
+      const detail=e?.response?.data?.detail;
+      const problem=status===401?"Session expired. Sign in again.":status===403?"Your current business or employee role cannot access invoices.":status===404?"Invoice service or active business could not be found.":status===500?"Invoice service failed on the server. Please check backend logs.":e?.message==="Network Error"?"Could not reach the Invoice Center API. Check connectivity and server status.":"Invoice Center is temporarily unavailable.";
+      setError([detail||problem,status?"HTTP "+status:null].filter(Boolean).join(" · "));
+    }
     finally { setLoading(false); }
   }
 
@@ -312,6 +320,7 @@ export default function SboInvoices() {
       const invoice = await createInvoiceFromTicket(ticketId);
       setNotice("Invoice draft created. Review it before sending.");
       await load();
+      setShowNewInvoice(false);
       await openInvoice(invoice.id);
     } catch (e) { setError(e?.response?.data?.detail || "Unable to create invoice draft."); }
     finally { setBusy(false); }
@@ -364,6 +373,7 @@ export default function SboInvoices() {
         <header className="sw-invoice-office-header">
           <div><div className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">SYNCWORKS · BUSINESS OPERATIONS</div><h1>Invoices & Payments</h1><p>Real business invoice records · select an invoice for details</p></div>
           <div className="flex items-center gap-2">
+            <button type="button" onClick={()=>setShowNewInvoice(true)} className="sw-invoice-toolbar-button sw-invoice-create-button"><Plus size={16}/> New invoice</button>
             <button type="button" onClick={()=>navigate("/sbo/finance")} className="sw-invoice-toolbar-button"><ArrowLeft size={16}/> Finance</button>
             <button type="button" onClick={load} disabled={loading} className="sw-invoice-toolbar-button"><RefreshCw size={16} className={loading?"animate-spin":""}/> Refresh</button>
           </div>
@@ -393,7 +403,7 @@ export default function SboInvoices() {
           <div className="mt-3 flex gap-2"><button disabled={reminderBusy} type="button" onClick={saveReminders} className="sw-invoice-toolbar-button">Enable reminders</button><button disabled={reminderBusy} type="button" onClick={disableReminders} className="sw-invoice-toolbar-button">Disable</button></div>
           {reminderError&&<p role="alert" className="mt-2 text-rose-300">{reminderError}</p>}
         </section>}
-        {error ? <div className="rounded-2xl border border-rose-400/20 bg-rose-500/[.07] p-4 text-sm text-rose-100">{error}</div> : null}
+        {error ? <div role="alert" className="rounded-2xl border border-rose-400/20 bg-rose-500/[.07] p-3 text-sm text-rose-100"><strong>Invoice data not loaded.</strong> {error} <button type="button" onClick={load} className="ml-2 underline">Retry</button></div> : null}
         {notice ? <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/[.07] p-4 text-sm text-emerald-100">{notice}</div> : null}
 
         {workspaceTab==="assistant" && (data.suggestions || []).length ? <section className="rounded-[1.7rem] border border-violet-400/20 bg-violet-500/[.05] p-4"><div className="flex items-center gap-2 font-black text-white"><Sparkles className="h-5 w-5 text-violet-200" />SYNC recommendations</div><div className="mt-3 grid gap-2 sm:grid-cols-3">{data.suggestions.map((item) => <div key={item.type} className="rounded-2xl border border-white/10 bg-slate-950/50 p-3 text-sm text-slate-300">{item.message}</div>)}</div></section> : null}
@@ -417,6 +427,7 @@ export default function SboInvoices() {
           {!loading && !(data.results || []).length ? <div className="mt-4 rounded-3xl border border-white/10 bg-white/[.025] p-8 text-center"><ReceiptText className="mx-auto h-8 w-8 text-slate-600" /><div className="mt-3 font-black text-white">No invoices in this view</div><div className="mt-1 text-sm text-slate-500">Completed jobs will appear above when they are ready to bill.</div></div> : null}
           <div className="sw-invoice-ledger-list">{(data.results || []).map((invoice) => <InvoiceCard key={invoice.id} invoice={invoice} onOpen={openInvoice} />)}</div>
         </section>}
+        {showNewInvoice&&<SboNewInvoiceDrawer onClose={()=>setShowNewInvoice(false)} ready={data.ready_to_bill||[]} onCreate={createDraft} busy={busy}/>}
       </div>
     </DashboardShell>
   );
