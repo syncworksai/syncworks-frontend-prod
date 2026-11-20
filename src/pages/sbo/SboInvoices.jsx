@@ -119,6 +119,7 @@ function buildInvoiceMailto(invoice) {
     `Hello ${invoice.customer_name||""},`,
     "",
     `Here is invoice #${invoice.id} for ${invoice.title||invoice.service_title||"services"}.`,
+    `Invoice date: ${invoice.created_at?fmtDate(String(invoice.created_at).slice(0,10)):"See invoice"}`,
     `Invoice total: ${money(invoice.total)}`,
     `Remaining balance: ${money(invoice.balance_due)}`,
     `Due date: ${date}`,
