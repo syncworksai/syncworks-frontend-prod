@@ -44,8 +44,14 @@ function getBusinessLogoUrl(biz) {
     biz?.logo_file ||
     "";
 
-  const base = String(raw || "").trim();
-  if (!base) return "";
+  const original = String(raw || "").trim();
+  if (!original) return "";
+  let base = "";
+  try {
+    const apiOrigin = new URL(api.defaults.baseURL, window.location.origin).origin;
+    base = new URL(original, original.startsWith("/") ? apiOrigin : apiOrigin+"/").href;
+    if (!/^https?:\\/\\//i.test(base)) return "";
+  } catch { return ""; }
 
   const stamp =
     biz?.logo_updated_at ||
