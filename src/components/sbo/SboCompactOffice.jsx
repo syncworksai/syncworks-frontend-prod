@@ -1,6 +1,7 @@
 import "./SboCompactOffice.css";
 import "../../styles/SyncWorksMotion.css";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, ClipboardList, DollarSign, Users, X, Settings2, Megaphone, BarChart3, Clock3, Route, Plus, ChevronRight, RefreshCw, Activity, Wrench, PanelLeftClose } from "lucide-react";
 import api from "../../api/client";
@@ -86,9 +87,27 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
   const openPanel=useCallback((next,event)=>{
     const target=event?.currentTarget||null;
     triggerRef.current=target;
+    const desktop=window.matchMedia("(min-width: 768px)").matches;
+    // Native View Transitions take a true geometry snapshot of the clicked
+    // control before morphing to the contextual panel. Existing CSS is fallback.
+    if(motionEnabled&&desktop&&!panel&&target&&document.startViewTransition){
+      target.style.viewTransitionName="sw-sbo-shared-panel";
+      try{
+        const transition=document.startViewTransition(()=>{
+          target.style.viewTransitionName="none";
+          flushSync(()=>{setPanel(next);positionPanel(target,next);});
+        });
+        transition.finished.catch(()=>{}).finally(()=>{
+          target.style.removeProperty("view-transition-name");
+        });
+        return;
+      }catch{
+        target.style.removeProperty("view-transition-name");
+      }
+    }
     setPanel(next);
     positionPanel(target,next);
-  },[positionPanel]);
+  },[motionEnabled,panel,positionPanel]);
   useEffect(()=>{
     if(!panel)return;
     const reposition=()=>positionPanel(triggerRef.current,panel);
@@ -277,7 +296,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
     </div>
     {quickMessageTicket&&<TicketQuickMessage ticketId={quickMessageTicket} onClose={()=>setQuickMessageTicket(null)}/>}
     {panel&&<div className="sw-sbo-panel-shade absolute inset-0 z-40 flex items-end justify-end bg-[#010513]/65 p-2 backdrop-blur-sm sm:p-4" onClick={()=>setPanel(null)}>
-      <section role="dialog" aria-modal="true" aria-label={panel==="subcontractors"?"Subcontractors":menu.find(m=>m.id===panel)?.title||"Operations"} onClick={e=>e.stopPropagation()} className={`sw-sbo-drawer flex h-auto max-h-[96%] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-cyan-300/40 p-4 text-white shadow-2xl ${popoverPosition?"sw-sbo-contextual-popout":""}`} data-arrow-side={popoverPosition?.side} style={popoverPosition?{"--sbo-popout-left":`${popoverPosition.left}px`,"--sbo-popout-top":`${popoverPosition.top}px`,"--sbo-popout-width":`${popoverPosition.width}px`,"--sbo-popout-height":`${popoverPosition.height}px`,"--sbo-arrow-top":`${popoverPosition.arrowTop}px`,"--sw-motion-origin-x":popoverPosition.side==="right"?"100%":"0%","--sw-motion-origin-y":`${Math.round(popoverPosition.arrowTop/popoverPosition.height*100)}%`,"--sw-motion-enter-x":popoverPosition.side==="right"?"12px":"-12px"}:undefined}>
+      <section role="dialog" aria-modal="true" aria-label={panel==="subcontractors"?"Subcontractors":menu.find(m=>m.id===panel)?.title||"Operations"} onClick={e=>e.stopPropagation()} className={`sw-sbo-drawer flex h-auto max-h-[96%] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-cyan-300/40 p-4 text-white shadow-2xl ${popoverPosition?"sw-sbo-contextual-popout":""}`} data-arrow-side={popoverPosition?.side} style={popoverPosition?{"--sbo-popout-left":`${popoverPosition.left}px`,"--sbo-popout-top":`${popoverPosition.top}px`,"--sbo-popout-width":`${popoverPosition.width}px`,"--sbo-popout-height":`${popoverPosition.height}px`,"--sbo-arrow-top":`${popoverPosition.arrowTop}px`,"--sw-motion-origin-x":popoverPosition.side==="right"?"100%":"0%","--sw-motion-origin-y":`${Math.round(popoverPosition.arrowTop/popoverPosition.height*100)}%`,"--sw-motion-enter-x":popoverPosition.side==="right"?"12px":"-12px",viewTransitionName:motionEnabled&&popoverPosition?"sw-sbo-shared-panel":undefined}:undefined}>
         <div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-semibold">{panel==="subcontractors"?"Subcontractors":menu.find(m=>m.id===panel)?.title||"Operations"}</h2><button aria-label="Close drawer" onClick={()=>setPanel(null)} className="rounded-xl border border-white/15 p-2"><X size={18}/></button></div>
         {panel==="operations"&&<div className="mb-3 space-y-3 overflow-y-auto text-sm">
           <div className="grid grid-cols-3 gap-2 text-center"><div className="rounded-xl bg-white/5 p-2"><strong className="block text-xl">{ops?summary.scheduled_jobs:"—"}</strong><small>Scheduled</small></div><div className="rounded-xl bg-white/5 p-2"><strong className="block text-xl">{ops?summary.route_conflicts:"—"}</strong><small>Conflicts</small></div><div className="rounded-xl bg-white/5 p-2"><strong className="block text-xl">{averageMinutes??"—"}</strong><small>Avg clock min*</small></div></div>
