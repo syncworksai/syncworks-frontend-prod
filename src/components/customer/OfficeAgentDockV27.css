@@ -139,3 +139,17 @@
  .sw-ai-conversation-footnote{padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
 }
 @media(prefers-reduced-motion:reduce){.sw-ai-conversation-overlay,.sw-ai-conversation{animation:none!important}}
+
+/* Compact, genuinely role-scoped assignment pulse inside employee chat. */
+.sw-ai-work-summary{padding:10px 14px 11px;border-bottom:1px solid color-mix(in srgb,var(--sw-workspace-accent,#35d8f6) 22%,transparent);background:color-mix(in srgb,var(--sw-ui-surface,#142b42) 30%,transparent);flex-shrink:0}
+.sw-ai-work-summary-head{display:flex;align-items:center;gap:8px}
+.sw-ai-work-summary-head strong{font-size:11px;font-weight:800}
+.sw-ai-work-summary-head span{font-size:10px;opacity:.72;flex:1;text-align:right}
+.sw-ai-work-summary-head button{display:grid;place-items:center;min-width:30px;min-height:30px;border:1px solid color-mix(in srgb,var(--sw-workspace-accent,#35d8f6) 30%,transparent);border-radius:9px;color:inherit}
+.sw-ai-work-summary>p{font-size:11px;opacity:.75;margin:6px 0 0;line-height:1.35}
+.sw-ai-work-summary-items{display:flex;gap:7px;margin-top:8px;overflow-x:auto;scrollbar-width:thin;overscroll-behavior-x:contain;padding-bottom:2px}
+.sw-ai-work-summary-items button{display:block;flex:0 0 min(210px,72vw);max-width:210px;text-align:left;padding:9px;border:1px solid color-mix(in srgb,var(--sw-workspace-accent,#35d8f6) 28%,transparent);border-radius:10px;background:color-mix(in srgb,var(--sw-ui-surface,#142b42) 65%,transparent);color:inherit}
+.sw-ai-work-summary-items button>span{font-size:9px;opacity:.72;display:block;margin-bottom:3px}
+.sw-ai-work-summary-items button>strong{font-size:11px;line-height:1.4;font-weight:700;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sw-ai-work-summary-items button>em{font-size:10px;line-height:1.3;display:block;color:#ffdc8f;font-style:normal;margin-top:4px}
+.sw-ai-work-summary-items button:focus-visible{outline:2px solid var(--sw-workspace-accent,#35d8f6);outline-offset:2px}
