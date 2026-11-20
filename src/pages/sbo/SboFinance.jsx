@@ -138,6 +138,8 @@ export default function SboFinance() {
   const [invoiceError,setInvoiceError]=useState("");
   const [showSetup,setShowSetup]=useState(false);
 
+  const [financeTab,setFinanceTab]=useState("overview");
+
   const navItems = [
     {label:"Business overview",icon:"⌂",onClick:()=>navigate("/sbo")},
     {label:"Finance overview",icon:"$",active:financeTab==="overview",onClick:()=>{setFinanceTab("overview");setShowSetup(false);}},
@@ -294,7 +296,6 @@ export default function SboFinance() {
     }
   }
 
-  const [financeTab,setFinanceTab]=useState("overview");
   const openFinanceTab=(tab)=>setFinanceTab(tab);
 
   async function startConnect() {
