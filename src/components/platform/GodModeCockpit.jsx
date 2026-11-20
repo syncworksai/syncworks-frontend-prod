@@ -22,15 +22,27 @@ export default function GodModeCockpit({ onOpen }) {
   const [mobileGroup, setMobileGroup] = useState(0);
   async function refresh() {
     setInfo(x=>({...x,loading:true,error:""}));
-    try {
-      const [summary, alerts] = await Promise.all([
-        api.get("/platform/metrics/summary/?days=30"),
-        api.get("/platform/metrics/alerts/")
-      ]);
-      setInfo({ loading:false, summary:summary.data,alerts:alerts.data,error:"" });
-    } catch {
-      setInfo(x=>({...x,loading:false,error:"Live platform metrics are unavailable. Refresh to retry."}));
+    const [summary, alerts] = await Promise.allSettled([
+      api.get("/platform/metrics/summary/?days=30"),
+      api.get("/platform/metrics/alerts/")
+    ]);
+    let metricData = summary.status === "fulfilled" ? summary.value.data : null;
+    const alertData = alerts.status === "fulfilled" ? alerts.value.data : null;
+    if (!metricData || metricData.users_total == null) {
+      try {
+        const usersResponse = await api.get("/platform/users/");
+        const data = usersResponse.data;
+        const count = Array.isArray(data) ? data.length : Array.isArray(data?.results) ? data.results.length : null;
+        if (count !== null) {
+          metricData = { ...(metricData || {}), users_total: data?.count ?? count };
+        }
+      } catch { /* No invented counts when every source fails. */ }
     }
+    setInfo({
+      loading:false, summary:metricData, alerts:alertData,
+      error:summary.status === "rejected" || alerts.status === "rejected"
+        ? "Some platform metrics are unavailable; verified values remain visible." : ""
+    });
   }
   useEffect(()=>{ refresh(); },[]);
   const s=info.summary, a=info.alerts;
