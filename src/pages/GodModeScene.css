@@ -302,3 +302,21 @@
 .sw-god-opsdesk-modal :is(input,select,textarea){background:#071020;border:1px solid #41536b;border-radius:10px;padding:10px;color:white;min-width:0;width:100%}
 .sw-god-opsdesk-modal-buttons{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.sw-god-opsdesk-modal-buttons button{padding:10px 13px;border-radius:10px;border:1px solid #41536b;font-weight:800;font-size:12px}.sw-god-opsdesk-modal-buttons button:last-child{background:#0891b2;border-color:#22d3ee;color:white}
 @media(max-width:700px){.sw-god-opsdesk-intro,.sw-god-opsdesk-ticket{align-items:stretch;flex-direction:column}.sw-god-opsdesk-actions{grid-template-columns:1fr}.sw-god-opsdesk-ticket-actions button{flex:1}.sw-god-opsdesk-modal{inset:115px 0 70px}.sw-god-opsdesk-modal>section{max-height:100%}}
+
+.sw-god-opsdesk-chat{border:1px solid rgba(103,232,249,.36);border-radius:16px;padding:13px;background:linear-gradient(135deg,rgba(11,34,61,.88),rgba(11,14,36,.84));display:flex;flex-direction:column;gap:10px;min-width:0}
+.sw-god-opsdesk-chat-heading{display:flex;align-items:center;gap:9px;color:#9beaf8}
+.sw-god-opsdesk-chat-heading>div{display:flex;flex-direction:column;gap:2px}
+.sw-god-opsdesk-chat-heading strong{font-size:15px;color:#fff}
+.sw-god-opsdesk-chat-heading span{font-size:11px;color:#a1b9ca}
+.sw-god-opsdesk-chat-log{display:flex;flex-direction:column;gap:8px;min-height:100px;max-height:235px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.sw-god-opsdesk-chat-empty{font-size:12px;line-height:1.55;color:#a4c4d5;margin:6px}
+.sw-god-opsdesk-chat-bubble{max-width:92%;padding:10px 12px;border:1px solid rgba(103,232,249,.19);border-radius:13px;background:rgba(8,24,46,.72)}
+.sw-god-opsdesk-chat-bubble.from-founder{align-self:flex-end;background:rgba(25,65,103,.64);border-color:rgba(103,232,249,.35)}
+.sw-god-opsdesk-chat-bubble.from-victoria{align-self:flex-start;background:rgba(40,25,82,.47);border-color:rgba(167,139,250,.35)}
+.sw-god-opsdesk-chat-bubble strong{display:block;color:#8fe8fa;font-size:10px;margin-bottom:3px}
+.sw-god-opsdesk-chat-bubble p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.5;color:#f2f7ff}
+.sw-god-opsdesk-chat-compose{display:flex;gap:8px;min-width:0}
+.sw-god-opsdesk-chat-compose input{flex:1;min-width:0;border-radius:11px;border:1px solid rgba(103,232,249,.3);background:rgba(0,9,27,.72);padding:10px 12px;color:#fff;font-size:12px}
+.sw-god-opsdesk-chat-compose button{display:flex;align-items:center;gap:7px;padding:10px 14px;border-radius:11px;background:rgba(14,116,144,.52);border:1px solid rgba(103,232,249,.5);color:#fff;font-size:12px;font-weight:800}
+.sw-god-opsdesk-chat-compose button:disabled{opacity:.48;cursor:not-allowed}
+@media(max-width:700px){.sw-god-opsdesk-chat-log{max-height:190px}.sw-god-opsdesk-chat-compose button{padding:9px}}
