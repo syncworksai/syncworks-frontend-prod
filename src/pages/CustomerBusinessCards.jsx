@@ -50,7 +50,7 @@ function getBusinessLogoUrl(biz) {
   try {
     const apiOrigin = new URL(api.defaults.baseURL, window.location.origin).origin;
     base = new URL(original, original.startsWith("/") ? apiOrigin : apiOrigin+"/").href;
-    if (!/^https?:\\/\\//i.test(base)) return "";
+    if (!base.startsWith("https://") && !base.startsWith("http://")) return "";
   } catch { return ""; }
 
   const stamp =
