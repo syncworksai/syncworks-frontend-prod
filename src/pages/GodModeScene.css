@@ -261,3 +261,15 @@
 @media (prefers-reduced-motion:reduce) {
  .sw-god-scene .sw-god-detail-drawer {animation:none!important;}
 }
+
+.sw-god-drawer-navigation {display:flex;align-items:center;gap:7px;flex:none;}
+.sw-god-drawer-navigation button {
+ display:grid;place-items:center;min-width:38px;min-height:38px;
+ border:1px solid rgba(103,232,249,.25);border-radius:11px;
+ background:rgba(11,34,64,.65);color:#e2faff;font-size:24px;
+ transition:background .28s ease,transform .28s ease;
+}
+.sw-god-drawer-navigation button:hover {background:rgba(35,87,113,.66);transform:translateY(-1px);}
+@media (max-width:1023px) {
+ .sw-god-scene .sw-god-detail-drawer .sw-god-drawer-navigation button {min-width:33px;min-height:33px;font-size:20px;}
+}
