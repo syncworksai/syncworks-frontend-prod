@@ -143,13 +143,14 @@ export default function SboFinance() {
     {label:"Finance overview",icon:"$",active:financeTab==="overview",onClick:()=>{setFinanceTab("overview");setShowSetup(false);}},
     {label:"Needs attention",icon:"!",onClick:()=>navigate("/sbo/invoices")},
     {label:"Invoices",icon:"▤",onClick:()=>navigate("/sbo/invoices")},
-    {label:"Billing automation",icon:"◷",onClick:()=>navigate("/sbo/billing-automation")},
+    {label:"Billing automation",icon:"◷",onClick:()=>navigate("/sbo/settings/billing-automation")},
     {label:"Catalog",icon:"▦",onClick:()=>navigate("/sbo/catalog")},
     {label:"Profit & Cash",icon:"◫",onClick:()=>navigate("/sbo/finance-intelligence")},
     {label:"Reports",icon:"↗",onClick:()=>navigate("/sbo/reports")},
     {label:"Payment settings",icon:"⚙",active:financeTab==="readiness",onClick:()=>{setFinanceTab("readiness");setShowSetup(false);}},
   ];  const loadAll = useCallback(async () => {
     setLoading(true);
+    setInvoiceLoading(true);
     setError("");
 
     const results = await Promise.allSettled([
@@ -212,7 +213,7 @@ export default function SboFinance() {
   const overdueRows=invoiceRows.filter(row=>String(row.derived_state||row.state||"").toUpperCase()==="OVERDUE");
   const attentionRows=[
     ...overdueRows.map(row=>({kind:"overdue",id:row.id,name:row.customer_name||"Customer",detail:row.title||"Invoice",date:row.due_date,amount:row.balance_due})),
-    ...readyToBill.map(row=>({kind:"ready",id:row.ticket_id||row.ticket||row.id,name:row.customer_name||row.customer||"Customer",detail:row.title||row.service_title||"Completed work",date:row.completed_at||row.completion_date||row.updated_at||null,amount:null})),
+    ...readyToBill.map(row=>({kind:"ready",id:row.ticket_id||row.ticket||row.id,name:row.customer_name||row.customer||"Customer",detail:row.title||row.service_title||"Completed work",date:row.completed_at||row.completion_date||null,amount:null})),
   ].slice(0,7);
   const daysSince=(date)=>{if(!date)return null;const timestamp=Date.parse(date);return Number.isFinite(timestamp)?Math.max(0,Math.floor((Date.now()-timestamp)/86400000)):null;};
   const money=(value)=>value===null||value===undefined?"—":Number(value).toLocaleString("en-US",{style:"currency",currency:"USD"});
@@ -401,7 +402,7 @@ export default function SboFinance() {
           </section>}
           {showSetup&&<div className="sw-sbo-finance-setup-backdrop" onMouseDown={()=>setShowSetup(false)}><aside role="dialog" aria-modal="true" aria-label="Finance setup" className="sw-sbo-finance-setup-drawer" onMouseDown={e=>e.stopPropagation()}><header><h2>Finance setup</h2><button type="button" onClick={()=>setShowSetup(false)} aria-label="Close setup"><XCircle size={21}/></button></header><p>Payment readiness, billing automation, and catalog controls.</p><div className="sw-sbo-finance-setup-items">
             <button onClick={()=>{setFinanceTab("readiness");setShowSetup(false)}}><span className={setupReady?"sw-sbo-setup-green":"sw-sbo-setup-amber"}/> Stripe & billing readiness <strong>{loading?"Loading":setupReady?"Ready":"Action needed"}</strong></button>
-            <button onClick={()=>navigate("/sbo/billing-automation")}><span className={autoReady?"sw-sbo-setup-green":"sw-sbo-setup-amber"}/> Automated invoicing & reminders <strong>{automation?autoReady?"Enabled":"Review":"Not verified"}</strong></button>
+            <button onClick={()=>navigate("/sbo/settings/billing-automation")}><span className={autoReady?"sw-sbo-setup-green":"sw-sbo-setup-amber"}/> Automated invoicing & reminders <strong>{automation?autoReady?"Enabled":"Review":"Not verified"}</strong></button>
             <button onClick={()=>navigate("/sbo/catalog")}><span className="sw-sbo-setup-amber"/> Service & parts catalog <strong>Manage</strong></button>
             <button onClick={()=>navigate("/sbo/invoices")}><span className="sw-sbo-setup-amber"/> Invoicing center <strong>Manage</strong></button>
             <button onClick={()=>navigate("/sbo/reports")}><span className="sw-sbo-setup-amber"/> Reports & archival records <strong>Open</strong></button>
