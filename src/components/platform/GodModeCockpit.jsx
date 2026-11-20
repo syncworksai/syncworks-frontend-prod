@@ -22,7 +22,7 @@ function Tile({ icon: Icon, label, value, help, loading }) {
 export default function GodModeCockpit({ onOpen }) {
   const { user } = useAuth();
   const chiefAvatar = AVATARS.find(a => a.role === "Chief of Staff") || AVATARS[0];
-  const openVictoria = () => window.dispatchEvent(new Event("syncworks:victoria-open"));
+  const openVictoria = () => onOpen("operations_desk");
   const openCommerce = () => window.dispatchEvent(new Event("syncworks:commerce-kpis-open"));
   const [info,setInfo] = useState({ loading:true, summary:null, alerts:null, error:"" });
   const [mobileGroup, setMobileGroup] = useState(0);
@@ -75,7 +75,7 @@ export default function GodModeCockpit({ onOpen }) {
     <div className="sw-god-workarea">
       <div className="sw-god-mobile-departments" aria-label="Choose God Mode department">
         <div className="sw-god-mobile-department-switch">{GROUPS.map((g,i)=><button type="button" key={g.title} aria-pressed={mobileGroup===i} onClick={()=>setMobileGroup(i)}><g.icon size={17}/><span>{g.title}</span></button>)}</div>
-        <div className="sw-god-mobile-department-content"><p>{GROUPS[mobileGroup].subtitle}</p><div>{GROUPS[mobileGroup].links.map(([id,label])=><button key={id} type="button" onClick={()=>onOpen(id)}>{label}<ChevronRight size={15}/></button>)}</div><button type="button" onClick={openVictoria} className="sw-god-mobile-victoria" aria-label="Open Victoria Chief of Staff briefing"><img src={getAvatarPhotoForUser(chiefAvatar,user)} alt="" /><span>Victoria · Chief of Staff</span><ChevronRight size={16}/></button></div>
+        <div className="sw-god-mobile-department-content"><p>{GROUPS[mobileGroup].subtitle}</p><div>{GROUPS[mobileGroup].links.map(([id,label])=><button key={id} type="button" onClick={()=>onOpen(id)}>{label}<ChevronRight size={15}/></button>)}</div><button type="button" onClick={openVictoria} className="sw-god-mobile-victoria" aria-label="Open Victoria Chief of Staff Operations Desk"><img src={getAvatarPhotoForUser(chiefAvatar,user)} alt="" /><span>Victoria · Chief of Staff</span><ChevronRight size={16}/></button></div>
       </div>
       <section className="sw-god-module-grid" aria-label="God Mode departments">
         {GROUPS.map(g=><article key={g.title} className={"sw-god-department sw-god-"+g.tone}>
@@ -93,7 +93,7 @@ export default function GodModeCockpit({ onOpen }) {
           <button onClick={openCommerce}><Activity size={18}/> Commerce KPIs <ArrowUpRight size={15}/></button>
           <button onClick={()=>onOpen("pilot_readiness")}><CheckCircle2 size={18}/> Release checklist <ArrowUpRight size={15}/></button>
         </section>
-        <button type="button" className="sw-god-assistant-hint sw-god-victoria-dock" onClick={openVictoria} aria-label="Open Victoria Chief of Staff briefing"><img src={getAvatarPhotoForUser(chiefAvatar,user)} alt="" className="sw-god-victoria-avatar" /><div><strong>Victoria · Chief of Staff</strong><span>Open briefing and approvals</span></div><ChevronRight size={17} aria-hidden="true" /></button>
+        <button type="button" className="sw-god-assistant-hint sw-god-victoria-dock" onClick={openVictoria} aria-label="Open Victoria Chief of Staff briefing"><img src={getAvatarPhotoForUser(chiefAvatar,user)} alt="" className="sw-god-victoria-avatar" /><div><strong>Victoria · Chief of Staff</strong><span>Open operations, triage and assignments</span></div><ChevronRight size={17} aria-hidden="true" /></button>
       </aside>
     </div>
   </div>;
