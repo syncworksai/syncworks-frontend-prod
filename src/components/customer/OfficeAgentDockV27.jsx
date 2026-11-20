@@ -90,7 +90,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           {fetchState === "loading" ? "Checking team…" :
            fetchState === "unavailable" ? "Status unavailable" :
            office ? (shown[0]?.configured ? "Configured" : "Not configured") :
-           `${employees.length} configured`}
+           `${shown.filter(person=>person.configured).length} profiles · review-only pilot`}
         </span>
       </div>
       {moveable && <div className="sw-office-bubbles-controls">
