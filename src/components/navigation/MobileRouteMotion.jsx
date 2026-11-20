@@ -33,8 +33,8 @@ export default function MobileRouteMotion({ children }) {
   const previousPath=previousRoute.current;
   // Workspaces share directional transitions. Immersive personal modules
   // retain their own independent motion systems.
-  const isWorkPath=path=>/^\\/(?:sbo|pm|employee|team|tickets|calendar|inbox|platform|tenant|investor|ceo|sales)(?:\\/|$)/.test(path)
-    || /^\\/customer(?:\\/|$)/.test(path) && !/^\\/customer\\/(?:health|forge|games)(?:\\/|$)/.test(path);
+  const isWorkPath=path=>/^\/(?:sbo|pm|employee|team|tickets|calendar|inbox|platform|tenant|investor|ceo|sales)(?:\/|$)/.test(path)
+    || (/^\/customer(?:\/|$)/.test(path) && !/^\/customer\/(?:health|forge|games)(?:\/|$)/.test(path));
   const isWork=isWorkPath(currentPath);
   const wasWork=isWorkPath(previousPath);
   const depth=path=>path.split("/").filter(Boolean).length;
