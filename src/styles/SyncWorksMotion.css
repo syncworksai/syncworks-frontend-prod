@@ -1,0 +1,108 @@
+/* SyncWorks Motion Foundation V1: reusable tokens, initially enabled only for SBO.
+   All effects use opacity/transform; never animate layout or block API interaction. */
+:root {
+  --sw-motion-tap: 150ms;
+  --sw-motion-fast: 180ms;
+  --sw-motion-panel: 240ms;
+  --sw-motion-route: 280ms;
+  --sw-motion-stagger: 38ms;
+  --sw-motion-in: cubic-bezier(.2,.8,.2,1);
+  --sw-motion-out: cubic-bezier(.4,0,1,1);
+  --sw-motion-spring: cubic-bezier(.2,.82,.22,1.08);
+}
+.sw-sbo-motion button:not(:disabled) { -webkit-tap-highlight-color: transparent; }
+.sw-sbo-motion button:not(:disabled):active { transform:scale(.96); transition:transform var(--sw-motion-tap) var(--sw-motion-in); }
+.sw-sbo-motion .sw-sbo-rail-link:active,
+.sw-sbo-motion .sw-sbo-kpis button:active,
+.sw-sbo-motion .sw-sbo-ops-panel button:active {
+  transform:scale(.975);
+}
+.sw-sbo-motion .sw-sbo-rail-link > svg:last-child {
+  transition:transform var(--sw-motion-fast) var(--sw-motion-in);
+}
+.sw-sbo-motion .sw-sbo-rail-link:is(:hover,:focus-visible) > svg:last-child {
+  transform:translateX(3px);
+}
+.sw-sbo-motion .sw-sbo-topbar h1 {
+  animation:sw-motion-masked-line var(--sw-motion-panel) var(--sw-motion-in) both;
+}
+.sw-sbo-motion .sw-sbo-office-canvas > :is(.sw-sbo-briefing,.sw-sbo-kpis,.sw-sbo-desktop-operations,.sw-sbo-action-grid,.sw-sbo-growth-link,.sw-sbo-ai-dock) {
+  animation:sw-motion-cascade var(--sw-motion-panel) var(--sw-motion-in) both;
+}
+.sw-sbo-motion .sw-sbo-office-canvas > .sw-sbo-briefing { animation-delay:38ms; }
+.sw-sbo-motion .sw-sbo-office-canvas > .sw-sbo-kpis { animation-delay:76ms; }
+.sw-sbo-motion .sw-sbo-office-canvas > :is(.sw-sbo-desktop-operations,.sw-sbo-action-grid) { animation-delay:114ms; }
+.sw-sbo-motion .sw-sbo-office-canvas > .sw-sbo-growth-link { animation-delay:152ms; }
+.sw-sbo-motion .sw-sbo-office-canvas > .sw-sbo-ai-dock { animation-delay:190ms; }
+.sw-sbo-motion .sw-sbo-drawer > .grid > * {
+  animation:sw-motion-cascade var(--sw-motion-fast) var(--sw-motion-in) both;
+  animation-delay:calc(var(--sw-motion-order,0) * var(--sw-motion-stagger));
+}
+.sw-sbo-motion .sw-sbo-desktop-operations :is(.sw-sbo-ops-panel) {
+  animation:sw-motion-cascade var(--sw-motion-panel) var(--sw-motion-in) both;
+}
+.sw-sbo-motion .sw-sbo-ops-panel:nth-child(2){animation-delay:38ms;}
+.sw-sbo-motion .sw-sbo-motion-skeleton {
+  overflow:hidden;
+  position:relative;
+  background:color-mix(in srgb,var(--sbo-glass-strong) 83%,white 17%);
+  border-radius:10px;
+  min-height:14px;
+}
+.sw-sbo-motion .sw-sbo-motion-skeleton::after {
+  content:"";
+  position:absolute;inset:0;
+  background:linear-gradient(100deg,transparent 10%,rgba(200,228,255,.12) 48%,transparent 90%);
+  transform:translateX(-100%);
+  animation:sw-motion-shimmer 1.4s linear infinite;
+}
+.sw-sbo-motion .sw-sbo-contextual-popout {
+  transform-origin:var(--sw-motion-origin-x,0%) var(--sw-motion-origin-y,50%);
+  animation:sw-motion-context-enter var(--sw-motion-panel) var(--sw-motion-in) both;
+}
+@media(max-width:767px){
+  .sw-sbo-motion .sw-sbo-panel-shade {
+    animation:sw-motion-scrim var(--sw-motion-fast) ease-out both;
+  }
+  .sw-sbo-motion .sw-sbo-drawer {
+    animation:sw-motion-sheet-enter var(--sw-motion-panel) var(--sw-motion-spring) both;
+  }
+}
+@keyframes sw-motion-masked-line {
+  from {opacity:.1;clip-path:inset(100% 0 0 0);transform:translateY(9px);}
+  to {opacity:1;clip-path:inset(0 0 0 0);transform:none;}
+}
+@keyframes sw-motion-cascade {
+  from {opacity:0;transform:translateY(8px);}
+  to {opacity:1;transform:none;}
+}
+@keyframes sw-motion-context-enter {
+  from {opacity:0;transform:translateX(var(--sw-motion-enter-x,-12px)) scale(.95);}
+  to {opacity:1;transform:none;}
+}
+@keyframes sw-motion-sheet-enter {
+  from {opacity:0;transform:translateY(24px) scale(.98);}
+  to {opacity:1;transform:none;}
+}
+@keyframes sw-motion-scrim {from{opacity:0}to{opacity:1}}
+@keyframes sw-motion-shimmer {to{transform:translateX(100%)}}
+/* Respect both system settings and the existing SyncWorks motion switch. */
+@media(prefers-reduced-motion:reduce){
+  .sw-sbo-motion *, .sw-sbo-motion *::before,.sw-sbo-motion *::after {
+    animation:none!important;transition:none!important;scroll-behavior:auto!important;
+  }
+  .sw-sbo-motion button:active{transform:none!important;}
+}
+
+/* Native shared-element geometry on supporting desktop browsers. */
+::view-transition-old(sw-sbo-shared-panel),
+::view-transition-new(sw-sbo-shared-panel) {
+  animation-duration:240ms;
+  animation-timing-function:cubic-bezier(.2,.8,.2,1);
+}
+@media(prefers-reduced-motion:reduce){
+  ::view-transition-old(sw-sbo-shared-panel),
+  ::view-transition-new(sw-sbo-shared-panel) {
+    animation-duration:0.01ms!important;
+  }
+}

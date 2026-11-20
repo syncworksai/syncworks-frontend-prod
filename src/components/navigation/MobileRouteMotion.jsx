@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import "./MobileRouteMotion.css";
 
@@ -21,13 +21,24 @@ function routeTransition(path) {
 export default function MobileRouteMotion({ children }) {
   const location = useLocation();
   const [enabled, setEnabled] = useState(readMotion);
+  const previousRoute=useRef(location.pathname);
   useEffect(() => {
     const sync = () => setEnabled(readMotion());
     window.addEventListener("sw:workspace-appearance", sync);
     window.addEventListener("storage", sync);
     return () => {window.removeEventListener("sw:workspace-appearance", sync);window.removeEventListener("storage", sync);};
   }, []);
-  const transition = enabled ? routeTransition(location.pathname) : "none";
+  const currentPath=location.pathname;
+  const previousPath=previousRoute.current;
+  const isSbo=currentPath==="/sbo"||currentPath.startsWith("/sbo/");
+  const wasSbo=previousPath==="/sbo"||previousPath.startsWith("/sbo/");
+  const depth=path=>path.split("/").filter(Boolean).length;
+  const businessMotion=isSbo&&wasSbo
+    ? depth(currentPath)>depth(previousPath)?"sbo-forward"
+      :depth(currentPath)<depth(previousPath)?"sbo-back":"sbo-peer"
+    :"sbo-peer";
+  useEffect(()=>{previousRoute.current=location.pathname;},[location.pathname]);
+  const transition=enabled ? isSbo ? businessMotion : routeTransition(currentPath) : "none";
   // Animate only routed pages. Global navigation / AI dock / alerts remain
   // outside the stage, so they never animate or lose state.
   return <div key={location.pathname} className="sw-mobile-route-stage" data-mobile-route-motion={transition}>{children}</div>;
