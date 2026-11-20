@@ -9,6 +9,7 @@ import "./CustomerWorkspace.css";
 import "./OfficeThemeIntegrationV16.css";
 import "./OfficeDrawersV21.css";
 import "./MobileWorkspaceMotion.css";
+import "./CustomerAppsPaged.css";
 
 export const WORKSPACE_THEMES = ["legacy", "classic", "future", "modern", "light"];
 const SETTINGS_KEY = "sw_workspace_appearance_v1";
@@ -77,6 +78,16 @@ export default function CustomerWorkspace({ settings, update, phoneMode = false,
   const privateExecutivePilot = forgeEnabled;
   const [panel, setPanel] = useState(null);
   const [closing, setClosing] = useState(false);
+  const [appsPage, setAppsPage] = useState(0);
+  const [narrowApps, setNarrowApps] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches);
+  useEffect(() => {
+    const media=window.matchMedia("(max-width: 767px)");
+    const update=()=>setNarrowApps(media.matches);
+    update();
+    media.addEventListener?.("change",update);
+    return()=>media.removeEventListener?.("change",update);
+  }, []);
+  useEffect(()=>setAppsPage(0),[panel,narrowApps]);
   useEffect(() => { const open = (event) => { if (["office", "apps", "appearance", "daily", "personal", "business"].includes(event?.detail)) { setClosing(false); setPanel(event.detail); } }; window.addEventListener("sw:workspace-open", open); return () => window.removeEventListener("sw:workspace-open", open); }, []);
   useEffect(() => {
     if (!panel) return;
@@ -100,6 +111,10 @@ export default function CustomerWorkspace({ settings, update, phoneMode = false,
     ...(dayTradingEnabled && (panel === "business" || panel === "apps") ? [["Freelance Work", "/customer/freelance/overview", BriefcaseBusiness]] : []),
     ...(forgeEnabled && (panel === "apps" || panel === "personal") ? [["The Forge", "/customer/forge", Flame],["Secure Wallet (Pilot)", "/customer/secure-wallet", Wallet]] : []),
   ];
+  const appsPerPage=narrowApps?6:9;
+  const appsPages=Math.max(1,Math.ceil(apps.length/appsPerPage));
+  const currentAppsPage=Math.min(appsPage,appsPages-1);
+  const visibleApps=panel==="apps"?apps.slice(currentAppsPage*appsPerPage,(currentAppsPage+1)*appsPerPage):apps;
   const motionActive = settings.motion && !(typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const close = () => { setClosing(true); window.setTimeout(() => { setPanel(null); setClosing(false); }, motionActive ? 360 : 0); };
   const go = (path) => { setClosing(true); window.setTimeout(() => { setPanel(null); nav(path); }, motionActive ? 300 : 0); };
@@ -109,10 +124,17 @@ export default function CustomerWorkspace({ settings, update, phoneMode = false,
       <button type="button" onClick={() => {setClosing(false);setPanel("appearance");}}><Palette size={16}/> <span>Appearance</span></button>
       <span className="sw-workspace-current">{settings.theme === "legacy" ? "Original" : settings.theme === "classic" ? "Classic Office" : settings.theme === "future" ? "SyncWorks Future" : settings.theme === "modern" ? "Modern Dark" : "Clean Light"}</span>
     </div>}
-    {panel && createPortal(<div className={`sw-workspace-overlay sw-workspace-overlay-themed ${closing ? "sw-workspace-overlay-closing" : ""}`} data-office-drawer-theme={settings.theme} data-office-drawer-motion={settings.motion} data-workspace-transition={panel === "office" || ["daily","personal","business"].includes(panel) ? "hologram" : panel === "appearance" ? "side" : "bottom"} data-motion-layout={phoneMode ? "phone" : "desktop"} onMouseDown={close}>
+    {panel && createPortal(<div className={`sw-workspace-overlay sw-workspace-overlay-themed ${closing ? "sw-workspace-overlay-closing" : ""}`} data-office-drawer-theme={settings.theme} data-office-drawer-motion={settings.motion} data-workspace-transition={panel === "office" || ["daily","personal","business"].includes(panel) ? "hologram" : panel === "appearance" ? "side" : "bottom"} data-motion-layout={phoneMode ? "phone" : "desktop"} data-workspace-panel={panel} onMouseDown={close}>
       <aside className="sw-workspace-drawer sw-office-theme-drawer" role="dialog" aria-modal="true" aria-label={panel === "appearance" ? "Appearance settings" : "Workspace launcher"} onMouseDown={e => e.stopPropagation()}>{phoneMode && panel === "apps" && <span className="sw-mobile-drawer-grip" aria-hidden="true" />}
         <header><div><span className="sw-workspace-eyebrow">SYNCWORKS / PERSONAL</span><h2>{panel === "appearance" ? "Appearance settings" : (activeCategory?.name || (panel === "office" ? "Your office" : "Your apps"))}</h2></div><button type="button" className="sw-workspace-close" onClick={close} aria-label="Close"><X size={20}/></button></header>
-        {panel !== "appearance" ? <>{panel === "office" && privateExecutivePilot && <OfficeExecutiveSnapshot onOpen={() => go("/private?tab=ceo")} />}<p className="sw-workspace-description">{activeCategory?.description || "Choose a category, then open the tool you need. Games keep their dedicated interface."}</p>{panel === "office" && <div className="sw-office-drawer-categories">{OFFICE_CATEGORIES.map(({id,name}) => <button type="button" key={id} onClick={() => setPanel(id)}>{name}</button>)}</div>}{panel !== "office" && <div className="sw-workspace-app-grid">{apps.map(([name, path, Icon]) => <button type="button" key={name} onClick={() => go(path)}><Icon size={22}/><span>{name}</span></button>)}</div>}{activeCategory && <button type="button" className="sw-workspace-reset" onClick={() => setPanel("office")}>← All categories</button>}</> : <><WorkspaceAppearancePanel settings={settings} update={update}/>{phoneMode && <MobileNavSettings />}</>}
+        {panel !== "appearance" ? <>{panel === "office" && privateExecutivePilot && <OfficeExecutiveSnapshot onOpen={() => go("/private?tab=ceo")} />}<p className="sw-workspace-description">{activeCategory?.description || "Choose a category, then open the tool you need. Games keep their dedicated interface."}</p>{panel === "office" && <div className="sw-office-drawer-categories">{OFFICE_CATEGORIES.map(({id,name}) => <button type="button" key={id} onClick={() => setPanel(id)}>{name}</button>)}</div>}{panel !== "office" && <div className={panel==="apps"?"sw-workspace-app-pages":""}>
+          <div className="sw-workspace-app-grid">{visibleApps.map(([name, path, Icon]) => <button type="button" key={name} onClick={() => go(path)}><Icon size={22}/><span>{name}</span></button>)}</div>
+          {panel==="apps" && <nav className="sw-workspace-app-pagination" aria-label="Apps pages">
+            <button type="button" disabled={currentAppsPage===0} onClick={()=>setAppsPage(p=>Math.max(0,p-1))}>← Previous</button>
+            <span aria-live="polite">Page {currentAppsPage+1} of {appsPages}</span>
+            <button type="button" disabled={currentAppsPage>=appsPages-1} onClick={()=>setAppsPage(p=>Math.min(appsPages-1,p+1))}>Next →</button>
+          </nav>}
+        </div>}{activeCategory && <button type="button" className="sw-workspace-reset" onClick={() => setPanel("office")}>← All categories</button>}</> : <><WorkspaceAppearancePanel settings={settings} update={update}/>{phoneMode && <MobileNavSettings />}</>}
       </aside>
     </div>, document.body)}
   </>;
