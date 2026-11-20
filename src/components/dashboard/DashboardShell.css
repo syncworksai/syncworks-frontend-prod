@@ -1,0 +1,89 @@
+/* Shared SyncWorks one-viewport work shell.
+   No document scroll. Long data remains available inside one bounded canvas. */
+html.sw-business-shell-active,
+body.sw-business-shell-active {
+  height:100%;
+  max-height:100dvh;
+  overflow:hidden!important;
+  overscroll-behavior:none;
+}
+.sw-business-locked-shell {
+  position:relative;
+  isolation:isolate;
+  display:flex;
+  flex-direction:column;
+  width:100%;
+  height:100dvh;
+  min-height:0;
+  overflow:hidden;
+  color:var(--sw-business-ink,#eff8ff);
+  background-color:#071326;
+}
+.sw-business-shell-photo,.sw-business-shell-overlay {
+  pointer-events:none;
+  position:absolute;
+  inset:0;
+  z-index:-1;
+}
+.sw-business-shell-photo {
+  background-image:var(--sw-business-office-photo);
+  background-position:center 53%;
+  background-size:cover;
+  background-repeat:no-repeat;
+}
+.sw-business-shell-overlay {
+  background:var(--sw-business-overlay,linear-gradient(110deg,rgba(2,9,25,.77),rgba(3,10,28,.52)));
+}
+.sw-business-locked-shell > :not(.sw-business-shell-photo):not(.sw-business-shell-overlay):not(main) {
+  flex-shrink:0;
+}
+.sw-business-locked-shell .sw-business-shell-main {
+  display:block;
+  flex:1 1 auto;
+  min-width:0;
+  min-height:0;
+  max-height:100%;
+  padding-bottom:12px;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(126,186,213,.55) transparent;
+}
+.sw-business-locked-shell .sw-business-shell-main :is(.rounded-3xl,.rounded-2xl,section) {
+  scroll-margin-top:12px;
+}
+.sw-business-locked-shell .sw-business-shell-main > * {
+  min-width:0;
+}
+.sw-business-locked-shell .sw-business-shell-main :is(.bg-slate-950\/70,.bg-slate-950\/60,.bg-slate-950\/55,.bg-slate-950\/65) {
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border-color:var(--sw-business-outline);
+}
+.sw-business-locked-shell .sw-business-shell-main .sw-business-compact-nav {
+  position:sticky;
+  top:0;
+  z-index:3;
+}
+@media(min-width:1024px) {
+  .sw-business-locked-shell .sw-business-shell-main > .grid > aside:first-child {
+    position:sticky;
+    top:0;
+    max-height:calc(100dvh - 120px);
+    overflow-y:auto;
+    overscroll-behavior:contain;
+  }
+}
+@media(max-width:767px) {
+  .sw-business-locked-shell .sw-business-shell-main {
+    padding-bottom:calc(108px + env(safe-area-inset-bottom));
+    scrollbar-width:none;
+  }
+  .sw-business-locked-shell .sw-business-shell-main::-webkit-scrollbar {display:none;}
+  .sw-business-locked-shell .sw-business-shell-photo {background-position:61% center;}
+}
+@media(prefers-reduced-motion:reduce){
+  .sw-business-locked-shell .sw-business-shell-main {scroll-behavior:auto;}
+}

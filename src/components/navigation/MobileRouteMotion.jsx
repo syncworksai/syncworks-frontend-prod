@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigationType } from "react-router-dom";
 import "./MobileRouteMotion.css";
 
 const SETTINGS_KEY = "sw_workspace_appearance_v1";
@@ -20,6 +20,7 @@ function routeTransition(path) {
 }
 export default function MobileRouteMotion({ children }) {
   const location = useLocation();
+  const navigationType=useNavigationType();
   const [enabled, setEnabled] = useState(readMotion);
   const previousRoute=useRef(location.pathname);
   useEffect(() => {
@@ -30,15 +31,19 @@ export default function MobileRouteMotion({ children }) {
   }, []);
   const currentPath=location.pathname;
   const previousPath=previousRoute.current;
-  const isSbo=currentPath==="/sbo"||currentPath.startsWith("/sbo/");
-  const wasSbo=previousPath==="/sbo"||previousPath.startsWith("/sbo/");
+  // Workspaces share directional transitions. Immersive personal modules
+  // retain their own independent motion systems.
+  const isWorkPath=path=>/^\/(?:sbo|pm|employee|team|tickets|calendar|inbox|platform|tenant|investor|ceo|sales)(?:\/|$)/.test(path)
+    || (/^\/customer(?:\/|$)/.test(path) && !/^\/customer\/(?:health|forge|games)(?:\/|$)/.test(path));
+  const isWork=isWorkPath(currentPath);
+  const wasWork=isWorkPath(previousPath);
   const depth=path=>path.split("/").filter(Boolean).length;
-  const businessMotion=isSbo&&wasSbo
-    ? depth(currentPath)>depth(previousPath)?"sbo-forward"
-      :depth(currentPath)<depth(previousPath)?"sbo-back":"sbo-peer"
+  const businessMotion=isWork&&wasWork
+    ? navigationType==="POP"||depth(currentPath)<depth(previousPath)?"sbo-back"
+      :depth(currentPath)>depth(previousPath)?"sbo-forward":"sbo-peer"
     :"sbo-peer";
   useEffect(()=>{previousRoute.current=location.pathname;},[location.pathname]);
-  const transition=enabled ? isSbo ? businessMotion : routeTransition(currentPath) : "none";
+  const transition=enabled ? isWork ? businessMotion : routeTransition(currentPath) : "none";
   // Animate only routed pages. Global navigation / AI dock / alerts remain
   // outside the stage, so they never animate or lose state.
   return <div key={location.pathname} className="sw-mobile-route-stage" data-mobile-route-motion={transition}>{children}</div>;
