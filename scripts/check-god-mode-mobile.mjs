@@ -82,3 +82,17 @@ test("Founder rail uses Victoria without obstructive commerce button", () => {
   assert.match(platform, /<PlatformCommerceDock \/>/);
   assert.match(launcher, /location\.pathname !== "\/platform"/);
 });
+
+test("Founder Operations Desk assigns support handoffs only through confirmed backlog creation", () => {
+  const desk=read("src/components/platform/FounderOperationsDesk.jsx");
+  const dashboard=read("src/pages/PlatformDashboard.jsx");
+  const cockpit=read("src/components/platform/GodModeCockpit.jsx");
+  assert.match(dashboard, /operations_desk/);
+  assert.match(dashboard, /<FounderOperationsDesk onOpen=\{setTab\}/);
+  assert.match(cockpit, /Assign Work/);
+  assert.match(desk, /\/platform\/support\/requests\/\?status=OPEN/);
+  assert.match(desk, /backlog_action:"create"/);
+  assert.match(desk, /Confirm backlog handoff/);
+  assert.match(desk, /victoriaPrompt/);
+  assert.doesNotMatch(desk, /backlog_action:"run"/);
+});
