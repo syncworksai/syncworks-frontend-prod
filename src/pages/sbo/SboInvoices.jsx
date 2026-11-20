@@ -19,6 +19,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import DashboardShell from "../../components/dashboard/DashboardShell";
+import "./SboInvoices.css";
 import {
   createInvoiceFromTicket,
   getInvoiceCenter,
@@ -29,7 +30,9 @@ import {
 const FILTERS = ["ALL", "DRAFT", "SENT", "PARTIALLY_PAID", "OVERDUE", "PAID", "VOID"];
 
 function money(value) {
-  const n = Number(value || 0);
+  if (value === null || value === undefined || value === "") return "—";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "—";
   return n.toLocaleString(undefined, { style: "currency", currency: "USD" });
 }
 
@@ -82,32 +85,20 @@ function Metric({ icon: Icon, label, value, hint }) {
 }
 
 function InvoiceCard({ invoice, onOpen }) {
+  const paid=invoice.amount_paid;
+  const balance=invoice.balance_due;
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(invoice.id)}
-      className="w-full rounded-[1.7rem] border border-white/10 bg-slate-950/60 p-4 text-left transition hover:border-cyan-400/25 hover:bg-slate-950/90"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-[10px] font-black uppercase tracking-[.16em] text-cyan-300">Invoice #{invoice.id}</div>
-          <div className="mt-1 truncate text-lg font-black text-white">{invoice.service_title || invoice.title || "Service invoice"}</div>
-          <div className="mt-1 text-sm text-slate-400">{invoice.customer_name || "Customer"}</div>
-        </div>
-        <StatePill state={invoice.derived_state} />
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div><div className="text-[10px] uppercase tracking-[.12em] text-slate-600">Total</div><div className="mt-1 font-black text-white">{money(invoice.total)}</div></div>
-        <div><div className="text-[10px] uppercase tracking-[.12em] text-slate-600">Balance</div><div className="mt-1 font-black text-white">{money(invoice.balance_due)}</div></div>
-        <div><div className="text-[10px] uppercase tracking-[.12em] text-slate-600">Due</div><div className="mt-1 text-sm font-bold text-slate-300">{fmtDate(invoice.due_date)}</div></div>
-        <div><div className="text-[10px] uppercase tracking-[.12em] text-slate-600">Source</div><div className="mt-1 text-sm font-bold text-slate-300">{invoice.marketplace_origin ? "Marketplace" : "Business"}</div></div>
-      </div>
-
-      <div className="mt-4 flex items-center justify-between border-t border-white/8 pt-3 text-xs text-slate-500">
-        <span>{invoice.ticket_code ? `Ticket ${invoice.ticket_code}` : `Ticket #${invoice.ticket || "—"}`}</span>
-        <span className="inline-flex items-center gap-1 font-black text-cyan-200">Open <ChevronRight className="h-4 w-4" /></span>
-      </div>
+    <button type="button" onClick={()=>onOpen(invoice.id)} className="sw-invoice-ledger-row" aria-label={`Open invoice ${invoice.id} for ${invoice.customer_name || "customer"}`}>
+      <span className="sw-invoice-ledger-identity">
+        <strong>INV-{invoice.id} · {invoice.customer_name || "Customer"}</strong>
+        <small>{invoice.service_title || invoice.title || "Service invoice"} · {fmtDate(invoice.due_date)}</small>
+      </span>
+      <span className="sw-invoice-ledger-amounts">
+        <span>Paid {money(paid)} of {money(invoice.total)}</span>
+        <strong>{money(balance)} due</strong>
+      </span>
+      <StatePill state={invoice.derived_state}/>
+      <ChevronRight aria-hidden="true" size={16} className="shrink-0 text-cyan-200"/>
     </button>
   );
 }
@@ -166,12 +157,14 @@ function DetailPanel({ invoice, busy, onClose, onAction }) {
         <div className="flex items-center gap-2"><StatePill state={invoice.derived_state} /><button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 text-slate-400"><XCircle className="h-5 w-5" /></button></div>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-4">
-        <Metric icon={ReceiptText} label="Invoice total" value={money(invoice.total)} hint="Customer total" />
-        <Metric icon={WalletCards} label="Paid" value={money(invoice.amount_paid)} hint="Recorded payments" />
-        <Metric icon={Clock3} label="Balance" value={money(invoice.balance_due)} hint={`Due ${fmtDate(invoice.due_date)}`} />
-        <Metric icon={FileText} label="Platform fee" value={money(invoice.platform_fee_amount)} hint={invoice.platform_fee_collected ? "Collected" : "Tracked / pending"} />
-      </div>
+      <dl className="sw-invoice-drawer-summary">
+        <div><dt>Invoice total</dt><dd>{money(invoice.total)}</dd></div>
+        <div><dt>Collected</dt><dd>{money(invoice.amount_paid)}</dd></div>
+        <div><dt>Balance due</dt><dd>{money(invoice.balance_due)}</dd></div>
+        <div><dt>Status</dt><dd>{String(invoice.derived_state||"DRAFT").replaceAll("_"," ")}</dd></div>
+        <div><dt>Due date</dt><dd>{fmtDate(invoice.due_date)}</dd></div>
+        <div><dt>Platform fee · {invoice.platform_fee_collected?"collected":"tracked"}</dt><dd>{money(invoice.platform_fee_amount)}</dd></div>
+      </dl>
 
       <div className="mt-5 rounded-3xl border border-white/10 bg-white/[.02] p-4">
         <div className="flex items-center justify-between"><div className="font-black text-white">Line items</div><div className="text-xs text-slate-500">Subtotal {money(invoice.subtotal)} · Tax {money(invoice.tax)}</div></div>
@@ -257,27 +250,27 @@ export default function SboInvoices() {
   }
 
   const summary = data.summary || {};
+  const noConfirmedData=error && !(data.results||[]).length && !Object.keys(summary).length;
   const filteredCount = useMemo(() => (data.results || []).length, [data.results]);
 
   return (
     <DashboardShell modeBarTitle="Business" modeBarSubtitle="Invoice Center">
-      <div className="mx-auto max-w-7xl space-y-3 pb-2">
-        <section className="rounded-[2rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_88%_8%,rgba(34,211,238,.12),transparent_34%),rgba(2,6,23,.94)] p-5 sm:p-7">
-          <button type="button" onClick={() => navigate("/sbo/finance")} className="inline-flex items-center gap-2 text-xs font-black text-slate-400 hover:text-white"><ArrowLeft className="h-4 w-4" />Finance</button>
-          <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
-            <div className="max-w-3xl"><div className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-200">SYNC Invoice Operations</div><h1 className="mt-1 text-3xl font-black text-white sm:text-4xl">Get the money without losing the details.</h1><p className="mt-2 text-sm leading-6 text-slate-400">Completed work, invoice line items, customer balances, platform-fee lineage and external payment reconciliation stay together. Quick actions sit on top of the existing invoicing engine instead of replacing it.</p></div>
-            <button type="button" onClick={load} disabled={loading} className="inline-flex h-11 items-center gap-2 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 text-sm font-black text-cyan-100 disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />Refresh</button>
+      <div className="sw-sterling-invoice-office mx-auto max-w-7xl">
+        <header className="sw-invoice-office-header">
+          <div><div className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">SYNCWORKS · BUSINESS OPERATIONS</div><h1>Invoices & Payments</h1><p>Real business invoice records · select an invoice for details</p></div>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={()=>navigate("/sbo/finance")} className="sw-invoice-toolbar-button"><ArrowLeft size={16}/> Finance</button>
+            <button type="button" onClick={load} disabled={loading} className="sw-invoice-toolbar-button"><RefreshCw size={16} className={loading?"animate-spin":""}/> Refresh</button>
           </div>
+        </header>
+        <section className="sw-invoice-summary-grid grid grid-cols-2 gap-2 lg:grid-cols-4">
+          <Metric icon={WalletCards} label="Outstanding" value={noConfirmedData?"—":money(summary.outstanding)} hint="Open customer balances" />
+          <Metric icon={AlertTriangle} label="Overdue" value={noConfirmedData?"—":(summary.overdue_count ?? "—")} hint="Needs follow-up" />
+          <Metric icon={CheckCircle2} label="Paid this month" value={noConfirmedData?"—":money(summary.paid_this_month)} hint="Recorded invoice payments" />
+          <Metric icon={ReceiptText} label="Ready to bill" value={noConfirmedData?"—":(summary.ready_to_bill_count ?? "—")} hint="Completed jobs without invoice" />
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Metric icon={WalletCards} label="Outstanding" value={money(summary.outstanding)} hint="Open customer balances" />
-          <Metric icon={AlertTriangle} label="Overdue" value={summary.overdue_count || 0} hint="Needs follow-up" />
-          <Metric icon={CheckCircle2} label="Paid this month" value={money(summary.paid_this_month)} hint="Recorded invoice payments" />
-          <Metric icon={ReceiptText} label="Ready to bill" value={summary.ready_to_bill_count || 0} hint="Completed jobs without invoice" />
-        </section>
-
-        <nav aria-label="Invoice workspace sections" className="sw-business-compact-nav flex flex-wrap gap-2 rounded-xl border border-cyan-300/20 bg-slate-950/80 p-2">
+        <nav aria-label="Invoice workspace sections" className="sw-invoice-tabs sw-business-compact-nav flex flex-wrap gap-2 rounded-xl border border-cyan-300/20 bg-slate-950/80 p-2">
           {[
             ["invoices","Invoices"],
             ["ready",`Ready to bill (${(data.ready_to_bill||[]).length})`],
@@ -293,21 +286,21 @@ export default function SboInvoices() {
         {workspaceTab==="ready" && (data.ready_to_bill || []).length ? <section className="rounded-[1.8rem] border border-emerald-400/20 bg-emerald-500/[.045] p-4 sm:p-5"><div className="flex items-center justify-between gap-3"><div><div className="font-black text-white">Completed work ready to invoice</div><div className="mt-1 text-xs text-slate-500">Create a draft first. Nothing is silently sent to the customer.</div></div><Plus className="h-5 w-5 text-emerald-200" /></div><div className="mt-4 grid gap-3 lg:grid-cols-2">{data.ready_to_bill.map((job) => <div key={job.ticket_id} className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="font-black text-white">{job.title}</div><div className="mt-1 text-xs text-slate-500">{job.customer_name} · {job.marketplace_origin ? "Marketplace" : "Business customer"}</div></div><button type="button" disabled={busy} onClick={() => createDraft(job.ticket_id)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-emerald-300/25 bg-emerald-500/10 px-3 text-xs font-black text-emerald-100 disabled:opacity-40"><Plus className="h-4 w-4" />Create draft</button></div>)}</div></section> : null}
 
         {selected ? <div className="fixed inset-0 z-[300] flex justify-end bg-[#020617]/75 backdrop-blur-[3px]" role="presentation" onClick={()=>setSelected(null)}>
-          <div role="dialog" aria-modal="true" aria-label={`Invoice ${selected.id} details`} className="h-full w-full max-w-2xl overflow-y-auto overscroll-contain border-l border-cyan-400/35 bg-[#071324] p-3 shadow-2xl sm:p-5" onClick={e=>e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-label={`Invoice ${selected.id} details`} className="sw-invoice-detail-drawer h-full w-full max-w-2xl overflow-y-auto overscroll-contain border-l border-cyan-400/35 bg-[#071324] p-3 shadow-2xl sm:p-5" onClick={e=>e.stopPropagation()}>
             <DetailPanel invoice={selected} busy={busy} onClose={() => setSelected(null)} onAction={runAction} />
           </div>
         </div> : null}
 
         {workspaceTab==="assistant" && !(data.suggestions||[]).length ? <p className="rounded-xl border border-white/10 p-4 text-sm text-slate-400">No SYNC suggestions for the current business data.</p> : null}
         {workspaceTab==="ready" && !(data.ready_to_bill||[]).length ? <p className="rounded-xl border border-white/10 p-4 text-sm text-slate-400">No completed work is waiting for an invoice.</p> : null}
-        {workspaceTab==="invoices" && <section>
+        {workspaceTab==="invoices" && <section className="sw-invoice-workspace-list">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div><div className="text-lg font-black text-white">Invoices</div><div className="text-xs text-slate-500">{filteredCount} shown</div></div>
             <div className="flex flex-wrap gap-2">{FILTERS.map((item) => <button key={item} type="button" onClick={() => setFilter(item)} className={`min-h-9 rounded-full border px-3 text-[10px] font-black uppercase tracking-[.12em] ${filter === item ? "border-cyan-300/30 bg-cyan-500/15 text-cyan-100" : "border-white/10 bg-white/[.025] text-slate-500"}`}>{item.replaceAll("_", " ")}</button>)}</div>
           </div>
           {loading ? <div className="grid min-h-48 place-items-center"><LoaderCircle className="h-8 w-8 animate-spin text-cyan-200" /></div> : null}
           {!loading && !(data.results || []).length ? <div className="mt-4 rounded-3xl border border-white/10 bg-white/[.025] p-8 text-center"><ReceiptText className="mx-auto h-8 w-8 text-slate-600" /><div className="mt-3 font-black text-white">No invoices in this view</div><div className="mt-1 text-sm text-slate-500">Completed jobs will appear above when they are ready to bill.</div></div> : null}
-          <div className="mt-4 grid gap-3 xl:grid-cols-2">{(data.results || []).map((invoice) => <InvoiceCard key={invoice.id} invoice={invoice} onOpen={openInvoice} />)}</div>
+          <div className="sw-invoice-ledger-list">{(data.results || []).map((invoice) => <InvoiceCard key={invoice.id} invoice={invoice} onOpen={openInvoice} />)}</div>
         </section>}
       </div>
     </DashboardShell>
