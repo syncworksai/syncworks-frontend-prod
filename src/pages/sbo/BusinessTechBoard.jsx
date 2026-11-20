@@ -38,6 +38,7 @@ export default function BusinessTechBoard({employeeMode=false}){
    const opts={params:{date},...(!support?{headers:{"X-Business-Id":businessId}}:{})};
    const result=await api.get(path,opts);
    setData(result.data||{staff:[],unassigned:[],summary:{}});
+   if(employeeMode)setRequestedPickups((result.data?.pending_pickup_ticket_ids||[]).map(String));
    if(!support){
     try{const [gr,workers]=await Promise.all([api.get("/sync-ai/business/technician-groups/"),getBusinessWorkforce()]);setGroups(gr.data?.groups||[]);setWorkforce(workers?.members||[]);}catch{setGroups([]);}
    }
