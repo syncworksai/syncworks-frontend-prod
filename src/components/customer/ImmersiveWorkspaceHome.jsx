@@ -3,6 +3,7 @@ import { fetchPersonalCalendarEvents } from "../../api/personalCalendarAgenda";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, CheckCheck, ClipboardPlus, Command, ArrowUpRight, BriefcaseBusiness, Building2, ChartNoAxesCombined, HeartPulse, Spade, ShoppingBag, Sparkles, Clock3, LayoutGrid, Mail, Palette, SunMedium } from "lucide-react";
 import "./ImmersiveWorkspaceHome.css";
+import CustomerScheduleWidget from "./CustomerScheduleWidget";
 import "./OfficePhotoBackground.css";
 import "./OfficePhotoRefinements.css";
 import "./GameLobbyV17.css";
@@ -57,6 +58,7 @@ export default function ImmersiveWorkspaceHome({ displayName = "there", theme, o
             <button type="button" onClick={onOpenAppearance} className="sw-immersive-customize"><Palette size={17}/> Customize your office</button>
           </div>
         </div>
+        <CustomerScheduleWidget />
         <div className="sw-immersive-focus" role="group" aria-label="Your command center shortcuts">
           <div className="sw-immersive-focus-caption"><Command size={17}/> YOUR COMMAND CENTER</div>
           <div style={{padding:"7px 10px",borderRadius:10,background:"rgba(5,15,33,.78)",border:"1px solid rgba(81,211,244,.24)",color:"#e4f6ff",fontSize:11}}>
