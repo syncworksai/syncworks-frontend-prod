@@ -67,3 +67,18 @@ test("God Mode is the single founder menu destination, preserving live user cont
   assert.match(scene, /sw-god-mobile-departments/);
   assert.match(scene, /height:100dvh/);
 });
+
+test("Founder rail uses Victoria without obstructive commerce button", () => {
+  const cockpit=read("src/components/platform/GodModeCockpit.jsx");
+  const commerce=read("src/components/platform/PlatformCommerceDock.jsx");
+  const platform=read("src/pages/PlatformDashboard.jsx");
+  const launcher=read("src/components/sync/SyncAssistantLauncher.jsx");
+  assert.match(cockpit, /syncworks:victoria-open/);
+  assert.match(cockpit, /sw-god-victoria-dock/);
+  assert.match(cockpit, /sw-god-mobile-victoria/);
+  assert.match(cockpit, /syncworks:commerce-kpis-open/);
+  assert.match(commerce, /addEventListener\("syncworks:commerce-kpis-open"/);
+  assert.doesNotMatch(commerce, /fixed bottom-5 right-5/);
+  assert.match(platform, /<PlatformCommerceDock \/>/);
+  assert.match(launcher, /location\.pathname !== "\/platform"/);
+});
