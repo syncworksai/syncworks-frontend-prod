@@ -3,6 +3,7 @@ import {createPortal} from "react-dom";
 import {CalendarDays,ChevronLeft,ChevronRight,Clock3,ExternalLink,List,Minus,Pencil,Plus,RefreshCw,X} from "lucide-react";
 import {useNavigate} from "react-router-dom";
 import api from "../../api/client";
+import {useWorkspaceAppearance} from "./CustomerWorkspace";
 import {fetchPersonalCalendarEvents} from "../../api/personalCalendarAgenda";
 import "./CustomerScheduleWidget.css";
 
@@ -24,6 +25,7 @@ function makeDraft(date,event){
 }
 export default function CustomerScheduleWidget(){
   const nav=useNavigate();
+  const [appearance]=useWorkspaceAppearance();
   const [events,setEvents]=useState([]),[loading,setLoading]=useState(true),[loadError,setLoadError]=useState("");
   const [open,setOpen]=useState(false),[view,setView]=useState("day"),[selected,setSelected]=useState(()=>new Date());
   const [editing,setEditing]=useState(null),[draft,setDraft]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
@@ -58,7 +60,7 @@ export default function CustomerScheduleWidget(){
     catch(ex){setError(ex?.response?.data?.detail||"Unable to remove event.");}finally{setBusy(false);}
   };
   const showEvent=e=>{setSelected(dateOf(e));edit(e);setOpen(true);};
-  const calendar=<div className="sw-customer-schedule-overlay" onMouseDown={e=>{if(e.currentTarget===e.target)setOpen(false);}}>
+  const calendar=<div data-workspace-theme={appearance.theme} className="sw-customer-schedule-overlay" onMouseDown={e=>{if(e.currentTarget===e.target)setOpen(false);}}>
     <section role="dialog" aria-modal="true" aria-label="Personal schedule" className="sw-customer-schedule-drawer">
       <div className="sw-schedule-drawer-heading"><div><small>YOUR PERSONAL HQ</small><h2>Calendar & agenda</h2></div><button type="button" aria-label="Close calendar" ref={closeRef} onClick={()=>setOpen(false)}><X size={20}/></button></div>
       <div className="sw-schedule-toolbar">
