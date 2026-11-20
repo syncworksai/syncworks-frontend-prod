@@ -14,10 +14,13 @@ import {
   ShieldCheck,
   WalletCards,
   XCircle,
+  Settings2,
+  ChevronRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import api from "../../api/client";
+import { getInvoiceCenter, getBillingAutomationSettings } from "../../api/invoices";
 import PaymentMigrationChecklist from "../../components/payments/PaymentMigrationChecklist";
 import DashboardShell from "../../components/dashboard/DashboardShell";
 import GlassCard from "../../components/dashboard/GlassCard";
@@ -129,18 +132,23 @@ export default function SboFinance() {
   const [billingStatus, setBillingStatus] = useState(null);
   const [subscription, setSubscription] = useState(null);
   const [connect, setConnect] = useState(null);
+  const [invoiceCenter,setInvoiceCenter]=useState(null);
+  const [automation,setAutomation]=useState(null);
+  const [invoiceLoading,setInvoiceLoading]=useState(true);
+  const [invoiceError,setInvoiceError]=useState("");
+  const [showSetup,setShowSetup]=useState(false);
 
   const navItems = [
     {label:"Business overview",icon:"⌂",onClick:()=>navigate("/sbo")},
-    {label:"Finance home",icon:"$",active:true,onClick:()=>setFinanceTab("overview")},
-    {label:"Payment readiness",icon:"✓",onClick:()=>setFinanceTab("readiness")},
-    {label:"Plans & payouts",icon:"▤",onClick:()=>setFinanceTab("payments")},
-    {label:"Fee reconciliation",icon:"↗",onClick:()=>setFinanceTab("reconciliation")},
-    {label:"Invoices",icon:"▦",onClick:()=>navigate("/sbo/invoices")},
+    {label:"Finance overview",icon:"$",active:financeTab==="overview",onClick:()=>{setFinanceTab("overview");setShowSetup(false);}},
+    {label:"Needs attention",icon:"!",onClick:()=>navigate("/sbo/invoices")},
+    {label:"Invoices",icon:"▤",onClick:()=>navigate("/sbo/invoices")},
+    {label:"Billing automation",icon:"◷",onClick:()=>navigate("/sbo/billing-automation")},
+    {label:"Catalog",icon:"▦",onClick:()=>navigate("/sbo/catalog")},
     {label:"Profit & Cash",icon:"◫",onClick:()=>navigate("/sbo/finance-intelligence")},
     {label:"Reports",icon:"↗",onClick:()=>navigate("/sbo/reports")},
-  ];
-  const loadAll = useCallback(async () => {
+    {label:"Payment settings",icon:"⚙",active:financeTab==="readiness",onClick:()=>{setFinanceTab("readiness");setShowSetup(false);}},
+  ];  const loadAll = useCallback(async () => {
     setLoading(true);
     setError("");
 
@@ -148,7 +156,13 @@ export default function SboFinance() {
       api.get("/billing/status/"),
       api.get("/billing/subscription/status/"),
       api.get("/connect/express/status/"),
+      getInvoiceCenter(),
+      getBillingAutomationSettings(),
     ]);
+    setInvoiceCenter(results[3].status==="fulfilled"?results[3].value:null);
+    setAutomation(results[4].status==="fulfilled"?results[4].value:null);
+    setInvoiceError(results[3].status==="rejected"?"Invoice activity could not be loaded. Open Invoices to retry.":"");
+    setInvoiceLoading(false);
 
     setBillingStatus(
       results[0].status === "fulfilled" ? results[0].value?.data || null : null
@@ -160,7 +174,7 @@ export default function SboFinance() {
       results[2].status === "fulfilled" ? results[2].value?.data || null : null
     );
 
-    const failures = results.filter((result) => result.status === "rejected");
+    const failures = results.slice(0,3).filter((result) => result.status === "rejected");
     if (failures.length) {
       const first = failures[0]?.reason;
       setError(
@@ -192,6 +206,19 @@ export default function SboFinance() {
     Boolean
   ).length;
   const readinessPercent = Math.round((readinessScore / 3) * 100);
+  const invoiceSummary=invoiceCenter?.summary||{};
+  const invoiceRows=Array.isArray(invoiceCenter?.results)?invoiceCenter.results:[];
+  const readyToBill=Array.isArray(invoiceCenter?.ready_to_bill)?invoiceCenter.ready_to_bill:[];
+  const overdueRows=invoiceRows.filter(row=>String(row.derived_state||row.state||"").toUpperCase()==="OVERDUE");
+  const attentionRows=[
+    ...overdueRows.map(row=>({kind:"overdue",id:row.id,name:row.customer_name||"Customer",detail:row.title||"Invoice",date:row.due_date,amount:row.balance_due})),
+    ...readyToBill.map(row=>({kind:"ready",id:row.ticket_id||row.ticket||row.id,name:row.customer_name||row.customer||"Customer",detail:row.title||row.service_title||"Completed work",date:row.completed_at||row.completion_date||row.updated_at||null,amount:null})),
+  ].slice(0,7);
+  const daysSince=(date)=>{if(!date)return null;const timestamp=Date.parse(date);return Number.isFinite(timestamp)?Math.max(0,Math.floor((Date.now()-timestamp)/86400000)):null;};
+  const money=(value)=>value===null||value===undefined?"—":Number(value).toLocaleString("en-US",{style:"currency",currency:"USD"});
+  const setupReady=!loading && readinessScore===3;
+  const autoReady=automation?.auto_send_invoices && automation?.auto_reminders_enabled;
+
 
   const requirementsDue = useMemo(() => {
     const requirements = connect?.requirements_due || {};
