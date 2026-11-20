@@ -14,6 +14,11 @@ import {
   Send,
   Sparkles,
   WalletCards,
+  Mail,
+  Pencil,
+  RotateCcw,
+  CalendarClock,
+  CreditCard,
   XCircle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -25,6 +30,9 @@ import {
   getInvoiceCenter,
   getInvoiceDetail,
   invoiceAction,
+  editInvoiceDraft,
+  getBillingAutomationSettings,
+  saveBillingAutomationSettings,
 } from "../../api/invoices";
 
 const FILTERS = ["ALL", "DRAFT", "SENT", "PARTIALLY_PAID", "OVERDUE", "PAID", "VOID"];
@@ -103,6 +111,55 @@ function InvoiceCard({ invoice, onOpen }) {
   );
 }
 
+function buildInvoiceMailto(invoice) {
+  const email=String(invoice.customer_email||"").trim();
+  const link=`${window.location.origin}/customer/invoices?invoice_id=${encodeURIComponent(invoice.id)}`;
+  const date=invoice.due_date?fmtDate(invoice.due_date):"the agreed due date";
+  const message=[
+    `Hello ${invoice.customer_name||""},`,
+    "",
+    `Here is invoice #${invoice.id} for ${invoice.service_title||invoice.title||"services"}.`,
+    `Invoice total: ${money(invoice.total)}`,
+    `Remaining balance: ${money(invoice.balance_due)}`,
+    `Due date: ${date}`,
+    "",
+    "View the invoice and pay securely using SyncWorks:",
+    link,
+    "",
+    "You may need to sign in to view this invoice.",
+    "Thank you."
+  ].join("\\n");
+  return `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(`Invoice #${invoice.id} · ${invoice.service_title||invoice.title||"Services"}`)}&body=${encodeURIComponent(message)}`;
+}
+
+function InvoiceEditForm({invoice,busy,onSave,onCancel}) {
+  const [title,setTitle]=useState(invoice.title||invoice.service_title||"");
+  const [notes,setNotes]=useState(invoice.notes||"");
+  const [dueDate,setDueDate]=useState(invoice.due_date||"");
+  useEffect(()=>{setTitle(invoice.title||invoice.service_title||"");setNotes(invoice.notes||"");setDueDate(invoice.due_date||"");},[invoice.id]);
+  return <form onSubmit={e=>{e.preventDefault();onSave({title:title.trim(),notes,due_date:dueDate});}} className="mt-4 rounded-xl border border-cyan-300/30 bg-cyan-500/5 p-4">
+    <h3 className="mb-3 font-semibold">Quick edit · Unpaid draft only</h3>
+    <div className="space-y-3">
+      <label className="block text-xs">Invoice title<input required maxLength={255} value={title} onChange={e=>setTitle(e.target.value)} className="mt-1 w-full rounded-lg border border-white/20 bg-slate-950 p-2 text-sm"/></label>
+      <label className="block text-xs">Due date<input required type="date" value={dueDate} onChange={e=>setDueDate(e.target.value)} className="mt-1 w-full rounded-lg border border-white/20 bg-slate-950 p-2 text-sm"/></label>
+      <label className="block text-xs">Notes<textarea maxLength={4000} value={notes} onChange={e=>setNotes(e.target.value)} rows={3} className="mt-1 w-full rounded-lg border border-white/20 bg-slate-950 p-2 text-sm"/></label>
+    </div>
+    <div className="mt-3 flex gap-2"><button disabled={busy||!title.trim()||!dueDate} type="submit" className="rounded-lg bg-cyan-500 px-3 py-2 text-sm font-semibold text-slate-950">Save draft</button><button type="button" onClick={onCancel} className="rounded-lg border border-white/20 px-3 py-2 text-sm">Cancel</button></div>
+  </form>;
+}
+
+function RefundReviewForm({invoice,busy,onRequest,onCancel}) {
+  const [amount,setAmount]=useState(String(invoice.amount_paid||""));
+  const [reason,setReason]=useState("");
+  return <form onSubmit={e=>{e.preventDefault();onRequest({amount,reason});}} className="mt-4 rounded-xl border border-amber-400/30 bg-amber-500/5 p-4">
+    <h3 className="font-semibold">Refund review request</h3>
+    <p className="my-2 text-xs text-amber-100">This records a review request only. No card, cash, Venmo or check refund is issued automatically.</p>
+    <label className="block text-xs">Amount<input required type="number" min="0.01" step="0.01" max={invoice.amount_paid} value={amount} onChange={e=>setAmount(e.target.value)} className="mt-1 w-full rounded-lg border border-white/20 bg-slate-950 p-2"/></label>
+    <label className="mt-2 block text-xs">Reason<textarea required maxLength={300} value={reason} onChange={e=>setReason(e.target.value)} className="mt-1 w-full rounded-lg border border-white/20 bg-slate-950 p-2" rows={2}/></label>
+    <div className="mt-3 flex gap-2"><button disabled={busy||!reason.trim()} type="submit" className="rounded-lg border border-amber-300 px-3 py-2 text-sm">Request review</button><button type="button" onClick={onCancel} className="rounded-lg border border-white/20 px-3 py-2 text-sm">Cancel</button></div>
+  </form>;
+}
+
 function PaymentPanel({ invoice, busy, onRecord }) {
   const [amount, setAmount] = useState(invoice?.balance_due || "");
   const [source, setSource] = useState("EXTERNAL_POS");
@@ -128,24 +185,28 @@ function PaymentPanel({ invoice, busy, onRecord }) {
             <option value="EXTERNAL_POS">External POS</option>
             <option value="CHECK">Check</option>
             <option value="CASH">Cash</option>
-            <option value="OTHER">Other</option>
-            <option value="SYNC_CARD">SyncWorks card</option>
+            <option value="VENMO">Venmo</option>
+            <option value="OTHER">Other external payment</option>
           </select>
         </label>
         <label className="text-xs font-bold text-slate-400">Reference
-          <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Optional" className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-base text-white" />
+          <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Cash receipt, check number, Venmo ID or POS receipt" className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-base text-white" />
         </label>
       </div>
-      <button type="button" disabled={busy || Number(amount) <= 0} onClick={() => onRecord({ amount, source, reference })} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-400/10 px-4 text-sm font-black text-amber-100 disabled:opacity-40">
+      <button type="button" disabled={busy || Number(amount) <= 0 || Number(amount)>Number(invoice.balance_due) || (["CHECK","VENMO","EXTERNAL_POS"].includes(source)&&!reference.trim())} onClick={() => onRecord({ amount, source, reference })} className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-400/10 px-4 text-sm font-black text-amber-100 disabled:opacity-40">
         <Banknote className="h-4 w-4" /> Record payment
       </button>
     </div>
   );
 }
 
-function DetailPanel({ invoice, busy, onClose, onAction }) {
+function DetailPanel({ invoice, busy, onClose, onAction, onEdit, onSendDraft }) {
   if (!invoice) return null;
   const open = !["PAID", "VOID"].includes(invoice.derived_state);
+  const [editing,setEditing]=useState(false);
+  const [requestingRefund,setRequestingRefund]=useState(false);
+  const emailAvailable=Boolean(String(invoice.customer_email||"").trim());
+
   return (
     <section className="rounded-[2rem] border border-cyan-400/20 bg-slate-950/90 p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -157,6 +218,15 @@ function DetailPanel({ invoice, busy, onClose, onAction }) {
         <div className="flex items-center gap-2"><StatePill state={invoice.derived_state} /><button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 text-slate-400"><XCircle className="h-5 w-5" /></button></div>
       </div>
 
+      <div className="mt-3 flex flex-wrap gap-2" aria-label="Invoice quick actions">
+        {invoice.derived_state==="DRAFT"&&<button type="button" onClick={()=>setEditing(v=>!v)} className="sw-invoice-toolbar-button"><Pencil size={15}/> Quick edit</button>}
+        <button type="button" onClick={()=>onSendDraft(invoice)} className="sw-invoice-toolbar-button"><Mail size={15}/> {emailAvailable?"Open prefilled email":"Copy invoice link"}</button>
+        {Number(invoice.amount_paid)>0&&<button type="button" onClick={()=>setRequestingRefund(v=>!v)} className="sw-invoice-toolbar-button"><RotateCcw size={15}/> Refund review</button>}
+      </div>
+      <p className="mt-2 text-xs text-slate-400">Email opens your device mail app as a draft. It does not attach a PDF, send automatically or mark the invoice delivered. The customer link requires sign-in.</p>
+      {editing&&<InvoiceEditForm invoice={invoice} busy={busy} onSave={payload=>onEdit(payload).then(ok=>{if(ok)setEditing(false);})} onCancel={()=>setEditing(false)}/>}
+      {requestingRefund&&<RefundReviewForm invoice={invoice} busy={busy} onRequest={payload=>onAction("request-refund",payload).then(ok=>{if(ok)setRequestingRefund(false);})} onCancel={()=>setRequestingRefund(false)}/>}
+      {invoice.card_last4&&<div className="mt-3 flex items-center gap-2 text-xs text-emerald-200"><CreditCard size={15}/>{invoice.card_brand||"Card"} ending •••• {invoice.card_last4} · Stripe-confirmed payment</div>}
       <dl className="sw-invoice-drawer-summary">
         <div><dt>Invoice total</dt><dd>{money(invoice.total)}</dd></div>
         <div><dt>Collected</dt><dd>{money(invoice.amount_paid)}</dd></div>
@@ -179,8 +249,8 @@ function DetailPanel({ invoice, busy, onClose, onAction }) {
       </div>
 
       {open ? <div className="mt-4 flex flex-wrap gap-2">
-        {invoice.derived_state === "DRAFT" ? <button type="button" disabled={busy} onClick={() => onAction("send")} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-cyan-500 px-4 text-sm font-black text-slate-950 disabled:opacity-40"><Send className="h-4 w-4" />Mark sent</button> : null}
-        {["SENT", "OVERDUE", "PARTIALLY_PAID"].includes(invoice.derived_state) ? <button type="button" disabled={busy} onClick={() => onAction("reminder")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-violet-400/25 bg-violet-500/10 px-4 text-sm font-black text-violet-100 disabled:opacity-40"><Clock3 className="h-4 w-4" />Payment reminder</button> : null}
+        {invoice.derived_state === "DRAFT" ? <button type="button" disabled={busy} onClick={() => onAction("send")} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-cyan-500 px-4 text-sm font-black text-slate-950 disabled:opacity-40"><Send className="h-4 w-4" />Issue in SyncWorks</button> : null}
+        {["SENT", "OVERDUE", "PARTIALLY_PAID"].includes(invoice.derived_state) ? <button type="button" disabled={busy} onClick={() => onAction("reminder")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-violet-400/25 bg-violet-500/10 px-4 text-sm font-black text-violet-100 disabled:opacity-40"><Clock3 className="h-4 w-4" />Notify in SyncWorks</button> : null}
         <button type="button" disabled={busy} onClick={() => onAction("void", { reason: "Voided from Invoice Center" })} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-rose-400/20 bg-rose-500/[.06] px-4 text-sm font-black text-rose-200 disabled:opacity-40"><XCircle className="h-4 w-4" />Void</button>
       </div> : null}
 
@@ -208,6 +278,13 @@ export default function SboInvoices() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [reminderSettings,setReminderSettings]=useState(null);
+  const [reminderBusy,setReminderBusy]=useState(false);
+  const [showReminderSettings,setShowReminderSettings]=useState(false);
+  const [reminderDays,setReminderDays]=useState("2");
+  const [reminderError,setReminderError]=useState("");
+  useEffect(()=>{getBillingAutomationSettings().then(v=>{setReminderSettings(v);setReminderDays(String(v.reminder_after_due_days?.[0]??2));}).catch(()=>setReminderSettings(null));},[]);
+
 
   async function load() {
     setLoading(true); setError("");
@@ -238,16 +315,41 @@ export default function SboInvoices() {
   }
 
   async function runAction(action, payload = {}) {
-    if (!selected?.id) return;
+    if (!selected?.id) return false;
     setBusy(true); setNotice(""); setError("");
     try {
       const updated = await invoiceAction(selected.id, action, payload);
       setSelected(updated);
-      setNotice(action === "record-payment" ? "Payment recorded and balance recalculated." : "Invoice updated.");
+      setNotice(action === "request-refund"?"Refund review logged. No funds were returned.":action === "record-payment" ? "External payment recorded; reconcile against the actual receipt." : "Invoice updated in SyncWorks; external email delivery is not implied.");
       await load();
-    } catch (e) { setError(e?.response?.data?.detail || "Unable to update invoice."); }
+      return true;
+    } catch (e) { setError(e?.response?.data?.detail || "Unable to update invoice.");return false; }
     finally { setBusy(false); }
   }
+
+  async function saveDraft(payload) {
+    if(!selected?.id)return false;
+    setBusy(true);setError("");
+    try{const updated=await editInvoiceDraft(selected.id,payload);setSelected(updated);setNotice("Unpaid draft updated.");await load();return true;}
+    catch(e){setError(e?.response?.data?.detail||"Unable to edit draft.");return false;}
+    finally{setBusy(false);}
+  }
+
+  async function openEmailDraft(invoice) {
+    if(!invoice.customer_email){try{await navigator.clipboard.writeText(`${window.location.origin}/customer/invoices?invoice_id=${invoice.id}`);setNotice("Customer invoice link copied; recipient must sign in. Add customer email in their profile.");}catch{setNotice("No customer email found. Copy the invoice link manually from the customer portal.");}return;}
+    window.location.href=buildInvoiceMailto(invoice);
+    setNotice("Email draft opened. Confirm and send it from your mail app; SyncWorks has not marked delivery.");
+  }
+
+  async function saveReminders() {
+    setReminderBusy(true);setReminderError("");
+    try {const days=Number(reminderDays);if(!Number.isInteger(days)||days<2||days>60)throw new Error("Choose 2–60 days after the invoice due date.");const v=await saveBillingAutomationSettings({auto_reminders_enabled:true,reminder_after_due_days:[days],reminder_before_due_days:0,reminder_on_due_date:false});setReminderSettings(v);setNotice(`Automated reminders enabled for ${days} days after the due date, subject to configured email delivery and customer preferences.`);setShowReminderSettings(false);}
+    catch(e){setReminderError(e?.response?.data?.detail||e.message||"Unable to save reminders.");}
+    finally{setReminderBusy(false);}
+  }
+
+  async function disableReminders(){setReminderBusy(true);try{const v=await saveBillingAutomationSettings({auto_reminders_enabled:false});setReminderSettings(v);setNotice("Automated reminders disabled.");}catch(e){setReminderError(e?.response?.data?.detail||"Unable to disable reminders.");}finally{setReminderBusy(false);}}
+
 
   const summary = data.summary || {};
   const noConfirmedData=error && !(data.results||[]).length && !Object.keys(summary).length;
@@ -278,6 +380,16 @@ export default function SboInvoices() {
           ].map(([id,label])=><button type="button" key={id} onClick={()=>setWorkspaceTab(id)} aria-current={workspaceTab===id?"page":undefined} className={`min-h-10 rounded-lg border px-3 text-xs font-bold ${workspaceTab===id?"border-cyan-400/40 bg-cyan-500/20 text-cyan-50":"border-slate-700 bg-slate-900/40 text-slate-300"}`}>{label}</button>)}
         </nav>
 
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-slate-950/60 p-2">
+          <button type="button" onClick={()=>setShowReminderSettings(v=>!v)} className="sw-invoice-toolbar-button"><CalendarClock size={16}/> Automated reminders</button>
+          <span className="text-xs text-slate-400">{reminderSettings?.auto_reminders_enabled? `Enabled · ${(reminderSettings.reminder_after_due_days||[]).join(", ")} day(s) after due`:"Off · manual review"}</span>
+        </div>
+        {showReminderSettings&&<section className="rounded-xl border border-cyan-400/20 bg-slate-950/90 p-3 text-sm">
+          <p className="mb-2 text-xs text-slate-400">For outstanding issued invoices, schedule a reminder no earlier than 2 days after the due date. Uses the existing daily automation and available server email delivery, not your personal mail app. Does not charge the card.</p>
+          <label className="block text-xs">Days past due <input type="number" min="2" max="60" step="1" value={reminderDays} onChange={e=>setReminderDays(e.target.value)} className="ml-2 w-20 rounded border border-white/20 bg-slate-900 p-2 text-white"/></label>
+          <div className="mt-3 flex gap-2"><button disabled={reminderBusy} type="button" onClick={saveReminders} className="sw-invoice-toolbar-button">Enable reminders</button><button disabled={reminderBusy} type="button" onClick={disableReminders} className="sw-invoice-toolbar-button">Disable</button></div>
+          {reminderError&&<p role="alert" className="mt-2 text-rose-300">{reminderError}</p>}
+        </section>}
         {error ? <div className="rounded-2xl border border-rose-400/20 bg-rose-500/[.07] p-4 text-sm text-rose-100">{error}</div> : null}
         {notice ? <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/[.07] p-4 text-sm text-emerald-100">{notice}</div> : null}
 
@@ -287,7 +399,7 @@ export default function SboInvoices() {
 
         {selected ? <div className="fixed inset-0 z-[300] flex justify-end bg-[#020617]/75 backdrop-blur-[3px]" role="presentation" onClick={()=>setSelected(null)}>
           <div role="dialog" aria-modal="true" aria-label={`Invoice ${selected.id} details`} className="sw-invoice-detail-drawer h-full w-full max-w-2xl overflow-y-auto overscroll-contain border-l border-cyan-400/35 bg-[#071324] p-3 shadow-2xl sm:p-5" onClick={e=>e.stopPropagation()}>
-            <DetailPanel invoice={selected} busy={busy} onClose={() => setSelected(null)} onAction={runAction} />
+            <DetailPanel invoice={selected} busy={busy} onClose={() => setSelected(null)} onAction={runAction} onEdit={saveDraft} onSendDraft={openEmailDraft}/>
           </div>
         </div> : null}
 
