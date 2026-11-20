@@ -64,7 +64,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
 
   const roster = useMemo(() => AVATARS.map((avatar) => ({
     ...avatar,
-    photo: employees.find(worker=>worker.id===avatar.id)?.photo || getAvatarPhotoForUser(avatar, user),
+    photo: employees.find(worker=>worker.id===avatar.id) ? (employees.find(worker=>worker.id===avatar.id).photo || null) : (["executive-male","future-male"].includes(avatar.id) ? null : getAvatarPhotoForUser(avatar,user)),
     name: employees.find(worker=>worker.id===avatar.id)?.name || avatar.name,
     configured: employees.some((worker) => worker.id === avatar.id),
   })), [employees, user?.email]);
@@ -100,7 +100,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
             <button key={person.id} type="button" className="sw-office-agent"
               aria-label={`Open ${person.name}, ${person.role}`}
               onClick={() => setSelected((old) => old === person.id ? null : person.id)}>
-              <img src={person.photo} alt="" loading="lazy" />
+              {person.photo?<img src={person.photo} alt="" loading="lazy" />:<span className="grid h-full w-full place-items-center rounded-full border border-cyan-300/30 bg-cyan-500/15 text-lg font-bold text-cyan-100">{person.name?.charAt(0)||"AI"}</span>}
               <span className="sw-office-agent-names"><strong>{person.name}</strong><small>{person.role}</small></span>
               <ChevronRight size={15} className="sw-office-agent-chevron" aria-hidden="true" />
             </button>
