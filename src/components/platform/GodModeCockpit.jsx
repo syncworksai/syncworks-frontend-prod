@@ -75,7 +75,7 @@ export default function GodModeCockpit({ onOpen }) {
     <div className="sw-god-workarea">
       <div className="sw-god-mobile-departments" aria-label="Choose God Mode department">
         <div className="sw-god-mobile-department-switch">{GROUPS.map((g,i)=><button type="button" key={g.title} aria-pressed={mobileGroup===i} onClick={()=>setMobileGroup(i)}><g.icon size={17}/><span>{g.title}</span></button>)}</div>
-        <div className="sw-god-mobile-department-content"><p>{GROUPS[mobileGroup].subtitle}</p><div>{GROUPS[mobileGroup].links.map(([id,label])=><button key={id} type="button" onClick={()=>onOpen(id)}>{label}<ChevronRight size={15}/></button>)}</div></div>
+        <div className="sw-god-mobile-department-content"><p>{GROUPS[mobileGroup].subtitle}</p><div>{GROUPS[mobileGroup].links.map(([id,label])=><button key={id} type="button" onClick={()=>onOpen(id)}>{label}<ChevronRight size={15}/></button>)}</div><button type="button" onClick={openVictoria} className="sw-god-mobile-victoria" aria-label="Open Victoria Chief of Staff briefing"><img src={getAvatarPhotoForUser(chiefAvatar,user)} alt="" /><span>Victoria · Chief of Staff</span><ChevronRight size={16}/></button></div>
       </div>
       <section className="sw-god-module-grid" aria-label="God Mode departments">
         {GROUPS.map(g=><article key={g.title} className={"sw-god-department sw-god-"+g.tone}>
