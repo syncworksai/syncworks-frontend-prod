@@ -63,19 +63,23 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     return () => { live = false; window.removeEventListener("sw:assist-team-updated",refresh); };
   }, [permitted, version]);
 
-  const roster = useMemo(() => getPilotAgentsForUser(user,AVATARS).map((avatar) => ({
+  const roster = useMemo(() => getPilotAgentsForUser(user,AVATARS).map((avatar) => {
+    const slotId=avatar.id==="accounting-female"?"finance-manager":avatar.id;
+    const employee=employees.find(worker=>worker.id===slotId);
+    return {
     ...avatar,
-    photo: employees.find(worker=>worker.id===avatar.id)?.photo || getAvatarPhotoForUser(avatar,user),
-    name: employees.find(worker=>worker.id===avatar.id)?.name || avatar.name,
-    configured: employees.some((worker) => worker.id === avatar.id),
-  })), [employees, user?.email]);
+    slotId,
+    photo: employee?.photo || getAvatarPhotoForUser(avatar,user),
+    name: employee?.name || avatar.name,
+    configured: Boolean(employee),
+  }}), [employees, user?.email]);
 
   if (!permitted) return null;
   const office = placement === "office";
   const shown = office ? roster.filter((person) => person.id === "executive-female") : roster;
   const active = roster.find((person) => person.id === selected);
   const openEmployee = (person) => nav(person.configured
-    ? `/sync/assist/employee/${encodeURIComponent(person.id)}`
+    ? `/sync/assist/employee/${encodeURIComponent(person.slotId)}`
     : "/sync/assist");
 
   const dock = (
