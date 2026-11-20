@@ -26,6 +26,7 @@ import { useNavigate } from "react-router-dom";
 import DashboardShell from "../../components/dashboard/DashboardShell";
 import "./SboInvoices.css";
 import SboNewInvoiceDrawer from "./SboNewInvoiceDrawer";
+import AttachmentPanel from "../../components/tickets/AttachmentPanel";
 import "./SboNewInvoiceDrawer.css";
 import {
   createInvoiceFromTicket,
@@ -413,6 +414,7 @@ export default function SboInvoices() {
         {selected ? <div className="fixed inset-0 z-[300] flex justify-end bg-[#020617]/75 backdrop-blur-[3px]" role="presentation" onClick={()=>setSelected(null)}>
           <div role="dialog" aria-modal="true" aria-label={`Invoice ${selected.id} details`} className="sw-invoice-detail-drawer h-full w-full max-w-2xl overflow-y-auto overscroll-contain border-l border-cyan-400/35 bg-[#071324] p-3 shadow-2xl sm:p-5" onClick={e=>e.stopPropagation()}>
             <DetailPanel invoice={selected} busy={busy} canManage={canManage} onClose={() => setSelected(null)} onAction={runAction} onEdit={saveDraft} onSendDraft={openEmailDraft}/>
+            {selected.ticket&&<section className="mt-4"><h3 className="mb-2 text-sm font-semibold text-white">Supporting job documents</h3><p className="mb-3 text-xs text-slate-300">Files uploaded here are securely attached to the related service ticket, not embedded directly in the invoice PDF.</p><AttachmentPanel ticketId={selected.ticket} canUpload={canManage}/></section>}
           </div>
         </div> : null}
 
