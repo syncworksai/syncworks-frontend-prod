@@ -1,0 +1,111 @@
+/* Customer Apps is a fixed-height paged launcher, never a full-page scrolling list.
+   The selected office theme still controls border, text and accent. */
+.sw-workspace-overlay-themed[data-workspace-panel="apps"][data-workspace-transition="bottom"] .sw-office-theme-drawer {
+  display:flex;
+  flex-direction:column;
+  flex:0 1 auto;
+  width:min(940px,calc(100vw - 30px));
+  height:auto;
+  max-height:calc(100dvh - 24px);
+  overflow:hidden!important;
+  padding:clamp(14px,1.7vw,22px)!important;
+  border-radius:22px 22px 0 0;
+}
+.sw-workspace-overlay-themed[data-workspace-panel="apps"] .sw-office-theme-drawer > header,
+.sw-workspace-overlay-themed[data-workspace-panel="apps"] .sw-workspace-description {
+  flex-shrink:0;
+}
+.sw-workspace-overlay-themed[data-workspace-panel="apps"] .sw-workspace-description {
+  margin:5px 0 12px;
+  font-size:12px;
+  line-height:1.35;
+}
+.sw-workspace-overlay-themed[data-workspace-panel="apps"] .sw-workspace-app-pages {
+  flex:0 1 auto;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  gap:10px;
+}
+.sw-workspace-overlay-themed[data-workspace-panel="apps"] .sw-workspace-app-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-rows:repeat(3,minmax(0,1fr));
+  gap:9px;
+}
+.sw-workspace-overlay-themed[data-workspace-panel="apps"] .sw-workspace-app-grid button {
+  min-width:0;
+  min-height:0;
+  height:clamp(62px,11dvh,92px);
+  padding:6px;
+  gap:6px;
+  border-radius:13px;
+  font-size:11px;
+}
+.sw-workspace-overlay-themed[data-workspace-panel="apps"] .sw-workspace-app-grid button svg{width:19px;height:19px;flex-shrink:0}
+.sw-workspace-app-pagination {
+  flex-shrink:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:14px;
+  min-height:34px;
+  font-size:11px;
+  color:var(--office-drawer-muted);
+}
+.sw-workspace-app-pagination button {
+  min-width:90px;
+  min-height:32px;
+  border-radius:9px;
+  border:1px solid var(--office-drawer-border);
+  background:var(--office-drawer-tile);
+  color:var(--office-drawer-text);
+  font-weight:700;
+}
+.sw-workspace-app-pagination button:disabled{opacity:.35;cursor:not-allowed}
+.sw-workspace-app-pagination button:not(:disabled):hover{border-color:var(--office-drawer-accent)}
+/* Modern Dark = near-black slate, not the desaturated green-grey office photograph. */
+.sw-workspace-overlay-themed[data-workspace-panel="apps"][data-office-drawer-theme="modern"] {
+  --office-drawer-bg:#0b0e14;
+  --office-drawer-text:#f3f5f8;
+  --office-drawer-muted:#a6b1c0;
+  --office-drawer-border:rgba(136,157,181,.32);
+  --office-drawer-tile:#141a24;
+  --office-drawer-tile-hover:#1d2633;
+  --office-drawer-accent:#b7c9df;
+}
+.sw-workspace-overlay-themed[data-workspace-panel="apps"][data-office-drawer-theme="modern"] .sw-office-theme-drawer {
+  background:#0b0e14!important;
+  background-image:linear-gradient(140deg,#111722,#080c12)!important;
+  border-color:rgba(129,147,173,.36)!important;
+}
+.sw-workspace-overlay-themed[data-workspace-panel="apps"][data-office-drawer-theme="modern"] .sw-workspace-app-grid button{
+  background:#141a24!important;
+  border-color:rgba(135,152,176,.32)!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.035);
+}
+.sw-workspace-overlay-themed[data-workspace-panel="apps"][data-office-drawer-theme="modern"] .sw-workspace-app-grid button:hover {
+  background:#1c2532!important;
+  border-color:#9bb6d4!important;
+}
+@media(max-width:767px) {
+ .sw-workspace-overlay-themed[data-workspace-panel="apps"][data-workspace-transition="bottom"] .sw-office-theme-drawer{
+   width:100%;max-height:100%;padding:12px!important;
+   border-radius:18px 18px 0 0;
+ }
+ .sw-workspace-overlay-themed[data-workspace-panel="apps"] .sw-workspace-app-grid{
+   grid-template-columns:repeat(2,minmax(0,1fr));
+   grid-template-rows:repeat(3,minmax(0,1fr));gap:7px;
+ }
+ .sw-workspace-overlay-themed[data-workspace-panel="apps"] .sw-workspace-app-grid button{
+   height:clamp(48px,9dvh,75px);font-size:10px;gap:4px;
+ }
+ .sw-workspace-overlay-themed[data-workspace-panel="apps"] .sw-workspace-app-grid button svg{width:17px;height:17px}
+ .sw-workspace-overlay-themed[data-workspace-panel="apps"] .sw-workspace-description{margin:3px 0 7px;font-size:11px}
+ .sw-workspace-app-pagination{gap:10px;min-height:30px}
+ .sw-workspace-app-pagination button{min-height:30px}
+}
+@media(max-height:560px){
+ .sw-workspace-overlay-themed[data-workspace-panel="apps"] .sw-workspace-app-grid button{height:clamp(36px,8dvh,55px)}
+ .sw-workspace-overlay-themed[data-workspace-panel="apps"] .sw-workspace-description{margin:2px 0 5px}
+}
