@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { AVATARS, getAvatarPhotoForUser } from "./JarvisAvatar";
+import { AVATARS, getAvatarPhotoForUser, getAvatarFallbackPhotoForUser } from "./JarvisAvatar";
+import { getPilotAgentsForUser } from "./pilotAgentRoster";
 import "./BusinessAssistantDock.css";
 
 /**
@@ -12,7 +13,7 @@ import "./BusinessAssistantDock.css";
  */
 export default function BusinessAssistantDock({user,onVictoria}) {
   const navigate=useNavigate();
-  const agents=AVATARS;
+  const agents=getPilotAgentsForUser(user, AVATARS);
   return <nav className="sw-business-assist-dock" aria-label="Business AI team">
     <span className="sw-business-assist-caption">AI TEAM</span>
     {agents.map(agent=><button
@@ -23,7 +24,7 @@ export default function BusinessAssistantDock({user,onVictoria}) {
       className="sw-business-assist-person"
       onClick={()=>agent.role==="Chief of Staff"?onVictoria():navigate("/sync/assist")}
     >
-      <img src={getAvatarPhotoForUser(agent,user)} alt="" loading="lazy"/>
+      <img src={getAvatarPhotoForUser(agent,user)} alt="" loading="lazy" onError={(event)=>{const fallback=getAvatarFallbackPhotoForUser(agent,user);if(fallback && event.currentTarget.src !== new URL(fallback,window.location.href).href)event.currentTarget.src=fallback;}}/>
       <span>{agent.name}</span>
     </button>)}
   </nav>;
