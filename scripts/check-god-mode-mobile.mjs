@@ -104,5 +104,5 @@ test("Founder portrait opens Operations Desk with a Victoria briefing action", (
   assert.match(cockpit, /aria-label="Open Victoria Chief of Staff Operations Desk"/);
   assert.match(cockpit, /sw-god-mobile-victoria/);
   assert.match(desk, /Speak with Victoria/);
-  assert.match(desk, /syncworks:victoria-open/);
+  assert.match(desk, /sendSyncAiMessage/);
 });
