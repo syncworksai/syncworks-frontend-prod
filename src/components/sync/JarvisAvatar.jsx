@@ -2,6 +2,7 @@ import React, {useEffect,useState} from "react";
 import {ChevronDown,Volume2,VolumeX} from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
 import "./JarvisAvatar.css";
+import { isFounderPilot, PILOT_AGENTS } from "./pilotAgentRoster";
 
 export const AVATAR_STORAGE_KEY="sw-jarvis-avatar-v1";
 export const AVATARS=[
@@ -13,8 +14,12 @@ export const AVATARS=[
 
 // Pilot-specific portrait only. Do not change the shared avatar manifest for customers.
 export const getAvatarPhotoForUser = (avatar, user) =>
-  avatar?.id === "executive-female" && String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com"
-    ? "/lady10.png?v=pilot-victoria-20261117"
+  isFounderPilot(user)
+    ? PILOT_AGENTS.find((item) => item.id === avatar?.id)?.photo || avatar?.photo
+    : avatar?.photo;
+export const getAvatarFallbackPhotoForUser = (avatar, user) =>
+  isFounderPilot(user)
+    ? PILOT_AGENTS.find((item) => item.id === avatar?.id)?.fallbackPhoto || avatar?.photo
     : avatar?.photo;
 
 export function loadAvatarChoice(){
@@ -39,11 +44,13 @@ export function useJarvisAvatar(){
 }
 
 export function JarvisAvatar({id="executive-female",state="idle",size="hero",label=true,displayName,displayRole}){
-  const config=AVATARS.find(v=>v.id===id)||AVATARS[0];
   const { user } = useAuth();
+  const defaultConfig=AVATARS.find(v=>v.id===id)||AVATARS[0];
+  const pilotConfig=isFounderPilot(user)?PILOT_AGENTS.find(v=>v.id===id):null;
+  const config=pilotConfig?{...defaultConfig,...pilotConfig,presentation:"Female"}:defaultConfig;
   const photo = getAvatarPhotoForUser(config, user);
   // A static headshot has no tracked lip landmarks: keep the photo intact and use the speaking waveform.
-  const usePhotoMouthOverlay = !photo.startsWith("/lady10.png");
+  const usePhotoMouthOverlay = !isFounderPilot(user) && !photo.startsWith("/lady10.png");
   const assistantName=displayName||config.name;
   const assistantRole=displayRole||config.role;
   const [photoReady,setPhotoReady]=useState(false);
@@ -53,7 +60,7 @@ export function JarvisAvatar({id="executive-female",state="idle",size="hero",lab
   const gradId="avatar-outfit-"+id;
   return <div className={`jarvis-avatar jarvis-avatar--${stage} jarvis-avatar--${size} ${photoReady?"jarvis-avatar--photographic":""}`} style={{"--avatar-accent":config.accent,"--mouth-x":config.mouthX,"--mouth-y":config.mouthY}}>
     <div className="jarvis-avatar__halo" aria-hidden="true"/>
-    <img key={photo} className="jarvis-avatar__photo" src={photo} alt={`${assistantName} - ${assistantRole}, virtual assistant`} loading="eager" decoding="async" onLoad={()=>setPhotoReady(true)} onError={()=>setPhotoReady(false)} />
+    <img key={photo} className="jarvis-avatar__photo" src={photo} alt={`${assistantName} - ${assistantRole}, virtual assistant`} loading="eager" decoding="async" onLoad={()=>setPhotoReady(true)} onError={(event)=>{ const fallback=getAvatarFallbackPhotoForUser(config,user); if(fallback && event.currentTarget.src !== new URL(fallback,window.location.href).href){event.currentTarget.src=fallback;}else{setPhotoReady(false);} }} />
     {photoReady&&usePhotoMouthOverlay&&<img key={photo+"-mouth"} className="jarvis-avatar__photo-mouth" src={photo} alt="" aria-hidden="true" draggable="false" />}
     {!photoReady&&<svg className="jarvis-avatar__portrait" viewBox="0 0 260 300" role="img" aria-label={`${assistantName} - ${assistantRole}, virtual assistant, ${stage}`}>
       <defs>
