@@ -372,6 +372,20 @@ export default function SboFinance() {
           {financeTab==="overview" && <section className="sw-sbo-finance-overview" aria-label="Finance overview">
             <header className="sw-sbo-finance-hero"><div><span className="sw-sbo-finance-kicker">YOUR OFFICE · FINANCE</span><h1>Finance command center</h1><p>Payment readiness, receivables and accounting access in one place.</p></div><button type="button" onClick={loadAll} disabled={loading} aria-label="Refresh finance status"><RefreshCw size={17} className={loading?"animate-spin":""}/></button></header>
             <div className="sw-sbo-finance-pulse"><div><span>PAYMENT OPERATIONS</span><p>{loading?"Loading live payment status…":readinessScore===3?"Subscriptions, billing and payouts are ready":`${3-readinessScore} of 3 payment setup requirements need attention`}</p></div><button onClick={()=>openFinanceTab("readiness")}>Review <ArrowLeft size={14} className="rotate-180"/></button></div>
+            <div className="sw-sbo-finance-invoice-header">
+              <div><span>INVOICING PULSE</span><h2>Receivables and job billing</h2></div>
+              <button type="button" onClick={()=>setShowSetup(true)} className={setupReady?"is-ready":""} aria-label="Open finance setup"><span className="sw-sbo-finance-status-light"/> {setupReady?"Setup ready":"Setup needs attention"} <Settings2 size={15}/></button>
+            </div>
+            <div className="sw-sbo-finance-invoice-kpis">
+              <button type="button" onClick={()=>navigate("/sbo/invoices")}><span>Outstanding</span><strong>{invoiceLoading?"—":invoiceError?"Unavailable":money(invoiceSummary.outstanding)}</strong></button>
+              <button type="button" onClick={()=>navigate("/sbo/invoices")}><span>Overdue invoices</span><strong>{invoiceLoading?"—":invoiceError?"Unavailable":(invoiceSummary.overdue_count??overdueRows.length)}</strong></button>
+              <button type="button" onClick={()=>navigate("/sbo/invoices")}><span>Ready to bill</span><strong>{invoiceLoading?"—":invoiceError?"Unavailable":(invoiceSummary.ready_to_bill_count??readyToBill.length)}</strong></button>
+              <button type="button" onClick={()=>navigate("/sbo/invoices")}><span>Paid this month</span><strong>{invoiceLoading?"—":invoiceError?"Unavailable":money(invoiceSummary.paid_this_month)}</strong></button>
+            </div>
+            <section className="sw-sbo-finance-attention">
+              <div className="sw-sbo-finance-attention-head"><h2><AlertTriangle size={16}/> Invoices requiring attention</h2><button type="button" onClick={()=>navigate("/sbo/invoices")}>All invoices <ChevronRight size={16}/></button></div>
+              {invoiceError?<p role="alert">{invoiceError}</p>:invoiceLoading?<p>Loading invoice activity…</p>:attentionRows.length?<div className="sw-sbo-finance-attention-list">{attentionRows.map((item,index)=><button type="button" key={item.kind+"-"+item.id+"-"+index} onClick={()=>navigate("/sbo/invoices")}><span><strong>{item.kind==="overdue"?"PAST DUE":"READY TO INVOICE"}</strong> · {item.name}<small>{item.detail} · {daysSince(item.date)===null?"Date unavailable":item.kind==="ready"?daysSince(item.date)+" days since completion":daysSince(item.date)+" days past due"}</small></span><span>{item.amount===null?"Review":money(item.amount)}</span></button>)}</div>:<p>No overdue invoices or completed jobs awaiting billing in the loaded records.</p>}
+            </section>
             <div className="sw-sbo-finance-stats">
               <button type="button" onClick={()=>openFinanceTab("readiness")}><strong>{loading?"—":readinessPercent+"%"}</strong><small>Payment readiness</small></button>
               <button type="button" onClick={()=>openFinanceTab("payments")}><strong>{connectReady?"Ready":"Review"}</strong><small>Stripe payouts</small></button>
@@ -385,6 +399,13 @@ export default function SboFinance() {
             </div>
             <div className="sw-sbo-finance-quick"><button type="button" onClick={()=>navigate("/sbo/invoices")}><FileText size={15}/> Invoices</button><button type="button" onClick={()=>navigate("/sbo/reports")}><TrendingUp size={15}/> Reports & exports</button><button type="button" onClick={()=>navigate("/sbo")}><LayoutDashboard size={15}/> Business office</button></div>
           </section>}
+          {showSetup&&<div className="sw-sbo-finance-setup-backdrop" onMouseDown={()=>setShowSetup(false)}><aside role="dialog" aria-modal="true" aria-label="Finance setup" className="sw-sbo-finance-setup-drawer" onMouseDown={e=>e.stopPropagation()}><header><h2>Finance setup</h2><button type="button" onClick={()=>setShowSetup(false)} aria-label="Close setup"><XCircle size={21}/></button></header><p>Payment readiness, billing automation, and catalog controls.</p><div className="sw-sbo-finance-setup-items">
+            <button onClick={()=>{setFinanceTab("readiness");setShowSetup(false)}}><span className={setupReady?"sw-sbo-setup-green":"sw-sbo-setup-amber"}/> Stripe & billing readiness <strong>{loading?"Loading":setupReady?"Ready":"Action needed"}</strong></button>
+            <button onClick={()=>navigate("/sbo/billing-automation")}><span className={autoReady?"sw-sbo-setup-green":"sw-sbo-setup-amber"}/> Automated invoicing & reminders <strong>{automation?autoReady?"Enabled":"Review":"Not verified"}</strong></button>
+            <button onClick={()=>navigate("/sbo/catalog")}><span className="sw-sbo-setup-amber"/> Service & parts catalog <strong>Manage</strong></button>
+            <button onClick={()=>navigate("/sbo/invoices")}><span className="sw-sbo-setup-amber"/> Invoicing center <strong>Manage</strong></button>
+            <button onClick={()=>navigate("/sbo/reports")}><span className="sw-sbo-setup-amber"/> Reports & archival records <strong>Open</strong></button>
+           </div><p className="sw-sbo-finance-setup-help">Green reflects verified payment readiness or saved automation settings. Catalog and other integrations are never marked complete without verification.</p></aside></div>}
           {error ? <div role="alert" className="rounded-lg border border-rose-400/25 bg-rose-900/40 p-3 text-sm text-rose-100">{error}</div> : null}
           {message ? <div role="status" className="rounded-lg border border-emerald-400/25 bg-emerald-900/40 p-3 text-sm text-emerald-100">{message}</div> : null}
           <div className={financeTab==="readiness"?"sw-sbo-finance-detail space-y-3":"hidden"}>
