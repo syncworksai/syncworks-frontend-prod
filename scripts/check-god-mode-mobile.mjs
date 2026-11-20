@@ -93,7 +93,8 @@ test("Founder Operations Desk assigns support handoffs only through confirmed ba
   assert.match(desk, /\/platform\/support\/requests\/\?status=OPEN/);
   assert.match(desk, /backlog_action:"create"/);
   assert.match(desk, /Confirm backlog handoff/);
-  assert.match(desk, /victoriaPrompt/);
+  assert.match(desk, /sendSyncAiMessage/);
+  assert.match(desk, /sw-god-opsdesk-chat-compose/);
   assert.doesNotMatch(desk, /backlog_action:"run"/);
 });
 
@@ -102,6 +103,6 @@ test("Founder portrait opens Operations Desk with a Victoria briefing action", (
   const desk=read("src/components/platform/FounderOperationsDesk.jsx");
   assert.match(cockpit, /aria-label="Open Victoria Chief of Staff Operations Desk"/);
   assert.match(cockpit, /sw-god-mobile-victoria/);
-  assert.match(desk, /Talk with Victoria/);
+  assert.match(desk, /Speak with Victoria/);
   assert.match(desk, /syncworks:victoria-open/);
 });
