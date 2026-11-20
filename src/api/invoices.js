@@ -12,6 +12,11 @@ export async function getInvoiceDetail(invoiceId) {
   return response?.data || {};
 }
 
+export async function editInvoiceDraft(invoiceId, payload) {
+  const response = await api.patch(`/sync-ai/business/invoices/${invoiceId}/`, payload);
+  return response?.data || {};
+}
+
 export async function createInvoiceFromTicket(ticketId, payload = {}) {
   const response = await api.post(`/sync-ai/business/invoices/from-ticket/${ticketId}/`, payload);
   return response?.data || {};
