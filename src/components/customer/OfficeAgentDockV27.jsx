@@ -4,6 +4,7 @@ import { BriefcaseBusiness, ChevronRight, Grip, MessageCircle, RefreshCw, Rotate
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { AVATARS, getAvatarPhotoForUser } from "../sync/JarvisAvatar";
+import {getPilotAgentsForUser} from "../sync/pilotAgentRoster";
 import "./OfficeAgentDockV27.css";
 
 // One source of truth for the private-pilot employees. Membership is NOT live
@@ -62,9 +63,9 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     return () => { live = false; window.removeEventListener("sw:assist-team-updated",refresh); };
   }, [permitted, version]);
 
-  const roster = useMemo(() => AVATARS.map((avatar) => ({
+  const roster = useMemo(() => getPilotAgentsForUser(user,AVATARS).map((avatar) => ({
     ...avatar,
-    photo: employees.find(worker=>worker.id===avatar.id) ? (employees.find(worker=>worker.id===avatar.id).photo || null) : (["executive-male","future-male"].includes(avatar.id) ? null : getAvatarPhotoForUser(avatar,user)),
+    photo: employees.find(worker=>worker.id===avatar.id)?.photo || getAvatarPhotoForUser(avatar,user),
     name: employees.find(worker=>worker.id===avatar.id)?.name || avatar.name,
     configured: employees.some((worker) => worker.id === avatar.id),
   })), [employees, user?.email]);
