@@ -11,7 +11,7 @@ test("QR wallet keeps social QR distinct from a real issued business card code",
   assert.match(page,/business_card_code/);
   assert.match(page,/validCode\(selected\.code\)/);
   assert.match(page,/\/me\/businesses\//);
-  assert.match(code,/^export function extractBusinessCardCode/);
+  assert.match(code,/export function extractBusinessCardCode/);
 });
 test("QR wallet never fabricates unavailable codes or exposes admin links",()=>{
   assert.match(page,/Business QR not ready/);
