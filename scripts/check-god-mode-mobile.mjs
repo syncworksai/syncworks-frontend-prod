@@ -52,3 +52,18 @@ test("Founder root route renders the live cockpit rather than legacy operations"
   assert.match(dashboard, /<GodModeCockpit onOpen=\{setTab\}/);
   assert.match(scene, /godmodebackground\.png/);
 });
+
+test("God Mode is the single founder menu destination, preserving live user controls", () => {
+  const menu = read("src/components/navigation/GlobalModeBar.jsx");
+  const dashboard = read("src/pages/PlatformDashboard.jsx");
+  const cockpit = read("src/components/platform/GodModeCockpit.jsx");
+  const scene = read("src/pages/GodModeScene.css");
+  assert.doesNotMatch(menu, /Legacy Admin Dashboard/);
+  assert.match(menu, /PLATFORM: \{ label: "God Mode", to: "\/platform" \}/);
+  assert.match(dashboard, /<GodModeLiveUsers \/>/);
+  assert.match(dashboard, /<UsersManager \/>/);
+  assert.match(cockpit, /sw-god-mobile-department-switch/);
+  assert.match(cockpit, /Promise\.allSettled/);
+  assert.match(scene, /sw-god-mobile-departments/);
+  assert.match(scene, /height:100dvh/);
+});
