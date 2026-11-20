@@ -1457,6 +1457,17 @@ export default function PlatformDashboard() {
     params.set("tab", next);
     setQuery(params);
   };
+  const drawerOrder = ["users","user_directory","businesses","prospects","testers","growth_os","affiliates","billing","requests","ads","broadcasts","news","__build_backlog","developer_agent","pilot_readiness","health_launch_lock","health_smoke_test"];
+  const drawerIndex = drawerOrder.indexOf(tab);
+  const adjacentTab = (step) => drawerOrder[(drawerIndex + step + drawerOrder.length) % drawerOrder.length];
+  useEffect(() => {
+    if (tab === "overview") return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setTab("overview");
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [tab, query, setQuery]);
 
   return (
     <div className="sw-god-scene min-h-screen min-w-0 overflow-x-hidden text-slate-100" data-sw-god-mode="true">
@@ -1479,7 +1490,7 @@ export default function PlatformDashboard() {
         <PlatformCommerceDock />
         {tab !== "overview" && <div className="sw-god-drawer-backdrop hidden lg:block" onClick={() => setTab("overview")} aria-hidden="true" />}
         <div key={tab} className={tab === "overview" ? "sw-god-tab-stage lg:hidden" : "sw-god-tab-stage sw-god-detail-drawer"} role={tab !== "overview" ? "dialog" : undefined} aria-modal={tab !== "overview" ? "true" : undefined} aria-label={tab !== "overview" ? (TABS.find(t=>t.id===tab)?.label || "Build Backlog") : undefined}>
-          {tab !== "overview" && <div className="sw-god-drawer-header hidden lg:flex"><div><p>SYNCWORKS / GOD MODE</p><h2>{TABS.find(t=>t.id===tab)?.label || "Build Backlog"}</h2></div><button type="button" onClick={() => setTab("overview")} aria-label="Close panel"><X size={21} /></button></div>}
+          {tab !== "overview" && <div className="sw-god-drawer-header flex"><div><p>SYNCWORKS / GOD MODE</p><h2>{TABS.find(t=>t.id===tab)?.label || "Build Backlog"}</h2></div><div className="sw-god-drawer-navigation"><button type="button" onClick={() => setTab(adjacentTab(-1))} aria-label="Previous God Mode tool" title="Previous tool">‹</button><button type="button" onClick={() => setTab(adjacentTab(1))} aria-label="Next God Mode tool" title="Next tool">›</button><button type="button" onClick={() => setTab("overview")} aria-label="Close panel" title="Close panel"><X size={20} /></button></div></div>}
           <div className="sw-god-drawer-body">
             {tab === "overview" ? <div className="hidden lg:block"><PlatformOverviewTab /></div> : null}
             {tab === "__build_backlog" ? <GodModeBuildBacklog /> : null}
