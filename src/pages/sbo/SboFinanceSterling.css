@@ -1,4 +1,8 @@
 /* SyncWorks Finance: Sterling/SBO one-screen office. Scoped to finance workspace only. */
+.sw-business-shell-main.sw-sbo-finance-shell{display:flex;flex-direction:column;overflow:hidden!important;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));}
+.sw-business-shell-main.sw-sbo-finance-shell>.sw-sbo-finance-cockpit{flex:1 1 auto;min-height:0;width:100%;}
+@media(max-width:899px){.sw-business-shell-main.sw-sbo-finance-shell{padding-bottom:calc(78px + env(safe-area-inset-bottom,0px));}}
+
 .sw-sbo-finance-cockpit{
  --fin-ink:var(--sw-business-ink,#f3f8ff);--fin-muted:var(--sw-business-muted,#b7c7da);
  --fin-accent:var(--sw-business-highlight,#80e7ff);--fin-border:var(--sw-business-outline,rgba(102,207,243,.27));
