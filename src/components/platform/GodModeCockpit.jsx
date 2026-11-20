@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Activity, ArrowUpRight, BellRing, Bot, BriefcaseBusiness, CheckCircle2, ChevronRight, CreditCard, Layers3, RefreshCw, ShieldCheck, Users, Workflow } from "lucide-react";
 import api from "../../api/client";
+import { useAuth } from "../../auth/AuthContext";
+import { AVATARS, getAvatarPhotoForUser } from "../sync/JarvisAvatar";
 
 const GROUPS = [
   { title: "People & Growth", subtitle: "Users, businesses, acquisition", icon: Users, tone: "cyan", links: [["users","User Control"],["user_directory","Directory"],["businesses","Businesses"],["prospects","Prospects"],["testers","Testers"],["growth_os","Growth OS"],["affiliates","Affiliates"]] },
@@ -18,6 +20,10 @@ function Tile({ icon: Icon, label, value, help, loading }) {
 }
 
 export default function GodModeCockpit({ onOpen }) {
+  const { user } = useAuth();
+  const chiefAvatar = AVATARS.find(a => a.role === "Chief of Staff") || AVATARS[0];
+  const openVictoria = () => window.dispatchEvent(new Event("syncworks:victoria-open"));
+  const openCommerce = () => window.dispatchEvent(new Event("syncworks:commerce-kpis-open"));
   const [info,setInfo] = useState({ loading:true, summary:null, alerts:null, error:"" });
   const [mobileGroup, setMobileGroup] = useState(0);
   async function refresh() {
@@ -84,9 +90,10 @@ export default function GodModeCockpit({ onOpen }) {
           <button onClick={()=>onOpen("__build_backlog")}><Workflow size={18}/> Open build pipeline <ArrowUpRight size={15}/></button>
           <button onClick={()=>onOpen("requests")}><BellRing size={18}/> Review support <ArrowUpRight size={15}/></button>
           <button onClick={()=>onOpen("billing")}><CreditCard size={18}/> Revenue & billing <ArrowUpRight size={15}/></button>
+          <button onClick={openCommerce}><Activity size={18}/> Commerce KPIs <ArrowUpRight size={15}/></button>
           <button onClick={()=>onOpen("pilot_readiness")}><CheckCircle2 size={18}/> Release checklist <ArrowUpRight size={15}/></button>
         </section>
-        <div className="sw-god-assistant-hint"><Bot size={19}/><div><strong>Chief of Staff</strong><span>Victoria is docked at the bottom right for founder assistance.</span></div></div>
+        <button type="button" className="sw-god-assistant-hint sw-god-victoria-dock" onClick={openVictoria} aria-label="Open Victoria Chief of Staff briefing"><img src={getAvatarPhotoForUser(chiefAvatar,user)} alt="" className="sw-god-victoria-avatar" /><div><strong>Victoria · Chief of Staff</strong><span>Open briefing and approvals</span></div><ChevronRight size={17} aria-hidden="true" /></button>
       </aside>
     </div>
   </div>;
