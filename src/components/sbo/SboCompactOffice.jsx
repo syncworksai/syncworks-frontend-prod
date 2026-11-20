@@ -11,7 +11,7 @@ import { AVATARS, getAvatarPhotoForUser } from "../sync/JarvisAvatar";
 import {getPilotAgentsForUser} from "../sync/pilotAgentRoster";
 import { useAuth } from "../../auth/AuthContext";
 import SubcontractorQuickInvite from "./SubcontractorQuickInvite";
-import SboAgentQuickChat from "./SboAgentQuickChat";
+import BusinessAgentQuickChat from "../sync/BusinessAgentQuickChat";
 
 const links = {
   more: [["Team & employees","/team/invites"],["HR & timeclock","/sbo/settings/workforce"],["Finance","/sbo/finance"],["Invoices","/sbo/invoices"],["Customers","/sbo/customers"],["Leads & growth","/sbo/leads"],["Social marketing","/sbo/growth"],["Reports","/sbo/reports"],["Partners & subcontractors","/sbo/partners"],["Catalog & pricing","/sbo/catalog"],["Business settings","/sbo/settings"]],
@@ -52,7 +52,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
   const isPilot=String(user?.email||"").trim().toLowerCase()==="jacoblord7@outlook.com";
   const agents=getPilotAgentsForUser(user,AVATARS);
   const [selectedAgent,setSelectedAgent]=useState(null);
-  const openAgent=(agent)=>setSelectedAgent({...agent,photo:getAvatarPhotoForUser(agent,user)});
+  const openAgent=(agent)=>setSelectedAgent(agent.id);
   const readMotion=()=>{try{return JSON.parse(localStorage.getItem("sw_workspace_appearance_v1")||"{}")?.motion!==false;}catch{return true;}};
   const [motionAllowed,setMotionAllowed]=useState(readMotion);
   const [reducedMotion,setReducedMotion]=useState(()=>window.matchMedia?.("(prefers-reduced-motion: reduce)").matches||false);
@@ -319,6 +319,6 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
         {panel==="subcontractors"?<SubcontractorQuickInvite activeBusinessId={activeBusinessId}/>:<div className="grid min-h-0 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">{(links[panel]||[]).map(([label,url],i)=>button(label,url,i))}{panel==="team"&&isPilot&&<button type="button" onClick={()=>go("/sync/assist/assignments")} className="flex items-center justify-between rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-3 text-left text-sm text-white">Assign work to AI <ChevronRight size={16} className="text-cyan-200"/></button>}{panel==="team"&&isPilot&&<button type="button" onClick={()=>go("/sync/assist/employees")} className="flex items-center justify-between rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-3 text-left text-sm text-white">Manage AI employees <ChevronRight size={16} className="text-cyan-200"/></button>}{panel==="team"&&<button type="button" onClick={event=>openPanel("subcontractors",event)} className="flex items-center justify-between rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-3 text-left text-sm text-white hover:bg-cyan-500/20">Subcontractors · Invite <ChevronRight size={16} className="text-cyan-200"/></button>}</div>}
       </section>
     </div>}
-    {isPilot&&<SboAgentQuickChat agent={selectedAgent} onClose={()=>setSelectedAgent(null)} onNavigate={go}/>}
+    {isPilot&&selectedAgent&&<BusinessAgentQuickChat agentId={selectedAgent} user={user} onClose={()=>setSelectedAgent(null)}/>}
   </div>;
 }
