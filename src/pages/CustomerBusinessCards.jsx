@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
+import {Building2, CalendarDays, ChevronLeft, ChevronRight, X, Star, Phone, Mail, ExternalLink, Info} from "lucide-react";
+import "./RolodexCompact.css";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { extractBusinessCardCode } from "../utils/businessQrCodes.mjs";
 import "./CustomerRolodex.css";
@@ -42,8 +44,14 @@ function getBusinessLogoUrl(biz) {
     biz?.logo_file ||
     "";
 
-  const base = String(raw || "").trim();
-  if (!base) return "";
+  const original = String(raw || "").trim();
+  if (!original) return "";
+  let base = "";
+  try {
+    const apiOrigin = new URL(api.defaults.baseURL, window.location.origin).origin;
+    base = new URL(original, original.startsWith("/") ? apiOrigin : apiOrigin+"/").href;
+    if (!base.startsWith("https://") && !base.startsWith("http://")) return "";
+  } catch { return ""; }
 
   const stamp =
     biz?.logo_updated_at ||
@@ -57,6 +65,15 @@ function getBusinessLogoUrl(biz) {
   return `${base}${base.includes("?") ? "&" : "?"}v=${encodeURIComponent(String(stamp))}`;
 }
 
+function BusinessLogo({biz,large=false}) {
+  const [failed,setFailed]=useState(false);
+  const url=getBusinessLogoUrl(biz);
+  useEffect(()=>setFailed(false),[url]);
+  return <div className={`sw-rolo-logo ${large?"large":""}`}>
+    {url&&!failed?<img src={url} alt={`${biz?.name||"Business"} logo`} loading="lazy" onError={()=>setFailed(true)}/>:
+      <div className="sw-rolo-logo-fallback" aria-label="No business logo"><Building2 size={25}/><span>{String(biz?.name||"Business").slice(0,2).toUpperCase()}</span></div>}
+  </div>;
+}
 function getFlag(biz, key) {
   if (typeof biz?.[key] === "boolean") return !!biz[key];
   if (typeof biz?.compliance?.[key] === "boolean") return !!biz.compliance[key];
@@ -233,6 +250,12 @@ export default function CustomerBusinessCards() {
 
   const [addOpen, setAddOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const [opened, setOpened] = useState(null);
+  const [drawerMode,setDrawerMode]=useState("details");
+  const [page,setPage]=useState(0);
+  const pageSize=6;
+  useEffect(()=>setPage(0),[search,activeGroup]);
+  useEffect(()=>{if(!opened)return;const onKey=e=>{if(e.key==="Escape")setOpened(null)};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[opened]);
 
   async function load() {
     setLoading(true);
@@ -424,68 +447,28 @@ export default function CustomerBusinessCards() {
   }
 
   return (
-    <div className="sw-rolodex-page min-h-screen bg-[#020617] text-slate-100">
+    <div className="sw-rolodex-page sw-rolo-compact-page text-slate-100">
       <ModeBar title="My Rolodex" subtitle="Your trusted businesses, ready for direct requests." />
 
-      <main className="sw-rolodex-main max-w-6xl mx-auto px-4 py-6 space-y-4">
+      <main className="sw-rolodex-main sw-rolo-compact-main">
         <div className="sw-rolodex-head"><div><p>SYNCWORKS / APPS</p><h1>My Rolodex</h1><span>Save, discover and request service from trusted businesses.</span></div><button type="button" onClick={()=>nav("/customer/new-request")}>New Request</button></div>
         {qrPreviewError ? <div role="alert" className="rounded-2xl border border-rose-400/40 bg-rose-950/60 p-3 text-sm text-rose-100">{qrPreviewError}<button type="button" className="ml-3 underline" onClick={clearQrPreview}>Dismiss</button></div> : null}
         {qrPreview?.business ? <section className="rounded-3xl border border-cyan-300/60 bg-slate-950/80 p-4 shadow-xl"><div className="text-xs font-black uppercase tracking-widest text-cyan-300">Scanned business card</div><h2 className="mt-2 text-xl font-black">{qrPreview.business.name}</h2><p className="mt-1 text-xs text-slate-300">{qrPreview.business.headline || "Verify this business before saving."}</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" disabled={busy} className="min-h-11 rounded-xl bg-cyan-400 px-4 font-bold text-slate-950 disabled:opacity-60" onClick={async()=>{try{await addByCode(qrPreview.code);clearQrPreview();}catch{}}}>{busy?"Saving…":"Save to Rolodex"}</button><button type="button" onClick={clearQrPreview} className="min-h-11 rounded-xl border border-slate-500 px-4">Not now</button></div></section> : null}
-        <div className="flex gap-2 flex-wrap">
-          <Button tone="slate" onClick={() => nav(-1)} disabled={busy}>
-            Back
-          </Button>
-
-          <Button tone="slate" onClick={load} disabled={loading || busy}>
-            {loading ? "Loading…" : "Refresh"}
-          </Button>
-
-          <Button tone="cyan" onClick={() => setScanOpen(true)} disabled={loading || busy}>
-            Scan QR
-          </Button>
-
-          <Button tone="indigo" onClick={() => setAddOpen(true)} disabled={loading || busy}>
-            Add by Code
-          </Button>
-        </div>
-
-        <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-4 space-y-4">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div>
-              <div className="text-sm font-semibold text-slate-100">Find a Saved Card</div>
-              <div className="text-xs text-slate-400 mt-1">
-                Search by business name, code, service, city, email, phone, website, or social link.
-              </div>
-            </div>
-            <div className="text-xs text-slate-500">{filteredItems.length} shown</div>
+        <div className="sw-rolo-toolbar">
+          <div className="sw-rolo-toolbar-actions">
+            <button type="button" onClick={()=>nav(-1)} disabled={busy}>Back</button>
+            <button type="button" onClick={load} disabled={loading||busy}>{loading?"Loading…":"Refresh"}</button>
+            <button type="button" onClick={()=>setScanOpen(true)} disabled={busy}>Scan QR</button>
+            <button type="button" onClick={()=>setAddOpen(true)} disabled={busy}>Add by Code</button>
           </div>
-
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search business cards..."
-            className="w-full rounded-2xl bg-slate-950 border border-slate-800 px-3 py-3 text-sm text-slate-100 outline-none focus:border-cyan-500/40"
-          />
-
-          <div className="flex gap-2 flex-wrap">
-            {groups.map((group) => (
-              <button
-                key={group}
-                type="button"
-                onClick={() => setActiveGroup(group)}
-                className={
-                  "text-xs rounded-full px-3 py-2 border transition " +
-                  (activeGroup === group
-                    ? "bg-cyan-500/15 border-cyan-500/30 text-cyan-200"
-                    : "bg-slate-950 border-slate-800 hover:bg-slate-900 text-slate-200")
-                }
-              >
-                {group}
-              </button>
-            ))}
+          <div className="sw-rolo-search">
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Find a saved business, service or location…" aria-label="Search saved business cards"/>
+            <span>{filteredItems.length} saved</span>
+          </div>
+          <div className="sw-rolo-filter" aria-label="Service filters">
+            {groups.map(group=><button type="button" key={group} aria-pressed={activeGroup===group} onClick={()=>setActiveGroup(group)}>{group}</button>)}
           </div>
         </div>
-
         {err ? (
           <div className="text-sm text-red-200 bg-red-900/10 border border-red-800 rounded-xl p-3">
             {err}
@@ -510,147 +493,67 @@ export default function CustomerBusinessCards() {
           </div>
         ) : null}
 
-        {!loading && filteredItems.length ? (
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filteredItems.map((fav) => {
-              const biz = fav?.business || {};
-              const website = normalizeWebsite(biz?.website || "");
-              const location = biz?.display_location || [biz?.city, biz?.state].filter(Boolean).join(", ");
-              const socials = getSocialLinks(biz);
-              const logoUrl = getBusinessLogoUrl(biz);
-
-              return (
-                <div
-                  key={fav?.id}
-                  className="group rounded-3xl border border-slate-800 bg-slate-950/45 p-5 shadow-[0_0_40px_rgba(0,0,0,0.20)] hover:shadow-[0_0_40px_rgba(34,211,238,0.07)] transition"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Saved Provider</div>
-                      <div className="text-lg font-extrabold truncate mt-1">{biz?.name || "Business"}</div>
-
-                      {fav?.nickname ? (
-                        <div className="text-xs text-slate-500 mt-1 truncate">
-                          Saved as: {fav.nickname}
-                        </div>
-                      ) : null}
-
-                      <div className="mt-3">
-                        <PresenceBadge mode={biz?.business_presence_mode} />
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3 shrink-0">
-                      <div className="h-16 w-16 rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
-                        {logoUrl ? (
-                          <img
-                            src={logoUrl}
-                            alt={biz?.name || "Business"}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-[10px] text-slate-500">No Logo</span>
-                        )}
-                      </div>
-
-                      <StarRating value={biz?.rating ?? 0} />
-                    </div>
-                  </div>
-
-                  {biz?.headline ? (
-                    <div className="mt-4 text-sm text-cyan-200 leading-relaxed">{biz.headline}</div>
-                  ) : null}
-
-                  {socials.length ? (
-                    <div className="mt-4">
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500 mb-2">
-                        Socials
-                      </div>
-                      <div className="flex gap-2 flex-wrap">
-                        {socials.map((item) => (
-                          <SocialLinkPill
-                            key={item.key}
-                            href={item.url}
-                            label={item.label}
-                            short={item.short}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <div className="mt-4 flex gap-2 flex-wrap">
-                    <TrustMiniPill active={getFlag(biz, "is_licensed")} label="Licensed" />
-                    <TrustMiniPill active={getFlag(biz, "is_insured")} label="Insured" />
-                    <TrustMiniPill active={getFlag(biz, "background_checked")} label="Checked" />
-                  </div>
-
-                  {biz?.services_text ? (
-                    <div className="mt-4 text-sm text-slate-300 line-clamp-4">{biz.services_text}</div>
-                  ) : null}
-
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                    <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-3">
-                      <div className="text-[11px] uppercase tracking-wide text-slate-500">Location</div>
-                      <div className="mt-1 text-slate-200">{location || "—"}</div>
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-3">
-                      <div className="text-[11px] uppercase tracking-wide text-slate-500">Radius</div>
-                      <div className="mt-1 text-slate-200">{getRadiusLabel(biz)}</div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 space-y-1 text-sm text-slate-300">
-                    <div>
-                      <span className="text-slate-500">Phone:</span> {biz?.phone || "—"}
-                    </div>
-                    <div>
-                      <span className="text-slate-500">Email:</span> {biz?.business_email || "—"}
-                    </div>
-                    <div>
-                      <span className="text-slate-500">ZIP:</span> {biz?.base_zip || "—"}
-                    </div>
-                    <div>
-                      <span className="text-slate-500">Code:</span> {biz?.business_card_code || "—"}
-                    </div>
-                    <div>
-                      <span className="text-slate-500">Website:</span>{" "}
-                      {website ? (
-                        <a
-                          href={website}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-cyan-300 underline break-all"
-                        >
-                          {website}
-                        </a>
-                      ) : (
-                        "—"
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-5 flex gap-2 flex-wrap">
-                    <Button tone="cyan" onClick={() => bookAgain(fav)} disabled={busy}>
-                      Book Again
-                    </Button>
-
-                    <Button tone="slate" onClick={() => nav(`/customer/business-cards/${fav.id}`)} disabled={busy}>
-                      View Card
-                    </Button>
-
-                    <Button tone="rose" onClick={() => removeCard(fav)} disabled={busy}>
-                      Delete Card
-                    </Button>
-                  </div>
+        {!loading && filteredItems.length ? <>
+          <div className="sw-rolo-list" aria-label="Saved business cards">
+            {filteredItems.slice(page*pageSize,(page+1)*pageSize).map(fav=>{
+              const biz=fav.business||{};
+              const location=biz.display_location||[biz.city,biz.state].filter(Boolean).join(", ");
+              const rating=Number(biz.rating);
+              const rated=biz.rating!=null&&Number.isFinite(rating)&&rating>0;
+              return <article className="sw-rolo-card" key={fav.id}>
+                <BusinessLogo biz={biz}/>
+                <div className="sw-rolo-card-info">
+                  <strong title={biz.name}>{biz.name||"Business"}</strong>
+                  <div className="sw-rolo-card-meta"><span>{groupLabelFromBusiness(biz)}</span><span>{getPresenceMeta(biz.business_presence_mode).label}</span>{location&&<span>{location}</span>}</div>
+                  <p>{biz.headline||biz.services_text||"Open the business card for services and contact details."}</p>
+                  <button type="button" className="sw-rolo-rating" onClick={()=>{setOpened(fav);setDrawerMode("reviews")}} aria-label={rated?`View ratings for ${biz.name}`:`Reviews for ${biz.name}`}>
+                    <Star size={14} fill={rated?"currentColor":"none"}/>{rated?`${rating.toFixed(1)} / 5`:"Not yet rated"} <span>Reviews</span>
+                  </button>
                 </div>
-              );
+                <div className="sw-rolo-card-actions">
+                  <button type="button" className="primary" onClick={()=>{setOpened(fav);setDrawerMode("call")}}><CalendarDays size={15}/> Schedule a Call</button>
+                  <button type="button" onClick={()=>{setOpened(fav);setDrawerMode("reviews")}}><Star size={15}/> Reviews</button>
+                  <button type="button" onClick={()=>{setOpened(fav);setDrawerMode("details")}}><Info size={15}/> More</button>
+                </div>
+              </article>
             })}
           </div>
-        ) : null}
+          <nav className="sw-rolo-pages" aria-label="Saved business pages">
+            <button type="button" disabled={page===0} onClick={()=>setPage(p=>Math.max(0,p-1))}><ChevronLeft size={15}/> Previous</button>
+            <span>Page {page+1} of {Math.ceil(filteredItems.length/pageSize)}</span>
+            <button type="button" disabled={(page+1)*pageSize>=filteredItems.length} onClick={()=>setPage(p=>p+1)}>Next <ChevronRight size={15}/></button>
+          </nav>
+        </> : null}
       </main>
 
+      {opened&&<div className="sw-rolo-drawer-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setOpened(null)}}>
+        <aside className="sw-rolo-drawer" role="dialog" aria-modal="true" aria-label={`${opened.business?.name||"Business"} information`}>
+          <header><BusinessLogo biz={opened.business} large/><div><small>Saved business</small><h2>{opened.business?.name||"Business"}</h2><p>{groupLabelFromBusiness(opened.business||{})}</p></div><button type="button" aria-label="Close details" onClick={()=>setOpened(null)}><X size={20}/></button></header>
+          <div className="sw-rolo-drawer-tabs">{[["details","Details"],["call","Schedule a Call"],["reviews","Reviews"]].map(([key,label])=><button type="button" aria-pressed={drawerMode===key} key={key} onClick={()=>setDrawerMode(key)}>{label}</button>)}</div>
+          <div className="sw-rolo-drawer-body">
+            {drawerMode==="details"&&<>
+              <p>{opened.business?.headline||opened.business?.services_text||"No additional business description is available."}</p>
+              <dl>{[["Location",opened.business?.display_location||[opened.business?.city,opened.business?.state].filter(Boolean).join(", ")],["Service radius",getRadiusLabel(opened.business)],["Phone",opened.business?.phone],["Email",opened.business?.business_email],["Services",opened.business?.services_text]].map(([k,v])=><div key={k}><dt>{k}</dt><dd>{v||"—"}</dd></div>)}</dl>
+              <div className="sw-rolo-drawer-links">{getSocialLinks(opened.business).map(x=><a key={x.key} href={x.url} target="_blank" rel="noreferrer">{x.label} <ExternalLink size={13}/></a>)}</div>
+              <div className="sw-rolo-drawer-links"><button type="button" onClick={()=>{setOpened(null);nav(`/customer/business-cards/${opened.id}`)}}>Full profile <ExternalLink size={14}/></button><button type="button" onClick={()=>{setOpened(null);bookAgain(opened)}}>Request service</button><button type="button" onClick={()=>{setOpened(null);removeCard(opened)}}>Remove saved card</button></div>
+            </>}
+            {drawerMode==="call"&&<>
+              <p>Connect with this business to arrange a call. These options start a request or contact the provider; no appointment is confirmed automatically.</p>
+              <div className="sw-rolo-drawer-links">
+                {opened.business?.phone&&<a href={`tel:${String(opened.business.phone).replace(/[^+\d]/g,"")}`}><Phone size={15}/> Call business</a>}
+                {opened.business?.business_email&&<a href={`mailto:${encodeURIComponent(opened.business.business_email)}?subject=${encodeURIComponent("Request to schedule a call")}&body=${encodeURIComponent(`Hello ${opened.business?.name||""},\n\nI'd like to arrange a call. Please let me know your availability.\n\nThank you.`)}`}><Mail size={15}/> Email call request</a>}
+                <button type="button" onClick={()=>{setOpened(null);bookAgain(opened)}}><CalendarDays size={15}/> Start SyncWorks request</button>
+              </div>
+              {!opened.business?.phone&&!opened.business?.business_email&&<p>No public phone or email is listed. Use the SyncWorks request flow to contact this provider.</p>}
+            </>}
+            {drawerMode==="reviews"&&<>
+              <div className="sw-rolo-review-summary"><Star size={28} fill={Number(opened.business?.rating)>0?"currentColor":"none"}/><strong>{Number(opened.business?.rating)>0?Number(opened.business.rating).toFixed(1)+" / 5":"No verified rating available"}</strong></div>
+              <p>Reviews must come from verified business feedback. Individual reviews and new review submissions are not available through this Rolodex API yet. We won't display fictional testimonials or accept unverified ratings.</p>
+              <button type="button" className="sw-rolo-review-profile" onClick={()=>{setOpened(null);nav(`/customer/business-cards/${opened.id}`)}}>View full business profile <ExternalLink size={15}/></button>
+            </>}
+          </div>
+        </aside>
+      </div>}
       <AddBusinessCardModal
         open={addOpen}
         onClose={() => setAddOpen(false)}
