@@ -22,7 +22,7 @@ const agentMessage=(agent,text,summary)=>{
   ].join(" ") : "Live operations metrics could not be verified; state this clearly instead of inventing numbers.";
   return `You are ${agent.name}, SyncWorks ${agent.role}. Reply within your designated business specialty. You are advising, not executing transactions, sending emails or accessing unconnected systems. ${context} User: ${text}`;
 };
-const safeNumber=v=>typeof v==="number"&&Number.isFinite(v)?v:null;
+const safeNumber=v=>v===null||v===undefined||v===""?null:Number.isFinite(Number(v))?Number(v):null;
 function Snapshot({ops,error,loading}){
   const s=ops?.summary||{};
   const staff=Array.isArray(ops?.staff)?ops.staff:[];
