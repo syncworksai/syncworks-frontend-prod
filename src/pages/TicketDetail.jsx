@@ -818,7 +818,7 @@ export default function TicketDetail() {
   const { id } = useParams();
   const loc = useLocation();
   const nav = useNavigate();
-  const { mode, activeBusinessId } = useAuth();
+  const { user, mode, activeBusinessId } = useAuth();
 
   const isCustomer = mode === "CUSTOMER";
   const isSboLike = mode === "SBO" || mode === "EMPLOYEE" || mode === "PROPERTY_MGR" || mode === "PM";
@@ -1235,7 +1235,7 @@ export default function TicketDetail() {
             </Link>
 
             {String(user?.email||"").toLowerCase()==="jacoblord7@outlook.com" && ticketId ? (
-              <button type="button" onClick={()=>navigate(`/sync/assist/assignments?ticket=${encodeURIComponent(ticketId)}`)}
+              <button type="button" onClick={()=>nav(`/sync/assist/assignments?ticket=${encodeURIComponent(ticketId)}`)}
                 className="inline-flex h-10 items-center rounded-2xl border border-cyan-400/40 bg-cyan-400/10 px-3 text-xs font-semibold text-cyan-100">
                 Assign to AI
               </button>
