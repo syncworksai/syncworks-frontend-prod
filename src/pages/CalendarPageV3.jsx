@@ -173,7 +173,7 @@ function draftFromEvent(event) {
   return {
     ...blankDraft(kind),
     kind,
-    event_category: String(event?.metadata?.event_category || (event?.metadata?.business_id ? "BUSINESS" : "PERSONAL")).toUpperCase() === "BUSINESS" ? "BUSINESS" : "PERSONAL",
+    event_category: ["BUSINESS","PROPERTY_MANAGEMENT"].includes(String(event?.metadata?.event_category || (event?.metadata?.business_id ? "BUSINESS" : "PERSONAL")).toUpperCase()) ? String(event?.metadata?.event_category || "BUSINESS").toUpperCase() : "PERSONAL",
     business_id: String(event?.metadata?.business_id || ""),
     business_name: String(event?.metadata?.business_name || ""),
     title: event.title || "",
@@ -493,7 +493,8 @@ export default function CalendarPageV3() {
   const [savingEvent, setSavingEvent] = useState(false);
   const [saveIssue, setSaveIssue] = useState("");
   const [editingEvent, setEditingEvent] = useState(null);
-  const { myBusinesses = [] } = useAuth();
+  const { myBusinesses = [],moduleAccess = {},profiles = {} } = useAuth();
+  const canCreatePmEvents=Boolean(moduleAccess.pm)||Object.keys(profiles||{}).some(p=>p.toLowerCase()==="pm");
   const businessOptions = useMemo(() => (Array.isArray(myBusinesses) ? myBusinesses : []).map(b => ({ id: String(b.id || b.business_id || ""), name: String(b.business_name || b.name || b.legal_name || b.dba_name || "").trim() })).filter(b => b.id && b.name), [myBusinesses]);
   const [draft, setDraft] = useState(() => blankDraft("EVENT"));
   const [captureText, setCaptureText] = useState("");
@@ -765,6 +766,10 @@ export default function CalendarPageV3() {
       setError("Add a title first.");
       return;
     }
+    if (draft.kind === "EVENT" && draft.event_category === "PROPERTY_MANAGEMENT" && !canCreatePmEvents) {
+      setSaveIssue("Upgrade to Property Management before saving PM calendar events.");
+      return;
+    }
     if (draft.kind === "EVENT" && draft.event_category === "BUSINESS" && !draft.business_id) {
       setEditorSection("details");
       setSaveIssue("Choose which business this event belongs to.");
@@ -780,9 +785,9 @@ export default function CalendarPageV3() {
     const metadata = {
       ...(editingEvent?.metadata || {}),
       entity_type: draft.kind,
-      event_category: draft.event_category === "BUSINESS" ? "BUSINESS" : "PERSONAL",
+      event_category: ["BUSINESS","PROPERTY_MANAGEMENT"].includes(draft.event_category) ? draft.event_category : "PERSONAL",
       business_id: draft.event_category === "BUSINESS" && draft.business_id ? draft.business_id : null,
-      business_name: draft.event_category === "BUSINESS" ? (businessOptions.find(b => b.id === draft.business_id)?.name || draft.business_name || "") : "",
+      business_name: draft.event_category === "PROPERTY_MANAGEMENT" ? "Property Management" : draft.event_category === "BUSINESS" ? (businessOptions.find(b => b.id === draft.business_id)?.name || draft.business_name || "") : "",
       weather_dependent: Boolean(draft.weather_dependent),
       fixed: !draft.flexible,
     };
@@ -1007,8 +1012,9 @@ export default function CalendarPageV3() {
             <div className="sw-cal-editor-panel" data-editor-panel="details" data-active={editorSection === "details"}>
             {draft.kind === "EVENT" && <fieldset className="sw-cal-event-category" aria-label="Event type">
               <legend>Calendar label</legend>
-              <button type="button" aria-pressed={draft.event_category !== "BUSINESS"} className={draft.event_category !== "BUSINESS" ? "selected personal" : ""} onClick={() => setDraft(value => ({...value,event_category:"PERSONAL",business_id:"",business_name:""}))}>Personal</button>
+              <button type="button" aria-pressed={draft.event_category === "PERSONAL"} className={draft.event_category === "PERSONAL" ? "selected personal" : ""} onClick={() => setDraft(value => ({...value,event_category:"PERSONAL",business_id:"",business_name:""}))}>Personal</button>
               <button type="button" aria-pressed={draft.event_category === "BUSINESS"} className={draft.event_category === "BUSINESS" ? "selected business" : ""} onClick={() => setDraft(value => ({...value,event_category:"BUSINESS"}))}>Business</button>
+              <button type="button" aria-pressed={draft.event_category === "PROPERTY_MANAGEMENT"} className={draft.event_category === "PROPERTY_MANAGEMENT" ? "selected business" : ""} onClick={() => canCreatePmEvents ? setDraft(value => ({...value,event_category:"PROPERTY_MANAGEMENT",business_id:"",business_name:"Property Management"})) : navigate("/upgrade")}>Property Management{!canCreatePmEvents ? " · Upgrade ↗" : ""}</button>
             </fieldset>}
             {draft.kind === "EVENT" && draft.event_category === "BUSINESS" && <label className="sw-cal-business-selector">Which business?
               <select value={draft.business_id} onChange={event => { const selected = businessOptions.find(b => b.id === event.target.value); setDraft(value=>({...value,business_id:event.target.value,business_name:selected?.name || ""})); }}>
