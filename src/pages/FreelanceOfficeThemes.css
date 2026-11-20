@@ -1,0 +1,118 @@
+/* Freelance center follows the same persisted office theme as Customer Workspace.
+   Scoped styles keep the rest of SyncWorks untouched. The legacy setting retains
+   the existing midnight styling; other settings use the matching material palette.
+*/
+.sw-freelance-root {
+  --fl-accent:#38bdf8;
+  --fl-ink:#f8fafc;
+  --fl-muted:#a5b4c8;
+  --fl-panel:rgba(10,23,45,.67);
+  --fl-line:rgba(125,181,225,.27);
+  --fl-image:none;
+  color:var(--fl-ink);
+  background-color:#060d19!important;
+  background-image:var(--fl-image)!important;
+  background-attachment:fixed!important;
+  min-height:100dvh;
+}
+.sw-freelance-root[data-workspace-theme="classic"] {
+  --fl-accent:#e6bd79;
+  --fl-ink:#fff4dc;
+  --fl-muted:#c4ae91;
+  --fl-panel:rgba(35,24,19,.74);
+  --fl-line:rgba(217,166,102,.32);
+  --fl-image:linear-gradient(115deg,rgba(32,20,13,.85),rgba(38,24,18,.66)),url("/office-themes/classic-office.webp");
+}
+.sw-freelance-root[data-workspace-theme="future"] {
+  --fl-accent:#44d8ff;
+  --fl-ink:#e8f5ff;
+  --fl-muted:#94b3d5;
+  --fl-panel:rgba(10,18,54,.65);
+  --fl-line:rgba(88,138,249,.34);
+  --fl-image:linear-gradient(110deg,rgba(4,10,36,.83),rgba(25,12,66,.55)),url("/office-themes/syncworks-future.webp");
+}
+.sw-freelance-root[data-workspace-theme="modern"] {
+  --fl-accent:#bbd1df;
+  --fl-ink:#eef4f7;
+  --fl-muted:#abb8c1;
+  --fl-panel:rgba(24,32,37,.75);
+  --fl-line:rgba(188,206,217,.26);
+  --fl-image:linear-gradient(110deg,rgba(12,18,24,.88),rgba(30,41,50,.65)),url("/office-themes/modern-dark.webp");
+}
+.sw-freelance-root[data-workspace-theme="light"] {
+  --fl-accent:#176889;
+  --fl-ink:#183348;
+  --fl-muted:#4b6577;
+  --fl-panel:rgba(252,250,244,.79);
+  --fl-line:rgba(58,104,131,.28);
+  --fl-image:linear-gradient(112deg,rgba(252,251,247,.90),rgba(242,247,245,.70)),url("/office-themes/clean-light.webp");
+}
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) {
+  background-size:cover!important;
+  background-position:center!important;
+}
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) .bg-slate-900\/75,
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) .bg-slate-900\/70,
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) .bg-slate-900\/80,
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) .bg-\[\#101b30\]\/85,
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) .bg-white\/\[\.035\] {
+  background:var(--fl-panel)!important;
+  border-color:var(--fl-line)!important;
+  backdrop-filter:blur(15px);
+}
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) .text-white,
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) .text-slate-100,
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) .text-slate-200 {
+  color:var(--fl-ink)!important;
+}
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) .text-slate-300,
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) .text-slate-400,
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) .text-slate-500 {
+  color:var(--fl-muted)!important;
+}
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) .text-cyan-200,
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) .text-cyan-300,
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) .text-cyan-100 {
+  color:var(--fl-accent)!important;
+}
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) .border-white\/10,
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) .border-white\/15,
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) .border-white\/20 {
+  border-color:var(--fl-line)!important;
+}
+.sw-freelance-root[data-workspace-theme="light"] .bg-slate-950,
+.sw-freelance-root[data-workspace-theme="light"] .bg-slate-950\/60,
+.sw-freelance-root[data-workspace-theme="light"] .bg-slate-950\/70,
+.sw-freelance-root[data-workspace-theme="light"] .bg-slate-950\/90,
+.sw-freelance-root[data-workspace-theme="light"] .bg-black\/20 {
+  background:rgba(229,239,241,.78)!important;
+  color:#173246!important;
+}
+.sw-freelance-root[data-workspace-theme="light"] .bg-gradient-to-br {
+  background-image:linear-gradient(115deg,rgba(245,244,237,.93),rgba(227,239,239,.78))!important;
+  border-color:var(--fl-line)!important;
+}
+.sw-freelance-root[data-workspace-theme="light"] input,
+.sw-freelance-root[data-workspace-theme="light"] textarea,
+.sw-freelance-root[data-workspace-theme="light"] select {
+  color:#153248;
+  background:rgba(250,252,251,.92)!important;
+  border-color:var(--fl-line)!important;
+}
+.sw-freelance-root[data-workspace-theme="light"] input::placeholder,
+.sw-freelance-root[data-workspace-theme="light"] textarea::placeholder {color:#667c89!important;}
+.sw-freelance-root[data-workspace-theme="classic"] .bg-gradient-to-br {
+  background-image:linear-gradient(110deg,rgba(64,42,28,.82),rgba(32,21,18,.81))!important;
+}
+.sw-freelance-root[data-workspace-theme="modern"] .bg-gradient-to-br {
+  background-image:linear-gradient(110deg,rgba(40,53,63,.8),rgba(23,30,39,.85))!important;
+}
+.sw-freelance-root[data-workspace-theme]:not([data-workspace-theme="legacy"]) .bg-\[\#060d19\] {background-color:transparent!important;}
+.sw-freelance-root[data-workspace-theme="light"] .text-amber-100 {color:#865216!important;}
+.sw-freelance-root[data-workspace-theme="light"] .bg-amber-500\/5 {background:rgba(246,228,180,.52)!important;}
+.sw-freelance-root[data-workspace-motion="false"] *,
+.sw-freelance-root[data-workspace-motion="false"] *::before,
+.sw-freelance-root[data-workspace-motion="false"] *::after {transition-duration:0.01ms!important;animation-duration:0.01ms!important;}
+@media (prefers-reduced-motion:reduce){
+ .sw-freelance-root *, .sw-freelance-root *::before, .sw-freelance-root *::after {transition-duration:0.01ms!important;animation-duration:0.01ms!important;}
+}
