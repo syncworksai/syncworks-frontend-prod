@@ -93,3 +93,16 @@
   }
   .sw-sbo-motion button:active{transform:none!important;}
 }
+
+/* Native shared-element geometry on supporting desktop browsers. */
+::view-transition-old(sw-sbo-shared-panel),
+::view-transition-new(sw-sbo-shared-panel) {
+  animation-duration:240ms;
+  animation-timing-function:cubic-bezier(.2,.8,.2,1);
+}
+@media(prefers-reduced-motion:reduce){
+  ::view-transition-old(sw-sbo-shared-panel),
+  ::view-transition-new(sw-sbo-shared-panel) {
+    animation-duration:0.01ms!important;
+  }
+}
