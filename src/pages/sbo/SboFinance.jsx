@@ -14,10 +14,13 @@ import {
   ShieldCheck,
   WalletCards,
   XCircle,
+  Settings2,
+  ChevronRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import api from "../../api/client";
+import { getInvoiceCenter, getBillingAutomationSettings } from "../../api/invoices";
 import PaymentMigrationChecklist from "../../components/payments/PaymentMigrationChecklist";
 import DashboardShell from "../../components/dashboard/DashboardShell";
 import GlassCard from "../../components/dashboard/GlassCard";
@@ -129,26 +132,42 @@ export default function SboFinance() {
   const [billingStatus, setBillingStatus] = useState(null);
   const [subscription, setSubscription] = useState(null);
   const [connect, setConnect] = useState(null);
+  const [invoiceCenter,setInvoiceCenter]=useState(null);
+  const [automation,setAutomation]=useState(null);
+  const [invoiceLoading,setInvoiceLoading]=useState(true);
+  const [invoiceError,setInvoiceError]=useState("");
+  const [showSetup,setShowSetup]=useState(false);
+
+  const [financeTab,setFinanceTab]=useState("overview");
 
   const navItems = [
     {label:"Business overview",icon:"⌂",onClick:()=>navigate("/sbo")},
-    {label:"Finance home",icon:"$",active:true,onClick:()=>setFinanceTab("overview")},
-    {label:"Payment readiness",icon:"✓",onClick:()=>setFinanceTab("readiness")},
-    {label:"Plans & payouts",icon:"▤",onClick:()=>setFinanceTab("payments")},
-    {label:"Fee reconciliation",icon:"↗",onClick:()=>setFinanceTab("reconciliation")},
-    {label:"Invoices",icon:"▦",onClick:()=>navigate("/sbo/invoices")},
+    {label:"Finance overview",icon:"$",active:financeTab==="overview",onClick:()=>{setFinanceTab("overview");setShowSetup(false);}},
+    {label:"Needs attention",icon:"!",onClick:()=>navigate("/sbo/invoices?state=OVERDUE")},
+    {label:"Invoices",icon:"▤",onClick:()=>navigate("/sbo/invoices")},
+    {label:"Paid invoices",icon:"✓",onClick:()=>navigate("/sbo/invoices?state=PAID")},
+    {label:"Archived / void",icon:"◌",onClick:()=>navigate("/sbo/invoices?state=VOID")},
+    {label:"Billing automation",icon:"◷",onClick:()=>navigate("/sbo/settings/billing-automation")},
+    {label:"Catalog",icon:"▦",onClick:()=>navigate("/sbo/catalog")},
     {label:"Profit & Cash",icon:"◫",onClick:()=>navigate("/sbo/finance-intelligence")},
     {label:"Reports",icon:"↗",onClick:()=>navigate("/sbo/reports")},
-  ];
-  const loadAll = useCallback(async () => {
+    {label:"Payment settings",icon:"⚙",active:financeTab==="readiness",onClick:()=>{setFinanceTab("readiness");setShowSetup(false);}},
+  ];  const loadAll = useCallback(async () => {
     setLoading(true);
+    setInvoiceLoading(true);
     setError("");
 
     const results = await Promise.allSettled([
       api.get("/billing/status/"),
       api.get("/billing/subscription/status/"),
       api.get("/connect/express/status/"),
+      getInvoiceCenter(),
+      getBillingAutomationSettings(),
     ]);
+    setInvoiceCenter(results[3].status==="fulfilled"?results[3].value:null);
+    setAutomation(results[4].status==="fulfilled"?results[4].value:null);
+    setInvoiceError(results[3].status==="rejected"?"Invoice activity could not be loaded. Open Invoices to retry.":"");
+    setInvoiceLoading(false);
 
     setBillingStatus(
       results[0].status === "fulfilled" ? results[0].value?.data || null : null
@@ -160,7 +179,7 @@ export default function SboFinance() {
       results[2].status === "fulfilled" ? results[2].value?.data || null : null
     );
 
-    const failures = results.filter((result) => result.status === "rejected");
+    const failures = results.slice(0,3).filter((result) => result.status === "rejected");
     if (failures.length) {
       const first = failures[0]?.reason;
       setError(
@@ -192,6 +211,19 @@ export default function SboFinance() {
     Boolean
   ).length;
   const readinessPercent = Math.round((readinessScore / 3) * 100);
+  const invoiceSummary=invoiceCenter?.summary||{};
+  const invoiceRows=Array.isArray(invoiceCenter?.results)?invoiceCenter.results:[];
+  const readyToBill=Array.isArray(invoiceCenter?.ready_to_bill)?invoiceCenter.ready_to_bill:[];
+  const overdueRows=invoiceRows.filter(row=>String(row.derived_state||row.state||"").toUpperCase()==="OVERDUE");
+  const attentionRows=[
+    ...overdueRows.map(row=>({kind:"overdue",id:row.id,name:row.customer_name||"Customer",detail:row.title||"Invoice",date:row.due_date,amount:row.balance_due})),
+    ...readyToBill.map(row=>({kind:"ready",id:row.ticket_id||row.ticket||row.id,name:row.customer_name||row.customer||"Customer",detail:row.title||row.service_title||"Completed work",date:row.completed_at||row.completion_date||null,amount:null})),
+  ].slice(0,7);
+  const daysSince=(date)=>{if(!date)return null;const timestamp=Date.parse(date);return Number.isFinite(timestamp)?Math.max(0,Math.floor((Date.now()-timestamp)/86400000)):null;};
+  const money=(value)=>value===null||value===undefined?"—":Number(value).toLocaleString("en-US",{style:"currency",currency:"USD"});
+  const setupReady=!loading && readinessScore===3;
+  const autoReady=automation?.auto_send_invoices && automation?.auto_reminders_enabled;
+
 
   const requirementsDue = useMemo(() => {
     const requirements = connect?.requirements_due || {};
@@ -264,7 +296,6 @@ export default function SboFinance() {
     }
   }
 
-  const [financeTab,setFinanceTab]=useState("overview");
   const openFinanceTab=(tab)=>setFinanceTab(tab);
 
   async function startConnect() {
@@ -345,6 +376,20 @@ export default function SboFinance() {
           {financeTab==="overview" && <section className="sw-sbo-finance-overview" aria-label="Finance overview">
             <header className="sw-sbo-finance-hero"><div><span className="sw-sbo-finance-kicker">YOUR OFFICE · FINANCE</span><h1>Finance command center</h1><p>Payment readiness, receivables and accounting access in one place.</p></div><button type="button" onClick={loadAll} disabled={loading} aria-label="Refresh finance status"><RefreshCw size={17} className={loading?"animate-spin":""}/></button></header>
             <div className="sw-sbo-finance-pulse"><div><span>PAYMENT OPERATIONS</span><p>{loading?"Loading live payment status…":readinessScore===3?"Subscriptions, billing and payouts are ready":`${3-readinessScore} of 3 payment setup requirements need attention`}</p></div><button onClick={()=>openFinanceTab("readiness")}>Review <ArrowLeft size={14} className="rotate-180"/></button></div>
+            <div className="sw-sbo-finance-invoice-header">
+              <div><span>INVOICING PULSE</span><h2>Receivables and job billing</h2></div>
+              <button type="button" onClick={()=>setShowSetup(true)} className={setupReady?"is-ready":""} aria-label="Open finance setup"><span className="sw-sbo-finance-status-light"/> {setupReady?"Setup ready":"Setup needs attention"} <Settings2 size={15}/></button>
+            </div>
+            <div className="sw-sbo-finance-invoice-kpis">
+              <button type="button" onClick={()=>navigate("/sbo/invoices")}><span>Outstanding</span><strong>{invoiceLoading?"—":invoiceError?"Unavailable":money(invoiceSummary.outstanding)}</strong></button>
+              <button type="button" onClick={()=>navigate("/sbo/invoices?state=OVERDUE")}><span>Overdue invoices</span><strong>{invoiceLoading?"—":invoiceError?"Unavailable":(invoiceSummary.overdue_count??overdueRows.length)}</strong></button>
+              <button type="button" onClick={()=>navigate("/sbo/invoices")}><span>Ready to bill</span><strong>{invoiceLoading?"—":invoiceError?"Unavailable":(invoiceSummary.ready_to_bill_count??readyToBill.length)}</strong></button>
+              <button type="button" onClick={()=>navigate("/sbo/invoices?state=PAID")}><span>Paid this month</span><strong>{invoiceLoading?"—":invoiceError?"Unavailable":money(invoiceSummary.paid_this_month)}</strong></button>
+            </div>
+            <section className="sw-sbo-finance-attention">
+              <div className="sw-sbo-finance-attention-head"><h2><AlertTriangle size={16}/> Invoices requiring attention</h2><button type="button" onClick={()=>navigate("/sbo/invoices")}>All invoices <ChevronRight size={16}/></button></div>
+              {invoiceError?<p role="alert">{invoiceError}</p>:invoiceLoading?<p>Loading invoice activity…</p>:attentionRows.length?<div className="sw-sbo-finance-attention-list">{attentionRows.map((item,index)=><button type="button" key={item.kind+"-"+item.id+"-"+index} onClick={()=>navigate(item.kind==="overdue"?"/sbo/invoices?state=OVERDUE":"/sbo/invoices")}><span><strong>{item.kind==="overdue"?"PAST DUE":"READY TO INVOICE"}</strong> · {item.name}<small>{item.detail} · {daysSince(item.date)===null?"Date unavailable":item.kind==="ready"?daysSince(item.date)+" days since completion":daysSince(item.date)+" days past due"}</small></span><span>{item.amount===null?"Review":money(item.amount)}</span></button>)}</div>:<p>No overdue invoices or completed jobs awaiting billing in the loaded records.</p>}
+            </section>
             <div className="sw-sbo-finance-stats">
               <button type="button" onClick={()=>openFinanceTab("readiness")}><strong>{loading?"—":readinessPercent+"%"}</strong><small>Payment readiness</small></button>
               <button type="button" onClick={()=>openFinanceTab("payments")}><strong>{connectReady?"Ready":"Review"}</strong><small>Stripe payouts</small></button>
@@ -358,6 +403,13 @@ export default function SboFinance() {
             </div>
             <div className="sw-sbo-finance-quick"><button type="button" onClick={()=>navigate("/sbo/invoices")}><FileText size={15}/> Invoices</button><button type="button" onClick={()=>navigate("/sbo/reports")}><TrendingUp size={15}/> Reports & exports</button><button type="button" onClick={()=>navigate("/sbo")}><LayoutDashboard size={15}/> Business office</button></div>
           </section>}
+          {showSetup&&<div className="sw-sbo-finance-setup-backdrop" onMouseDown={()=>setShowSetup(false)}><aside role="dialog" aria-modal="true" aria-label="Finance setup" className="sw-sbo-finance-setup-drawer" onMouseDown={e=>e.stopPropagation()}><header><h2>Finance setup</h2><button type="button" onClick={()=>setShowSetup(false)} aria-label="Close setup"><XCircle size={21}/></button></header><p>Payment readiness, billing automation, and catalog controls.</p><div className="sw-sbo-finance-setup-items">
+            <button onClick={()=>{setFinanceTab("readiness");setShowSetup(false)}}><span className={setupReady?"sw-sbo-setup-green":"sw-sbo-setup-amber"}/> Stripe & billing readiness <strong>{loading?"Loading":setupReady?"Ready":"Action needed"}</strong></button>
+            <button onClick={()=>navigate("/sbo/settings/billing-automation")}><span className={autoReady?"sw-sbo-setup-green":"sw-sbo-setup-amber"}/> Automated invoicing & reminders <strong>{automation?autoReady?"Enabled":"Review":"Not verified"}</strong></button>
+            <button onClick={()=>navigate("/sbo/catalog")}><span className="sw-sbo-setup-amber"/> Service & parts catalog <strong>Manage</strong></button>
+            <button onClick={()=>navigate("/sbo/invoices")}><span className="sw-sbo-setup-amber"/> Invoicing center <strong>Manage</strong></button>
+            <button onClick={()=>navigate("/sbo/reports")}><span className="sw-sbo-setup-amber"/> Reports & archival records <strong>Open</strong></button>
+           </div><p className="sw-sbo-finance-setup-help">Green reflects verified payment readiness or saved automation settings. Catalog and other integrations are never marked complete without verification.</p></aside></div>}
           {error ? <div role="alert" className="rounded-lg border border-rose-400/25 bg-rose-900/40 p-3 text-sm text-rose-100">{error}</div> : null}
           {message ? <div role="status" className="rounded-lg border border-emerald-400/25 bg-emerald-900/40 p-3 text-sm text-emerald-100">{message}</div> : null}
           <div className={financeTab==="readiness"?"sw-sbo-finance-detail space-y-3":"hidden"}>
