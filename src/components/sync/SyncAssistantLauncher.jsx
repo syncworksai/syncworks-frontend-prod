@@ -143,7 +143,7 @@ export default function SyncAssistantLauncher() {
   return (
     <>
       <div className={`fixed bottom-24 right-4 z-[260] flex flex-col items-end gap-3 lg:bottom-6 lg:right-6 ${taskDialogOpen && showChief ? "hidden" : mobileVisible ? "" : "hidden lg:flex"}`}>
-        {showChief && !isCustomerHome && !showBusinessDock && (
+        {showChief && !isCustomerHome && !showBusinessDock && location.pathname !== "/platform" && (
           <>
             <button type="button" aria-haspopup="dialog" aria-label="Open Victoria Chief of Staff briefing" title="Victoria — Chief of Staff" onClick={() => setCommandOpen(true)}
               className="group flex min-h-12 items-center gap-2 rounded-full border border-cyan-300/45 bg-[#061327]/95 py-1 pl-1 pr-2 text-left text-white shadow-[0_0_26px_rgba(34,211,238,.22)] transition hover:border-cyan-300">
@@ -155,7 +155,7 @@ export default function SyncAssistantLauncher() {
             </button>
           </>
         )}
-        <button
+        {location.pathname !== "/platform" && <button
           type="button"
           onClick={() => setAlertsOpen(true)}
           className="relative grid h-12 w-12 place-items-center rounded-full border border-violet-300/35 bg-gradient-to-br from-slate-950 via-violet-950 to-slate-950 text-violet-100 shadow-[0_0_28px_rgba(139,92,246,0.28)] transition hover:scale-105"
@@ -164,7 +164,7 @@ export default function SyncAssistantLauncher() {
         >
           <Bell aria-hidden="true" className="h-5 w-5" />
           {unread ? <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[9px] font-black text-white ring-2 ring-slate-950">{unread > 99 ? "99+" : unread}</span> : null}
-        </button>
+        </button>}
 
 
       </div>
