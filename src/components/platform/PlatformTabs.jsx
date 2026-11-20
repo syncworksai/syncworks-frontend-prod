@@ -26,6 +26,7 @@ export default function PlatformTabs({ tabs, active, onChange }) {
             </button>
           );
         })}
+        <a href="/platform/revenue-plan" className="px-3 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-sm font-black text-emerald-200">Revenue Plan</a>
         <button
           type="button"
           onClick={() => onChange("__build_backlog")}
