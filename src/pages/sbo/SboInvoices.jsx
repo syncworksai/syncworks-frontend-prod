@@ -30,7 +30,9 @@ import {
 const FILTERS = ["ALL", "DRAFT", "SENT", "PARTIALLY_PAID", "OVERDUE", "PAID", "VOID"];
 
 function money(value) {
-  const n = Number(value || 0);
+  if (value === null || value === undefined || value === "") return "—";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "—";
   return n.toLocaleString(undefined, { style: "currency", currency: "USD" });
 }
 
