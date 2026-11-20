@@ -46,6 +46,7 @@ import CalendarDailySnapshot from "../components/calendar/CalendarDailySnapshot"
 import DashboardShell from "../components/dashboard/DashboardShell";
 import ImmersiveWorkspaceHome from "../components/customer/ImmersiveWorkspaceHome";
 import OfficeAgentDock from "../components/customer/OfficeAgentDockV27";
+import AutomationDiscoverCTA from "../components/customer/AutomationDiscoverCTA";
 import DesktopActionAlerts from "../components/customer/DesktopActionAlerts";
 import "../components/customer/DesktopAgentBubblesV30.css";
 import MobileCustomerCommandCenter from "../components/customer/MobileCustomerCommandCenter";
@@ -414,7 +415,7 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
           {workspaceTheme !== "legacy" && inOffice && <button type="button" className="sw-office-activity-toggle" aria-expanded={showActivity} onClick={()=>setShowActivity(v=>!v)}>{showActivity ? "Hide activity & quick capture" : "View activity & quick capture"} <ChevronRight size={15}/></button>}
         </aside>
       </div>
-      {workspaceTheme !== "legacy" && <div className="sw-desktop-office-team-dock" aria-label="Your AI employee dock"><OfficeAgentDock user={user} placement="home" theme={workspaceTheme} /></div>}
+      {workspaceTheme !== "legacy" && <div className="sw-desktop-office-team-dock" aria-label="AI employee tools">{String(user?.email||"").toLowerCase()==="jacoblord7@outlook.com" ? <OfficeAgentDock user={user} placement="home" theme={workspaceTheme} /> : <AutomationDiscoverCTA compact />}</div>}
     </DashboardShell>
   );
 }
