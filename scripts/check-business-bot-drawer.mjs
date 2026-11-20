@@ -9,7 +9,8 @@ const quick=readFileSync("src/components/sync/BusinessAgentQuickChat.jsx","utf8"
 test("SBO desktop and mobile bot portraits use the actual pilot roster and open specialist drawers",()=>{
   assert.match(sbo,/getPilotAgentsForUser\(user,AVATARS\)/);
   assert.match(sbo,/agents\.map\(agent=>/);
-  assert.match(sbo,/syncworks:business-agent-open/);
+  assert.match(sbo,/import BusinessAgentQuickChat/);
+  assert.match(sbo,/<BusinessAgentQuickChat agentId=\{selectedAgent\}/);
   assert.match(sbo,/onClick=\{\(\)=>openAgent\(agent\)\}/);
 });
 test("Persistent business dock uses the same drawer event",()=>{
