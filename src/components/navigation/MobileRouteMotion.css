@@ -29,3 +29,34 @@
     opacity:1!important;
   }
 }
+
+/* SBO-only pilot: short hierarchical navigation. The global dock/header stay
+   outside this route stage, and mobile avoids transforms on fixed layout. */
+.sw-mobile-route-stage[data-mobile-route-motion^="sbo-"] > *:first-child {
+  animation:sw-sbo-route-peer 180ms cubic-bezier(.2,.8,.2,1) both;
+}
+@media(min-width:768px) {
+  .sw-mobile-route-stage[data-mobile-route-motion="sbo-forward"] > *:first-child {
+    animation:sw-sbo-route-forward 250ms cubic-bezier(.2,.8,.2,1) both;
+  }
+  .sw-mobile-route-stage[data-mobile-route-motion="sbo-back"] > *:first-child {
+    animation:sw-sbo-route-back 240ms cubic-bezier(.2,.8,.2,1) both;
+  }
+}
+@keyframes sw-sbo-route-peer {
+  from {opacity:.25;}
+  to {opacity:1;}
+}
+@keyframes sw-sbo-route-forward {
+  from {opacity:.2;transform:translateX(18px);}
+  to {opacity:1;transform:translateX(0);}
+}
+@keyframes sw-sbo-route-back {
+  from {opacity:.2;transform:translateX(-18px);}
+  to {opacity:1;transform:translateX(0);}
+}
+@media(prefers-reduced-motion:reduce) {
+  .sw-mobile-route-stage[data-mobile-route-motion^="sbo-"] > *:first-child {
+    animation:none!important;opacity:1!important;transform:none!important;
+  }
+}
