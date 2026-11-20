@@ -209,6 +209,7 @@ export default function SboInvoices() {
   const navigate = useNavigate();
   const [data, setData] = useState({ summary: {}, results: [], ready_to_bill: [], suggestions: [] });
   const [filter, setFilter] = useState("ALL");
+  const [workspaceTab,setWorkspaceTab]=useState("invoices");
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -223,6 +224,7 @@ export default function SboInvoices() {
   }
 
   useEffect(() => { load(); }, [filter]);
+  useEffect(()=>{if(!selected)return;const onKey=e=>{if(e.key==="Escape")setSelected(null);};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey);},[selected]);
 
   async function openInvoice(id) {
     setBusy(true); setError("");
@@ -259,7 +261,7 @@ export default function SboInvoices() {
 
   return (
     <DashboardShell modeBarTitle="Business" modeBarSubtitle="Invoice Center">
-      <div className="mx-auto max-w-7xl space-y-5 pb-28">
+      <div className="mx-auto max-w-7xl space-y-3 pb-2">
         <section className="rounded-[2rem] border border-cyan-400/20 bg-[radial-gradient(circle_at_88%_8%,rgba(34,211,238,.12),transparent_34%),rgba(2,6,23,.94)] p-5 sm:p-7">
           <button type="button" onClick={() => navigate("/sbo/finance")} className="inline-flex items-center gap-2 text-xs font-black text-slate-400 hover:text-white"><ArrowLeft className="h-4 w-4" />Finance</button>
           <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
@@ -275,16 +277,30 @@ export default function SboInvoices() {
           <Metric icon={ReceiptText} label="Ready to bill" value={summary.ready_to_bill_count || 0} hint="Completed jobs without invoice" />
         </section>
 
+        <nav aria-label="Invoice workspace sections" className="sw-business-compact-nav flex flex-wrap gap-2 rounded-xl border border-cyan-300/20 bg-slate-950/80 p-2">
+          {[
+            ["invoices","Invoices"],
+            ["ready",`Ready to bill (${(data.ready_to_bill||[]).length})`],
+            ["assistant","SYNC suggestions"]
+          ].map(([id,label])=><button type="button" key={id} onClick={()=>setWorkspaceTab(id)} aria-current={workspaceTab===id?"page":undefined} className={`min-h-10 rounded-lg border px-3 text-xs font-bold ${workspaceTab===id?"border-cyan-400/40 bg-cyan-500/20 text-cyan-50":"border-slate-700 bg-slate-900/40 text-slate-300"}`}>{label}</button>)}
+        </nav>
+
         {error ? <div className="rounded-2xl border border-rose-400/20 bg-rose-500/[.07] p-4 text-sm text-rose-100">{error}</div> : null}
         {notice ? <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/[.07] p-4 text-sm text-emerald-100">{notice}</div> : null}
 
-        {(data.suggestions || []).length ? <section className="rounded-[1.7rem] border border-violet-400/20 bg-violet-500/[.05] p-4"><div className="flex items-center gap-2 font-black text-white"><Sparkles className="h-5 w-5 text-violet-200" />SYNC recommendations</div><div className="mt-3 grid gap-2 sm:grid-cols-3">{data.suggestions.map((item) => <div key={item.type} className="rounded-2xl border border-white/10 bg-slate-950/50 p-3 text-sm text-slate-300">{item.message}</div>)}</div></section> : null}
+        {workspaceTab==="assistant" && (data.suggestions || []).length ? <section className="rounded-[1.7rem] border border-violet-400/20 bg-violet-500/[.05] p-4"><div className="flex items-center gap-2 font-black text-white"><Sparkles className="h-5 w-5 text-violet-200" />SYNC recommendations</div><div className="mt-3 grid gap-2 sm:grid-cols-3">{data.suggestions.map((item) => <div key={item.type} className="rounded-2xl border border-white/10 bg-slate-950/50 p-3 text-sm text-slate-300">{item.message}</div>)}</div></section> : null}
 
-        {(data.ready_to_bill || []).length ? <section className="rounded-[1.8rem] border border-emerald-400/20 bg-emerald-500/[.045] p-4 sm:p-5"><div className="flex items-center justify-between gap-3"><div><div className="font-black text-white">Completed work ready to invoice</div><div className="mt-1 text-xs text-slate-500">Create a draft first. Nothing is silently sent to the customer.</div></div><Plus className="h-5 w-5 text-emerald-200" /></div><div className="mt-4 grid gap-3 lg:grid-cols-2">{data.ready_to_bill.map((job) => <div key={job.ticket_id} className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="font-black text-white">{job.title}</div><div className="mt-1 text-xs text-slate-500">{job.customer_name} · {job.marketplace_origin ? "Marketplace" : "Business customer"}</div></div><button type="button" disabled={busy} onClick={() => createDraft(job.ticket_id)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-emerald-300/25 bg-emerald-500/10 px-3 text-xs font-black text-emerald-100 disabled:opacity-40"><Plus className="h-4 w-4" />Create draft</button></div>)}</div></section> : null}
+        {workspaceTab==="ready" && (data.ready_to_bill || []).length ? <section className="rounded-[1.8rem] border border-emerald-400/20 bg-emerald-500/[.045] p-4 sm:p-5"><div className="flex items-center justify-between gap-3"><div><div className="font-black text-white">Completed work ready to invoice</div><div className="mt-1 text-xs text-slate-500">Create a draft first. Nothing is silently sent to the customer.</div></div><Plus className="h-5 w-5 text-emerald-200" /></div><div className="mt-4 grid gap-3 lg:grid-cols-2">{data.ready_to_bill.map((job) => <div key={job.ticket_id} className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="font-black text-white">{job.title}</div><div className="mt-1 text-xs text-slate-500">{job.customer_name} · {job.marketplace_origin ? "Marketplace" : "Business customer"}</div></div><button type="button" disabled={busy} onClick={() => createDraft(job.ticket_id)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-emerald-300/25 bg-emerald-500/10 px-3 text-xs font-black text-emerald-100 disabled:opacity-40"><Plus className="h-4 w-4" />Create draft</button></div>)}</div></section> : null}
 
-        {selected ? <DetailPanel invoice={selected} busy={busy} onClose={() => setSelected(null)} onAction={runAction} /> : null}
+        {selected ? <div className="fixed inset-0 z-[300] flex justify-end bg-[#020617]/75 backdrop-blur-[3px]" role="presentation" onClick={()=>setSelected(null)}>
+          <div role="dialog" aria-modal="true" aria-label={`Invoice ${selected.id} details`} className="h-full w-full max-w-2xl overflow-y-auto overscroll-contain border-l border-cyan-400/35 bg-[#071324] p-3 shadow-2xl sm:p-5" onClick={e=>e.stopPropagation()}>
+            <DetailPanel invoice={selected} busy={busy} onClose={() => setSelected(null)} onAction={runAction} />
+          </div>
+        </div> : null}
 
-        <section>
+        {workspaceTab==="assistant" && !(data.suggestions||[]).length ? <p className="rounded-xl border border-white/10 p-4 text-sm text-slate-400">No SYNC suggestions for the current business data.</p> : null}
+        {workspaceTab==="ready" && !(data.ready_to_bill||[]).length ? <p className="rounded-xl border border-white/10 p-4 text-sm text-slate-400">No completed work is waiting for an invoice.</p> : null}
+        {workspaceTab==="invoices" && <section>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div><div className="text-lg font-black text-white">Invoices</div><div className="text-xs text-slate-500">{filteredCount} shown</div></div>
             <div className="flex flex-wrap gap-2">{FILTERS.map((item) => <button key={item} type="button" onClick={() => setFilter(item)} className={`min-h-9 rounded-full border px-3 text-[10px] font-black uppercase tracking-[.12em] ${filter === item ? "border-cyan-300/30 bg-cyan-500/15 text-cyan-100" : "border-white/10 bg-white/[.025] text-slate-500"}`}>{item.replaceAll("_", " ")}</button>)}</div>
@@ -292,7 +308,7 @@ export default function SboInvoices() {
           {loading ? <div className="grid min-h-48 place-items-center"><LoaderCircle className="h-8 w-8 animate-spin text-cyan-200" /></div> : null}
           {!loading && !(data.results || []).length ? <div className="mt-4 rounded-3xl border border-white/10 bg-white/[.025] p-8 text-center"><ReceiptText className="mx-auto h-8 w-8 text-slate-600" /><div className="mt-3 font-black text-white">No invoices in this view</div><div className="mt-1 text-sm text-slate-500">Completed jobs will appear above when they are ready to bill.</div></div> : null}
           <div className="mt-4 grid gap-3 xl:grid-cols-2">{(data.results || []).map((invoice) => <InvoiceCard key={invoice.id} invoice={invoice} onOpen={openInvoice} />)}</div>
-        </section>
+        </section>}
       </div>
     </DashboardShell>
   );
