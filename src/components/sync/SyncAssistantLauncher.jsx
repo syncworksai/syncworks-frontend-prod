@@ -7,6 +7,7 @@ import api from "../../api/client";
 import SyncAlertDrawer from "./SyncAlertDrawer";
 import VictoriaCommandCenter from "./VictoriaCommandCenter";
 import BusinessAssistantDock from "./BusinessAssistantDock";
+import BusinessAgentQuickChat from "./BusinessAgentQuickChat";
 
 const HIDDEN_PREFIXES = [
   "/login",
@@ -25,6 +26,13 @@ export default function SyncAssistantLauncher() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [commandOpen,setCommandOpen]=useState(false);
+  const [businessAgentId,setBusinessAgentId]=useState(null);
+  useEffect(()=>{
+    const onOpen=e=>{const id=String(e?.detail?.agentId||"");if(id)setBusinessAgentId(id);};
+    window.addEventListener("syncworks:business-agent-open",onOpen);
+    return()=>window.removeEventListener("syncworks:business-agent-open",onOpen);
+  },[]);
+  useEffect(()=>{setBusinessAgentId(null);},[location.pathname]);
   useEffect(()=>{const listener=()=>setCommandOpen(true);window.addEventListener("syncworks:victoria-open",listener);return()=>window.removeEventListener("syncworks:victoria-open",listener);},[]);
 
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
@@ -169,6 +177,7 @@ export default function SyncAssistantLauncher() {
 
       </div>
       {showBusinessDock&&<BusinessAssistantDock user={user} onVictoria={()=>setCommandOpen(true)}/>}
+      {showChief&&businessAgentId&&!excludedVictoria&&<BusinessAgentQuickChat agentId={businessAgentId} user={user} onClose={()=>setBusinessAgentId(null)}/>}
       {showChief && <VictoriaCommandCenter open={commandOpen} onClose={()=>setCommandOpen(false)}/>}
       <SyncAlertDrawer open={alertsOpen} onClose={() => { setAlertsOpen(false); loadUnread(); }} onCountChange={setUnread} />
     </>
