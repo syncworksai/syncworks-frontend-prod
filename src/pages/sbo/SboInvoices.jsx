@@ -273,7 +273,7 @@ function DetailPanel({ invoice, busy, canManage, onClose, onAction, onEdit, onSe
 export default function SboInvoices() {
   const navigate = useNavigate();
   const [data, setData] = useState({ summary: {}, results: [], ready_to_bill: [], suggestions: [] });
-  const [filter, setFilter] = useState("ALL");
+  const [filter, setFilter] = useState(() => {const requested=new URLSearchParams(window.location.search).get("state")?.toUpperCase()||"ALL";return FILTERS.includes(requested)?requested:"ALL";});
   const [workspaceTab,setWorkspaceTab]=useState("invoices");
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
