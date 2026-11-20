@@ -260,7 +260,7 @@ function DetailPanel({ invoice, busy, onClose, onAction, onEdit, onSendDraft }) 
         <div className="font-black text-white">Invoice timeline</div>
         <div className="mt-3 space-y-3">
           {(invoice.events || []).length ? invoice.events.map((event) => (
-            <div key={event.id} className="flex gap-3 text-sm"><div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-cyan-300" /><div><div className="font-bold text-slate-200">{String(event.event_type).replaceAll("_", " ")}{event.amount ? ` · ${money(event.amount)}` : ""}</div><div className="mt-0.5 text-xs leading-5 text-slate-500">{event.message} · {fmtTime(event.occurred_at)}</div></div></div>
+            <div key={event.id} className="flex gap-3 text-sm"><div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-cyan-300" /><div><div className="font-bold text-slate-200">{String(event.event_type).replaceAll("_", " ")}{event.amount ? ` · ${money(event.amount)}` : ""}</div><div className="mt-0.5 text-xs leading-5 text-slate-400">{event.message} · {fmtTime(event.occurred_at)}</div>{event.payment_source&&<div className="mt-1 text-xs text-cyan-200">Payment source: {event.payment_source.replaceAll("_"," ")}{event.external_reference?` · Receipt/reference: ${event.external_reference}`:""}</div>}</div></div>
           )) : <div className="text-sm text-slate-500">No timeline events recorded yet.</div>}
         </div>
       </div>
