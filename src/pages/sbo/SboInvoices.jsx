@@ -200,7 +200,7 @@ function PaymentPanel({ invoice, busy, onRecord }) {
   );
 }
 
-function DetailPanel({ invoice, busy, onClose, onAction, onEdit, onSendDraft }) {
+function DetailPanel({ invoice, busy, canManage, onClose, onAction, onEdit, onSendDraft }) {
   if (!invoice) return null;
   const open = !["PAID", "VOID"].includes(invoice.derived_state);
   const [editing,setEditing]=useState(false);
@@ -219,11 +219,11 @@ function DetailPanel({ invoice, busy, onClose, onAction, onEdit, onSendDraft }) 
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2" aria-label="Invoice quick actions">
-        {invoice.derived_state==="DRAFT"&&<button type="button" onClick={()=>setEditing(v=>!v)} className="sw-invoice-toolbar-button"><Pencil size={15}/> Quick edit</button>}
-        {invoice.derived_state!=="VOID"&&<button type="button" disabled={invoice.derived_state==="DRAFT"} title={invoice.derived_state==="DRAFT"?"Issue the invoice in SyncWorks before emailing the customer.":"Opens an editable email draft"} onClick={()=>onSendDraft(invoice)} className="sw-invoice-toolbar-button disabled:opacity-40"><Mail size={15}/> {invoice.derived_state==="DRAFT"?"Issue first to email":emailAvailable?"Open prefilled email":"Copy invoice link"}</button>}
-        {Number(invoice.amount_paid)>0&&<button type="button" onClick={()=>setRequestingRefund(v=>!v)} className="sw-invoice-toolbar-button"><RotateCcw size={15}/> Refund review</button>}
+        {canManage&&invoice.derived_state==="DRAFT"&&<button type="button" onClick={()=>setEditing(v=>!v)} className="sw-invoice-toolbar-button"><Pencil size={15}/> Quick edit</button>}
+        {canManage&&invoice.derived_state!=="VOID"&&<button type="button" disabled={invoice.derived_state==="DRAFT"} title={invoice.derived_state==="DRAFT"?"Issue the invoice in SyncWorks before emailing the customer.":"Opens an editable email draft"} onClick={()=>onSendDraft(invoice)} className="sw-invoice-toolbar-button disabled:opacity-40"><Mail size={15}/> {invoice.derived_state==="DRAFT"?"Issue first to email":emailAvailable?"Open prefilled email":"Copy invoice link"}</button>}
+        {canManage&&Number(invoice.amount_paid)>0&&<button type="button" onClick={()=>setRequestingRefund(v=>!v)} className="sw-invoice-toolbar-button"><RotateCcw size={15}/> Refund review</button>}
       </div>
-      <p className="mt-2 text-xs text-slate-400">Email opens your device mail app as a draft. It does not attach a PDF, send automatically or mark the invoice delivered. The customer link requires sign-in.</p>
+      {canManage&&<p className="mt-2 text-xs text-slate-400">Email opens your device mail app as a draft. It does not attach a PDF, send automatically or mark the invoice delivered. The customer link requires sign-in.</p>}
       {editing&&<InvoiceEditForm invoice={invoice} busy={busy} onSave={payload=>onEdit(payload).then(ok=>{if(ok)setEditing(false);})} onCancel={()=>setEditing(false)}/>}
       {requestingRefund&&<RefundReviewForm invoice={invoice} busy={busy} onRequest={payload=>onAction("request-refund",payload).then(ok=>{if(ok)setRequestingRefund(false);})} onCancel={()=>setRequestingRefund(false)}/>}
       {invoice.card_last4&&<div className="mt-3 flex items-center gap-2 text-xs text-emerald-200"><CreditCard size={15}/>{invoice.card_brand||"Card"} ending •••• {invoice.card_last4} · Stripe-confirmed payment</div>}
@@ -248,13 +248,13 @@ function DetailPanel({ invoice, busy, onClose, onAction, onEdit, onSendDraft }) 
         </div>
       </div>
 
-      {open ? <div className="mt-4 flex flex-wrap gap-2">
+      {canManage&&open ? <div className="mt-4 flex flex-wrap gap-2">
         {invoice.derived_state === "DRAFT" ? <button type="button" disabled={busy} onClick={() => onAction("send")} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-cyan-500 px-4 text-sm font-black text-slate-950 disabled:opacity-40"><Send className="h-4 w-4" />Issue in SyncWorks</button> : null}
         {["SENT", "OVERDUE", "PARTIALLY_PAID"].includes(invoice.derived_state) ? <button type="button" disabled={busy} onClick={() => onAction("reminder")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-violet-400/25 bg-violet-500/10 px-4 text-sm font-black text-violet-100 disabled:opacity-40"><Clock3 className="h-4 w-4" />Notify in SyncWorks</button> : null}
         <button type="button" disabled={busy} onClick={() => onAction("void", { reason: "Voided from Invoice Center" })} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-rose-400/20 bg-rose-500/[.06] px-4 text-sm font-black text-rose-200 disabled:opacity-40"><XCircle className="h-4 w-4" />Void</button>
       </div> : null}
 
-      {open ? <div className="mt-4"><PaymentPanel invoice={invoice} busy={busy} onRecord={(payload) => onAction("record-payment", payload)} /></div> : null}
+      {canManage&&open ? <div className="mt-4"><PaymentPanel invoice={invoice} busy={busy} onRecord={(payload) => onAction("record-payment", payload)} /></div> : null}
 
       <div className="mt-5 rounded-3xl border border-white/10 bg-white/[.02] p-4">
         <div className="font-black text-white">Invoice timeline</div>
@@ -279,6 +279,7 @@ export default function SboInvoices() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [reminderSettings,setReminderSettings]=useState(null);
+  const canManage=Boolean(data.permissions?.can_manage_invoices);
   const [reminderBusy,setReminderBusy]=useState(false);
   const [showReminderSettings,setShowReminderSettings]=useState(false);
   const [reminderDays,setReminderDays]=useState("2");
@@ -380,11 +381,11 @@ export default function SboInvoices() {
           ].map(([id,label])=><button type="button" key={id} onClick={()=>setWorkspaceTab(id)} aria-current={workspaceTab===id?"page":undefined} className={`min-h-10 rounded-lg border px-3 text-xs font-bold ${workspaceTab===id?"border-cyan-400/40 bg-cyan-500/20 text-cyan-50":"border-slate-700 bg-slate-900/40 text-slate-300"}`}>{label}</button>)}
         </nav>
 
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-slate-950/60 p-2">
+        {canManage&&<div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-slate-950/60 p-2">
           <button type="button" onClick={()=>setShowReminderSettings(v=>!v)} className="sw-invoice-toolbar-button"><CalendarClock size={16}/> Automated reminders</button>
           <span className="text-xs text-slate-400">{reminderSettings?.auto_reminders_enabled? `Enabled · ${(reminderSettings.reminder_after_due_days||[]).join(", ")} day(s) after due`:"Off · manual review"}</span>
-        </div>
-        {showReminderSettings&&<section className="rounded-xl border border-cyan-400/20 bg-slate-950/90 p-3 text-sm">
+        </div>}
+        {canManage&&showReminderSettings&&<section className="rounded-xl border border-cyan-400/20 bg-slate-950/90 p-3 text-sm">
           <p className="mb-2 text-xs text-slate-400">For outstanding issued invoices, schedule a reminder no earlier than 2 days after the due date. Uses the existing daily automation and available server email delivery, not your personal mail app. Does not charge the card.</p>
           <label className="block text-xs">Days past due <input type="number" min="2" max="60" step="1" value={reminderDays} onChange={e=>setReminderDays(e.target.value)} className="ml-2 w-20 rounded border border-white/20 bg-slate-900 p-2 text-white"/></label>
           <div className="mt-3 flex gap-2"><button disabled={reminderBusy} type="button" onClick={saveReminders} className="sw-invoice-toolbar-button">Enable reminders</button><button disabled={reminderBusy} type="button" onClick={disableReminders} className="sw-invoice-toolbar-button">Disable</button></div>
@@ -399,7 +400,7 @@ export default function SboInvoices() {
 
         {selected ? <div className="fixed inset-0 z-[300] flex justify-end bg-[#020617]/75 backdrop-blur-[3px]" role="presentation" onClick={()=>setSelected(null)}>
           <div role="dialog" aria-modal="true" aria-label={`Invoice ${selected.id} details`} className="sw-invoice-detail-drawer h-full w-full max-w-2xl overflow-y-auto overscroll-contain border-l border-cyan-400/35 bg-[#071324] p-3 shadow-2xl sm:p-5" onClick={e=>e.stopPropagation()}>
-            <DetailPanel invoice={selected} busy={busy} onClose={() => setSelected(null)} onAction={runAction} onEdit={saveDraft} onSendDraft={openEmailDraft}/>
+            <DetailPanel invoice={selected} busy={busy} canManage={canManage} onClose={() => setSelected(null)} onAction={runAction} onEdit={saveDraft} onSendDraft={openEmailDraft}/>
           </div>
         </div> : null}
 
