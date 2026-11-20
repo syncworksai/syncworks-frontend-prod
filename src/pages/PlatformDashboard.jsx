@@ -5,6 +5,7 @@ import api from "../api/client";
 import "./GodModeScene.css";
 
 import GodModeCockpit from "../components/platform/GodModeCockpit";
+import PlatformCommerceDock from "../components/platform/PlatformCommerceDock";
 import { X } from "lucide-react";
 import PlatformOverviewTab from "../components/platform/PlatformOverviewTab";
 import PlatformMobileDashboard from "../components/platform/PlatformMobileDashboard";
@@ -1475,6 +1476,7 @@ export default function PlatformDashboard() {
       <main className="sw-god-workspace relative mx-auto w-full min-w-0 max-w-7xl px-3 pt-3 sm:px-4 lg:px-5 lg:pt-3">
         <PlatformMobileDashboard activeTab={tab} tabs={TABS} onChange={setTab} />
         <GodModeCockpit onOpen={setTab} />
+        <PlatformCommerceDock />
         {tab !== "overview" && <div className="sw-god-drawer-backdrop hidden lg:block" onClick={() => setTab("overview")} aria-hidden="true" />}
         <div key={tab} className={tab === "overview" ? "sw-god-tab-stage lg:hidden" : "sw-god-tab-stage sw-god-detail-drawer"} role={tab !== "overview" ? "dialog" : undefined} aria-modal={tab !== "overview" ? "true" : undefined} aria-label={tab !== "overview" ? (TABS.find(t=>t.id===tab)?.label || "Build Backlog") : undefined}>
           {tab !== "overview" && <div className="sw-god-drawer-header hidden lg:flex"><div><p>SYNCWORKS / GOD MODE</p><h2>{TABS.find(t=>t.id===tab)?.label || "Build Backlog"}</h2></div><button type="button" onClick={() => setTab("overview")} aria-label="Close panel"><X size={21} /></button></div>}
