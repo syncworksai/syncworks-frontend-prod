@@ -54,7 +54,8 @@ export default function SyncAssistantLauncher() {
   const showChief = pilotFounder && eligibleVictoriaRoute && !excludedVictoria;
   // All SBO subpages share one persistent AI dock. The SBO landing already
   // has its header and mobile portrait row, so do not render duplicates there.
-  const showBusinessDock=pilotFounder && location.pathname.startsWith("/sbo/") && !taskDialogOpen;
+  const businessWorkspaceRoute=/^\/(?:sbo\/|pm(?:\/|$)|employee(?:\/|$)|team\/invites(?:\/|$)|ceo(?:\/|$))/.test(location.pathname);
+  const showBusinessDock=pilotFounder && businessWorkspaceRoute && !taskDialogOpen;
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [unread, setUnread] = useState(0);
 
