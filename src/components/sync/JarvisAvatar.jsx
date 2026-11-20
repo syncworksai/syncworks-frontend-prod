@@ -7,9 +7,9 @@ import { isFounderPilot, PILOT_AGENTS } from "./pilotAgentRoster";
 export const AVATAR_STORAGE_KEY="sw-jarvis-avatar-v1";
 export const AVATARS=[
   {id:"executive-female",name:"Victoria",role:"Chief of Staff",style:"Executive",presentation:"Female",photo:"/jarvis-avatars/victoria.jpeg",mouthX:"49%",mouthY:"34%",skin:"#d8a17f",shade:"#a36b51",hair:"#261d24",outfit:"#172b50",accent:"#d8b271"},
-  {id:"executive-male",name:"James",role:"Sales Manager",style:"Executive",presentation:"Male",photo:"/jarvis-avatars/james.jpeg",mouthX:"49%",mouthY:"43%",skin:"#bc8263",shade:"#895641",hair:"#211e21",outfit:"#152133",accent:"#c3ab86"},
+  {id:"executive-male",name:"Scarlett",role:"Sales Manager",style:"Executive",presentation:"Male",photo:"/jarvis-avatars/james.jpeg",mouthX:"49%",mouthY:"43%",skin:"#bc8263",shade:"#895641",hair:"#211e21",outfit:"#152133",accent:"#c3ab86"},
   {id:"future-female",name:"Elizabeth",role:"Marketing Manager",style:"Modern",presentation:"Female",photo:"/jarvis-avatars/elizabeth.jpeg",mouthX:"49%",mouthY:"39%",skin:"#e8b398",shade:"#b07965",hair:"#cbb9a9",outfit:"#102f48",accent:"#52defd"},
-  {id:"future-male",name:"William",role:"Research Analyst",style:"Modern",presentation:"Male",photo:"/jarvis-avatars/william.jpeg",mouthX:"50%",mouthY:"38%",skin:"#bb8a70",shade:"#855844",hair:"#151c2c",outfit:"#2d2055",accent:"#ad65ff"},
+  {id:"future-male",name:"Sophia",role:"Research Analyst",style:"Modern",presentation:"Male",photo:"/jarvis-avatars/william.jpeg",mouthX:"50%",mouthY:"38%",skin:"#bb8a70",shade:"#855844",hair:"#151c2c",outfit:"#2d2055",accent:"#ad65ff"},
 ];
 
 // Pilot-specific portrait only. Do not change the shared avatar manifest for customers.
