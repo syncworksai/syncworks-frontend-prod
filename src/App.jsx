@@ -151,6 +151,7 @@ import SettingsHub from "./pages/SettingsHub";
 import LearningCenter from "./pages/LearningCenter";
 import SyncAssistant from "./pages/SyncAssistant";
 import SyncAssistPilot from "./pages/SyncAssistPilot";
+import AIEmployeeMarketplace from "./pages/AIEmployeeMarketplace";
 import SyncAssistEmployeeDashboard from "./pages/SyncAssistEmployeeDashboard";
 import SyncAssistCommunications from "./pages/SyncAssistCommunications";
 import SyncAssistGrowth from "./pages/SyncAssistGrowth";
@@ -209,6 +210,7 @@ export default function App() {
         <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
         <Route path="/sync" element={<ProtectedRoute><SyncAssistant /></ProtectedRoute>} />
         <Route path="/sync/assist" element={<ProtectedRoute><SyncAssistPilot /></ProtectedRoute>} />
+        <Route path="/sync/assist/employees" element={<ProtectedRoute><AIEmployeeMarketplace /></ProtectedRoute>} />
         <Route path="/sync/assist/employee/:employeeId" element={<ProtectedRoute><SyncAssistEmployeeDashboard /></ProtectedRoute>} />
         <Route path="/sync/assist/communications" element={<ProtectedRoute><SyncAssistCommunications /></ProtectedRoute>} />
         <Route path="/sync/assist/growth" element={<ProtectedRoute><SyncAssistGrowth /></ProtectedRoute>} />
