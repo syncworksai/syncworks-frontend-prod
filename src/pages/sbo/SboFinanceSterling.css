@@ -147,3 +147,41 @@
  .sw-sbo-finance-overview:has(.sw-sbo-finance-attention) .sw-sbo-finance-pulse{display:none}
 }
 @media(max-height:650px){.sw-sbo-finance-overview .sw-sbo-finance-hero{display:none}.sw-sbo-finance-attention{max-height:110px}}
+
+/* Finance v4: single Sterling navigation rail; detail workflows are right-hand drawers. */
+.sw-sbo-finance-sterling-rail{display:flex;flex-direction:column;height:100%;min-height:0;border:1px solid var(--fin-border);border-radius:17px;padding:13px;background:var(--fin-glass);backdrop-filter:blur(17px);color:var(--fin-ink)}
+.sw-sbo-finance-rail-heading{padding:9px 7px 13px;display:flex;flex-direction:column;gap:5px}
+.sw-sbo-finance-rail-heading>span{font-size:10px;font-weight:850;letter-spacing:.14em;color:var(--fin-muted)}
+.sw-sbo-finance-rail-heading>strong{font-size:16px;font-weight:850}
+.sw-sbo-finance-sterling-rail nav{display:flex;flex-direction:column;gap:7px;min-height:0}
+.sw-sbo-finance-sterling-rail nav button{width:100%;border:1px solid var(--fin-border);border-radius:11px;padding:9px 10px;min-height:44px;color:var(--fin-ink);display:flex;align-items:center;gap:9px;text-align:left;font-size:12px;background:color-mix(in srgb,var(--fin-glass) 85%,transparent)}
+.sw-sbo-finance-sterling-rail nav button:hover,.sw-sbo-finance-sterling-rail nav button[aria-current="page"]{border-color:var(--fin-accent);background:color-mix(in srgb,var(--fin-accent) 15%,var(--fin-glass))}
+.sw-sbo-finance-sterling-rail nav button>span:nth-child(2){flex:1}
+.sw-sbo-finance-rail-icon{font-weight:850;font-size:16px;color:var(--fin-accent);width:19px;text-align:center}
+.sw-sbo-finance-sterling-rail nav button>svg{color:var(--fin-muted)}
+.sw-sbo-finance-rail-return{margin-top:auto;padding:10px;text-align:left;color:var(--fin-muted);font-size:11px}
+.sw-sbo-finance-center{position:relative}
+.sw-sbo-finance-shortcuts{display:flex;flex:0 0 auto;gap:6px;flex-wrap:wrap}
+.sw-sbo-finance-shortcuts button{border:1px solid var(--fin-border);border-radius:9px;background:var(--fin-glass);color:var(--fin-ink);font-size:11px;padding:7px 10px;display:flex;align-items:center;gap:7px}
+.sw-sbo-finance-shortcuts button span{color:var(--fin-accent);font-weight:850}
+.sw-sbo-finance-detail-scrim{position:fixed;inset:0;z-index:1180;background:rgba(0,0,0,.6);cursor:default}
+.sw-sbo-finance-drawer{position:fixed!important;top:0;right:0;width:min(720px,100vw);height:100dvh;max-height:100dvh;z-index:1190;padding:17px 18px 55px!important;overflow-y:auto!important;overscroll-behavior:contain;background:color-mix(in srgb,var(--fin-glass) 91%,#0a1729)!important;backdrop-filter:blur(30px);border-left:1px solid var(--fin-border);box-shadow:-22px 0 65px #0009}
+.sw-sbo-finance-drawer-heading{position:sticky;top:-17px;z-index:5;margin:-17px -18px 12px;padding:15px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#0c1928;border-bottom:1px solid var(--fin-border)}
+.sw-sbo-finance-drawer-heading span{font-size:10px;color:var(--fin-accent);font-weight:800;letter-spacing:.12em}
+.sw-sbo-finance-drawer-heading h2{font-size:19px;font-weight:850;color:#f5f8fb}
+.sw-sbo-finance-drawer-heading>button{border:1px solid var(--fin-border);border-radius:10px;padding:7px;color:#f5f8fb}
+.sw-sbo-finance-drawer>div,.sw-sbo-finance-drawer>section{max-width:100%}
+.sw-sbo-finance-drawer .rounded-3xl{border-radius:15px}
+@media(max-width:899px){
+ .sw-sbo-finance-cockpit{display:flex!important;flex-direction:column}
+ .sw-sbo-finance-sterling-rail{display:block!important;height:auto;flex:0 0 auto;padding:5px;overflow:hidden}
+ .sw-sbo-finance-rail-heading,.sw-sbo-finance-rail-return{display:none}
+ .sw-sbo-finance-sterling-rail nav{display:flex;flex-direction:row;gap:5px;overflow-x:auto;scrollbar-width:none}
+ .sw-sbo-finance-sterling-rail nav button{min-width:max-content;width:auto;flex:none;min-height:40px;padding:7px 9px;font-size:10px}
+ .sw-sbo-finance-sterling-rail nav button>svg{display:none}
+ .sw-sbo-finance-rail-icon{font-size:13px;width:auto}
+ .sw-sbo-finance-shortcuts{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+ .sw-sbo-finance-shortcuts button{white-space:nowrap;font-size:10px;padding:5px 8px}
+ .sw-sbo-finance-drawer{width:100vw;padding:10px 10px 85px!important}
+ .sw-sbo-finance-drawer-heading{margin:-10px -10px 9px;top:-10px;padding:12px}
+}
