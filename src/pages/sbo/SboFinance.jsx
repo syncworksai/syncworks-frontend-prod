@@ -289,6 +289,7 @@ export default function SboFinance() {
 
   return (
     <DashboardShell
+      className="sw-sbo-finance-shell"
       title="Finance"
       subtitle="Subscriptions, payouts, payment readiness, and fee reconciliation"
       modeBarTitle="Finance"
