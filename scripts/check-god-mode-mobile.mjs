@@ -73,7 +73,7 @@ test("Founder rail uses Victoria without obstructive commerce button", () => {
   const commerce=read("src/components/platform/PlatformCommerceDock.jsx");
   const platform=read("src/pages/PlatformDashboard.jsx");
   const launcher=read("src/components/sync/SyncAssistantLauncher.jsx");
-  assert.match(cockpit, /syncworks:victoria-open/);
+  assert.match(cockpit, /const openVictoria = \(\) => onOpen\("operations_desk"\)/);
   assert.match(cockpit, /sw-god-victoria-dock/);
   assert.match(cockpit, /sw-god-mobile-victoria/);
   assert.match(cockpit, /syncworks:commerce-kpis-open/);
@@ -95,4 +95,13 @@ test("Founder Operations Desk assigns support handoffs only through confirmed ba
   assert.match(desk, /Confirm backlog handoff/);
   assert.match(desk, /victoriaPrompt/);
   assert.doesNotMatch(desk, /backlog_action:"run"/);
+});
+
+test("Founder portrait opens Operations Desk with a Victoria briefing action", () => {
+  const cockpit=read("src/components/platform/GodModeCockpit.jsx");
+  const desk=read("src/components/platform/FounderOperationsDesk.jsx");
+  assert.match(cockpit, /aria-label="Open Victoria Chief of Staff Operations Desk"/);
+  assert.match(cockpit, /sw-god-mobile-victoria/);
+  assert.match(desk, /Talk with Victoria/);
+  assert.match(desk, /syncworks:victoria-open/);
 });
