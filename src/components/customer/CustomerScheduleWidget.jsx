@@ -4,6 +4,7 @@ import {CalendarDays,ChevronLeft,ChevronRight,Clock3,ExternalLink,List,Minus,Pen
 import {useNavigate} from "react-router-dom";
 import api from "../../api/client";
 import {useWorkspaceAppearance} from "./CustomerWorkspace";
+import {useAuth} from "../../auth/AuthContext";
 import {fetchPersonalCalendarEvents} from "../../api/personalCalendarAgenda";
 import "./CustomerScheduleWidget.css";
 
@@ -16,16 +17,24 @@ const plusDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
 const startWeek=d=>plusDays(d,-d.getDay());
 const clock=e=>e.all_day?"All day":dateOf(e).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
 const sortEvents=rows=>[...rows].sort((a,b)=>dateOf(a)-dateOf(b));
-const eventCategory=e=>String(e?.metadata?.event_category||"PERSONAL").toLowerCase()==="business"?"Business":"Personal";
+const eventCategory=e=>{const type=String(e?.metadata?.event_category||"PERSONAL").toUpperCase();return type==="PROPERTY_MANAGEMENT"?"Property Management":type==="BUSINESS"?(e.metadata?.business_name||"Business"):"Personal";};
+const hasPmProfile=profiles=>Boolean(profiles&&Object.keys(profiles).some(key=>key.toLowerCase()==="pm"));
 const fmtMonth=d=>d.toLocaleDateString([],{month:"long",year:"numeric"});
 function makeDraft(date,event){
   const start=event?.start_at?new Date(event.start_at):new Date(date.getFullYear(),date.getMonth(),date.getDate(),9,0);
   const end=event?.end_at?new Date(event.end_at):new Date(start.getTime()+60*60000);
-  return {title:event?.title||"",start:localDateTime(start),end:localDateTime(end),description:event?.description||"",all_day:Boolean(event?.all_day)};
+  const metadata=event?.metadata||{};
+  const type=String(metadata.event_category||(metadata.business_id?"BUSINESS":"PERSONAL")).toUpperCase();
+  return {title:event?.title||"",start:localDateTime(start),end:localDateTime(end),description:event?.description||"",all_day:Boolean(event?.all_day),category:["BUSINESS","PROPERTY_MANAGEMENT"].includes(type)?type:"PERSONAL",businessId:String(metadata.business_id||""),businessName:String(metadata.business_name||"")};
 }
 export default function CustomerScheduleWidget(){
   const nav=useNavigate();
   const [appearance]=useWorkspaceAppearance();
+  const {myBusinesses=[],moduleAccess={},profiles={}}=useAuth();
+  const businessOptions=useMemo(()=>Array.isArray(myBusinesses)?myBusinesses.map(b=>({id:String(b.id||b.business_id||""),name:String(b.business_name||b.name||b.legal_name||b.dba_name||"").trim()})).filter(b=>b.id&&b.name):[],[myBusinesses]);
+  const canUseBusiness=businessOptions.length>0||Boolean(moduleAccess?.sbo);
+  const canUsePm=Boolean(moduleAccess?.pm)||hasPmProfile(profiles);
+  const categoryAllowed=category=>category==="PERSONAL"||(category==="BUSINESS"&&canUseBusiness)||(category==="PROPERTY_MANAGEMENT"&&canUsePm);
   const [events,setEvents]=useState([]),[loading,setLoading]=useState(true),[loadError,setLoadError]=useState("");
   const [open,setOpen]=useState(false),[view,setView]=useState("day"),[selected,setSelected]=useState(()=>new Date());
   const [editing,setEditing]=useState(null),[draft,setDraft]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
@@ -43,9 +52,12 @@ export default function CustomerScheduleWidget(){
   const shift=n=>setSelected(d=>view==="month"?new Date(d.getFullYear(),d.getMonth()+n,Math.min(d.getDate(),28)):plusDays(d,view==="week"?n*7:n));
   const edit=e=>{setEditing(e||null);setDraft(makeDraft(selected,e));setError("");setNotice("");};
   const save=async(e)=>{e.preventDefault();if(busy)return;setError("");const start=new Date(draft.start),end=new Date(draft.end);if(!draft.title.trim()||!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||end<=start){setError("Enter a title and a valid end time after the start.");return;}
+    if(!categoryAllowed(draft.category)){setError("This workspace must be activated before events can be saved to it.");return;}
+    if(draft.category==="BUSINESS"&&!businessOptions.some(b=>b.id===draft.businessId)){setError("Choose a connected business.");return;}
     setBusy(true);try{
-      const payload={title:draft.title.trim(),description:draft.description,start_at:start.toISOString(),end_at:end.toISOString(),all_day:draft.all_day,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"America/Chicago"};
-      if(!editing){Object.assign(payload,{source:"MANUAL",metadata:{entity_type:"EVENT",event_category:"PERSONAL",fixed:true},reminder_minutes:30});}
+      const metadata={...(editing?.metadata||{}),entity_type:"EVENT",event_category:draft.category,business_id:draft.category==="BUSINESS"?draft.businessId:null,business_name:draft.category==="BUSINESS"?(businessOptions.find(b=>b.id===draft.businessId)?.name||""):draft.category==="PROPERTY_MANAGEMENT"?"Property Management":"",fixed:true};
+      const payload={title:draft.title.trim(),description:draft.description,start_at:start.toISOString(),end_at:end.toISOString(),all_day:draft.all_day,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"America/Chicago",metadata};
+      if(!editing){Object.assign(payload,{source:"MANUAL",reminder_minutes:30});}
       const res=editing?await api.patch(`/personal-calendar/events/${editing.id}/`,payload):await api.post("/personal-calendar/events/",payload);
       const id=res?.data?.id||editing?.id;
       if(!id)throw Error("Calendar did not return an event ID.");
@@ -81,6 +93,19 @@ export default function CustomerScheduleWidget(){
       {draft&&<div className="sw-schedule-editor" role="group" aria-label={editing?"Edit calendar event":"New calendar event"}>
         <form onSubmit={save}>
           <div className="sw-schedule-editor-top"><strong>{editing?"Quick edit":"New event"}</strong><button type="button" aria-label="Close editor" onClick={()=>setDraft(null)}><X size={17}/></button></div>
+          <fieldset className="sw-schedule-category"><legend>What is this event for?</legend>
+            <div className="sw-schedule-category-options">
+              <button type="button" aria-pressed={draft.category==="PERSONAL"} onClick={()=>setDraft(x=>({...x,category:"PERSONAL",businessId:"",businessName:""}))}>Personal</button>
+              {[{id:"BUSINESS",label:"Business",allowed:canUseBusiness},{id:"PROPERTY_MANAGEMENT",label:"Property Management",allowed:canUsePm}].map(option=><button key={option.id} type="button" aria-pressed={draft.category===option.id} className={!option.allowed?"locked":""} onClick={()=>option.allowed?setDraft(x=>({...x,category:option.id,businessId:"",businessName:""})):nav("/upgrade")} title={option.allowed?option.label:"Upgrade to enable "+option.label}>{option.label}{!option.allowed&&<small>Upgrade ↗</small>}</button>)}
+            </div>
+          </fieldset>
+          {draft.category==="BUSINESS"&&canUseBusiness&&<label>Which business?
+            <select required value={draft.businessId} onChange={e=>{const b=businessOptions.find(x=>x.id===e.target.value);setDraft(x=>({...x,businessId:e.target.value,businessName:b?.name||""}));}}>
+              <option value="">Choose a business</option>{businessOptions.map(b=><option value={b.id} key={b.id}>{b.name}</option>)}
+            </select>
+            {!businessOptions.length&&<small>No connected business found. Complete business setup first.</small>}
+          </label>}
+          {draft.category==="PROPERTY_MANAGEMENT"&&canUsePm&&<p className="sw-schedule-pm-notice">Property Management workspace. Specific properties are managed in the full PM calendar.</p>}
           <label>Title<input required maxLength={200} value={draft.title} onChange={e=>setDraft(x=>({...x,title:e.target.value}))}/></label>
           <div className="sw-schedule-editor-times"><label>Starts<input type="datetime-local" required value={draft.start} onChange={e=>setDraft(x=>({...x,start:e.target.value}))}/></label><label>Ends<input type="datetime-local" required value={draft.end} onChange={e=>setDraft(x=>({...x,end:e.target.value}))}/></label></div>
           <label>Notes<input maxLength={1000} value={draft.description} onChange={e=>setDraft(x=>({...x,description:e.target.value}))}/></label>
