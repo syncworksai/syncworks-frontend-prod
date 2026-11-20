@@ -203,7 +203,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
     <div className="mx-auto grid h-full max-w-[1540px] grid-cols-1 gap-3 px-3 py-3 md:grid-cols-[165px_minmax(0,1fr)_225px] md:px-5 lg:grid-cols-[205px_minmax(0,1fr)_270px]">
       <aside className="sw-sbo-rail hidden min-h-0 flex-col gap-2 rounded-2xl p-3 md:flex">
         <div className="mb-2 text-[10px] font-bold uppercase tracking-[.2em] text-cyan-300">Business workspace</div>
-        {menu.map(item=><button key={item.id} onClick={event=>openPanel(item.id,event)} className="sw-sbo-rail-link flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-left text-sm"><item.icon size={17} className="shrink-0 text-cyan-300"/><span>{item.title}</span><ChevronRight size={13} className="ml-auto shrink-0 text-slate-400"/></button>)}
+        {menu.map(item=><button key={item.id} onClick={event=>openPanel(item.id,event)} aria-expanded={panel===item.id} className={`sw-sbo-rail-link flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-left text-sm ${panel===item.id?"is-active":""}`}><item.icon size={17} className="shrink-0 text-cyan-300"/><span>{item.title}</span><ChevronRight size={13} className="ml-auto shrink-0 text-slate-400"/></button>)}
       </aside>
       <main className="sw-sbo-office-canvas flex min-h-0 flex-col gap-3">
         <header className="sw-sbo-topbar flex shrink-0 items-start justify-between gap-2 rounded-2xl p-3">
@@ -238,7 +238,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
               {opsError&&<p className="text-xs text-amber-200">{opsError}</p>}
               {staff.length?staff.slice(0,8).map(person=><button type="button" key={person.user_id||person.member_id||person.name} onClick={()=>nav("/sbo/tech-board")} className="flex w-full items-center justify-between gap-2 border-t border-white/10 py-2 text-left text-xs">
                 <span className="truncate font-semibold">{person.name||"Team member"}</span><span className="shrink-0 text-slate-300">{(person.jobs||[]).length} assigned</span>
-              </button>):<p className="py-3 text-xs text-slate-400">{ops?"No schedulable technicians returned. Solo owners can open dispatch to manage work.":"Loading technician assignments…"}</p>}
+              </button>):<div className="py-3">{!ops&&!opsError&&motionEnabled?<div aria-label="Loading technician assignments" role="status" className="space-y-3"><div className="sw-sbo-motion-skeleton h-4 w-3/4"/><div className="sw-sbo-motion-skeleton h-4 w-2/3"/><div className="sw-sbo-motion-skeleton h-4 w-1/2"/></div>:<p className="text-xs text-slate-400">{ops?"No schedulable technicians returned. Solo owners can open dispatch to manage work.":opsError||"Loading technician assignments…"}</p>}</div>}
             </div>
           </section>
           <section className="sw-sbo-ops-panel flex min-h-0 flex-col overflow-hidden rounded-2xl border p-3">
