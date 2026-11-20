@@ -50,14 +50,16 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
   const rootRef=useRef(null);
   const triggerRef=useRef(null);
   const [popoverPosition,setPopoverPosition]=useState(null);
-  const positionPanel=useCallback((trigger)=>{
+  const positionPanel=useCallback((trigger,kind)=>{
     if(!trigger||!rootRef.current||window.matchMedia("(max-width: 767px)").matches){
       setPopoverPosition(null);return;
     }
     const root=rootRef.current.getBoundingClientRect();
     const target=trigger.getBoundingClientRect();
     const width=Math.min(414,Math.max(280,root.width-36));
-    const height=Math.min(430,root.height-24);
+    const itemCount=(links[kind]||[]).length+(kind==="team"?1:0);
+    const desiredHeight=kind==="operations"||kind==="subcontractors"?430:Math.min(430,105+Math.ceil(itemCount/2)*54);
+    const height=Math.max(140,Math.min(desiredHeight,root.height-24));
     const centerX=target.left+target.width/2;
     const toLeft=centerX>root.left+root.width*.57;
     const desired=toLeft?target.left-root.left-width-13:target.right-root.left+13;
@@ -70,11 +72,11 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
     const target=event?.currentTarget||null;
     triggerRef.current=target;
     setPanel(next);
-    positionPanel(target);
+    positionPanel(target,next);
   },[positionPanel]);
   useEffect(()=>{
     if(!panel)return;
-    const reposition=()=>positionPanel(triggerRef.current);
+    const reposition=()=>positionPanel(triggerRef.current,panel);
     window.addEventListener("resize",reposition);
     return()=>window.removeEventListener("resize",reposition);
   },[panel,positionPanel]);
