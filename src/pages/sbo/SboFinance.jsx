@@ -269,6 +269,8 @@ export default function SboFinance() {
     }
   }
 
+  const [financeTab,setFinanceTab]=useState("readiness");
+
   async function startConnect() {
     setBusyAction("connect");
     setError("");
@@ -334,23 +336,22 @@ export default function SboFinance() {
       <div className="grid min-h-0 gap-3 lg:grid-cols-[230px_minmax(0,1fr)]">
         <SidebarNav title="Business OS" subtitle="Finance" items={navItems} />
         <div className="min-w-0 space-y-4">
+          <nav aria-label="Finance workspace sections" className="sw-business-compact-nav flex flex-wrap gap-2 rounded-xl border border-cyan-300/20 bg-slate-950/75 p-2 backdrop-blur-xl">
+            {[
+              ["readiness","Payment readiness"],
+              ["payments","Plans & payouts"],
+              ["reconciliation","Fee reconciliation"]
+            ].map(([id,label])=><button key={id} type="button" aria-current={financeTab===id?"page":undefined} onClick={()=>setFinanceTab(id)} className={`min-h-10 rounded-lg border px-3 text-xs font-semibold transition ${financeTab===id?"border-cyan-300/50 bg-cyan-500/20 text-cyan-50":"border-slate-700/70 bg-slate-900/40 text-slate-300 hover:border-cyan-300/30"}`}>{label}</button>)}
+            <button type="button" onClick={()=>navigate("/sbo/invoices")} className="min-h-10 rounded-lg border border-slate-700/70 px-3 text-xs font-semibold text-slate-300">Invoices →</button>
+          </nav>
+          {error ? <div role="alert" className="rounded-lg border border-rose-400/25 bg-rose-900/40 p-3 text-sm text-rose-100">{error}</div> : null}
+          {message ? <div role="status" className="rounded-lg border border-emerald-400/25 bg-emerald-900/40 p-3 text-sm text-emerald-100">{message}</div> : null}
+          <div className={financeTab==="readiness"?"space-y-3":"hidden"}>
           <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
                       <div className="text-sm font-black text-emerald-100">New: Profit & Cash Workspace</div>
                       <div className="mt-1 text-xs leading-5 text-slate-300">Track labor, materials, expenses, job contribution, recorded margins, and planned cash events.</div>
                       <button type="button" onClick={() => navigate("/sbo/finance-intelligence")} className="mt-3 min-h-10 rounded-xl border border-cyan-400/25 bg-cyan-500/10 px-3 text-xs font-black text-cyan-100">Open Profit & Cash →</button>
                     </div>
-
-          {error ? (
-            <div className="rounded-3xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200">
-              {error}
-            </div>
-          ) : null}
-
-          {message ? (
-            <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-              {message}
-            </div>
-          ) : null}
 
           <PaymentMigrationChecklist />
           <section className="relative overflow-hidden rounded-[2rem] border border-cyan-500/20 bg-slate-950/70 p-5 shadow-[0_0_60px_rgba(34,211,238,0.08)] md:p-7">
@@ -455,6 +456,8 @@ export default function SboFinance() {
             </div>
           </GlassCard>
 
+          </div>
+          <div className={financeTab==="payments"?"space-y-3":"hidden"}>
           <div className="grid gap-5 xl:grid-cols-2">
             <GlassCard
               title="Business plan"
@@ -561,6 +564,8 @@ export default function SboFinance() {
             </GlassCard>
           </div>
 
+          </div>
+          <div className={financeTab==="reconciliation"?"space-y-3":"hidden"}>
           <GlassCard
             title="Platform fee reconciliation"
             subtitle="SyncWorks tracks the 1% platform fee regardless of payment method."
@@ -603,6 +608,7 @@ export default function SboFinance() {
               Open cash fee invoices
             </button>
           </GlassCard>
+          </div>
         </div>
       </div>
     </DashboardShell>
