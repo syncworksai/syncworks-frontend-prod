@@ -143,6 +143,16 @@ export default function SyncAssistant() {
   const {avatarId,choose:chooseAvatar}=useJarvisAvatar();
   const [teamEmployees, setTeamEmployees] = useState([]);
   const [roleProgress, setRoleProgress] = useState(null);
+  useEffect(()=>{
+    if(!pilotAccess)return;
+    let alive=true;
+    const load=()=>api.get("/sync-ai/assist/pilot/team/",{timeout:12000})
+      .then(({data})=>{if(alive)setTeamEmployees(data.employees||[])})
+      .catch(()=>{});
+    load();
+    window.addEventListener("sw:assist-team-updated",load);
+    return()=>{alive=false;window.removeEventListener("sw:assist-team-updated",load)};
+  },[pilotAccess]);
   useEffect(() => {
     if (!pilotAccess) return;
     let active = true;
@@ -178,7 +188,7 @@ export default function SyncAssistant() {
     const entry = teamEmployees.find((row) => row.id === avatar.id);
     return entry ? {
       ...avatar,
-      photo: getAvatarPhotoForUser(avatar, user),
+      photo: entry.photo || getAvatarPhotoForUser(avatar, user),
       name: entry.name,
       role: String(entry.role).toLowerCase().split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" "),
       executionStatus: entry.execution_status,
