@@ -22,6 +22,8 @@ import PaymentMigrationChecklist from "../../components/payments/PaymentMigratio
 import DashboardShell from "../../components/dashboard/DashboardShell";
 import GlassCard from "../../components/dashboard/GlassCard";
 import SidebarNav from "../../components/dashboard/SidebarNav";
+import { BarChart3, ClipboardList, LayoutDashboard, FileText, TrendingUp } from "lucide-react";
+import "./SboFinanceSterling.css";
 
 function cx(...parts) {
   return parts.filter(Boolean).join(" ");
@@ -129,22 +131,15 @@ export default function SboFinance() {
   const [connect, setConnect] = useState(null);
 
   const navItems = [
-    { label: "Dashboard", icon: "⌂", onClick: () => navigate("/sbo") },
-    { label: "Job Requests", icon: "▤", onClick: () => navigate("/tickets?view=new") },
-    { label: "Inbox", icon: "💬", onClick: () => navigate("/inbox"), badge: "0" },
-    { label: "Calendar", icon: "◷", onClick: () => navigate("/calendar") },
-    { label: "Customers", icon: "◉", onClick: () => navigate("/sbo/customers") },
-    { label: "Leads", icon: "◎", onClick: () => navigate("/sbo/leads") },
-    { label: "Employees", icon: "👥", onClick: () => navigate("/team/invites") },
-    { label: "Partners", icon: "◇", onClick: () => navigate("/sbo/partners") },
-    { label: "Product Settings", icon: "⚙", onClick: () => navigate("/sbo/catalog") },
-    { label: "Finance", icon: "$", active: true, onClick: () => navigate("/sbo/finance") },
-    { label: "Social Media", icon: "✦", onClick: () => navigate("/sbo/growth") },
-    { label: "Reports", icon: "↗", onClick: () => navigate("/sbo/reports") },
-    { label: "Profit & Cash", icon: "▦", onClick: () => navigate("/sbo/finance-intelligence") },
-    { label: "Settings", icon: "⚙", onClick: () => navigate("/sbo/settings?return=%2Fsbo") },
+    {label:"Business overview",icon:"⌂",onClick:()=>navigate("/sbo")},
+    {label:"Finance home",icon:"$",active:true,onClick:()=>setFinanceTab("overview")},
+    {label:"Payment readiness",icon:"✓",onClick:()=>setFinanceTab("readiness")},
+    {label:"Plans & payouts",icon:"▤",onClick:()=>setFinanceTab("payments")},
+    {label:"Fee reconciliation",icon:"↗",onClick:()=>setFinanceTab("reconciliation")},
+    {label:"Invoices",icon:"▦",onClick:()=>navigate("/sbo/invoices")},
+    {label:"Profit & Cash",icon:"◫",onClick:()=>navigate("/sbo/finance-intelligence")},
+    {label:"Reports",icon:"↗",onClick:()=>navigate("/sbo/reports")},
   ];
-
   const loadAll = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -269,7 +264,8 @@ export default function SboFinance() {
     }
   }
 
-  const [financeTab,setFinanceTab]=useState("readiness");
+  const [financeTab,setFinanceTab]=useState("overview");
+  const openFinanceTab=(tab)=>setFinanceTab(tab);
 
   async function startConnect() {
     setBusyAction("connect");
@@ -333,20 +329,37 @@ export default function SboFinance() {
         </div>
       }
     >
-      <div className="grid min-h-0 gap-3 lg:grid-cols-[230px_minmax(0,1fr)]">
+      <div className="sw-sbo-finance-cockpit grid min-h-0 gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
         <SidebarNav title="Business OS" subtitle="Finance" items={navItems} />
-        <div className="min-w-0 space-y-4">
+        <div className="sw-sbo-finance-center min-w-0 space-y-4">
           <nav aria-label="Finance workspace sections" className="sw-business-compact-nav flex flex-wrap gap-2 rounded-xl border border-cyan-300/20 bg-slate-950/75 p-2 backdrop-blur-xl">
             {[
+              ["overview","Overview"],
               ["readiness","Payment readiness"],
               ["payments","Plans & payouts"],
               ["reconciliation","Fee reconciliation"]
             ].map(([id,label])=><button key={id} type="button" aria-current={financeTab===id?"page":undefined} onClick={()=>setFinanceTab(id)} className={`min-h-10 rounded-lg border px-3 text-xs font-semibold transition ${financeTab===id?"border-cyan-300/50 bg-cyan-500/20 text-cyan-50":"border-slate-700/70 bg-slate-900/40 text-slate-300 hover:border-cyan-300/30"}`}>{label}</button>)}
             <button type="button" onClick={()=>navigate("/sbo/invoices")} className="min-h-10 rounded-lg border border-slate-700/70 px-3 text-xs font-semibold text-slate-300">Invoices →</button>
           </nav>
+          {financeTab==="overview" && <section className="sw-sbo-finance-overview" aria-label="Finance overview">
+            <header className="sw-sbo-finance-hero"><div><span className="sw-sbo-finance-kicker">YOUR OFFICE · FINANCE</span><h1>Finance command center</h1><p>Payment readiness, receivables and accounting access in one place.</p></div><button type="button" onClick={loadAll} disabled={loading} aria-label="Refresh finance status"><RefreshCw size={17} className={loading?"animate-spin":""}/></button></header>
+            <div className="sw-sbo-finance-pulse"><div><span>PAYMENT OPERATIONS</span><p>{loading?"Loading live payment status…":readinessScore===3?"Subscriptions, billing and payouts are ready":`${3-readinessScore} of 3 payment setup requirements need attention`}</p></div><button onClick={()=>openFinanceTab("readiness")}>Review <ArrowLeft size={14} className="rotate-180"/></button></div>
+            <div className="sw-sbo-finance-stats">
+              <button type="button" onClick={()=>openFinanceTab("readiness")}><strong>{loading?"—":readinessPercent+"%"}</strong><small>Payment readiness</small></button>
+              <button type="button" onClick={()=>openFinanceTab("payments")}><strong>{connectReady?"Ready":"Review"}</strong><small>Stripe payouts</small></button>
+              <button type="button" onClick={()=>openFinanceTab("reconciliation")}><strong>1%</strong><small>Platform fee policy</small></button>
+            </div>
+            <div className="sw-sbo-finance-actions">
+              <button type="button" onClick={()=>openFinanceTab("readiness")}><ShieldCheck size={25}/><strong>Payment setup</strong><span>Subscriptions, billing card and verification</span></button>
+              <button type="button" onClick={()=>openFinanceTab("payments")}><WalletCards size={25}/><strong>Plans & payouts</strong><span>Business plan and Stripe Connect</span></button>
+              <button type="button" onClick={()=>openFinanceTab("reconciliation")}><CircleDollarSign size={25}/><strong>Fee reconciliation</strong><span>Cash, card and outside payments</span></button>
+              <button type="button" onClick={()=>navigate("/sbo/finance-intelligence")}><BarChart3 size={25}/><strong>Profit & cash</strong><span>Expenses, job margins and forecasts</span></button>
+            </div>
+            <div className="sw-sbo-finance-quick"><button type="button" onClick={()=>navigate("/sbo/invoices")}><FileText size={15}/> Invoices</button><button type="button" onClick={()=>navigate("/sbo/reports")}><TrendingUp size={15}/> Reports & exports</button><button type="button" onClick={()=>navigate("/sbo")}><LayoutDashboard size={15}/> Business office</button></div>
+          </section>}
           {error ? <div role="alert" className="rounded-lg border border-rose-400/25 bg-rose-900/40 p-3 text-sm text-rose-100">{error}</div> : null}
           {message ? <div role="status" className="rounded-lg border border-emerald-400/25 bg-emerald-900/40 p-3 text-sm text-emerald-100">{message}</div> : null}
-          <div className={financeTab==="readiness"?"space-y-3":"hidden"}>
+          <div className={financeTab==="readiness"?"sw-sbo-finance-detail space-y-3":"hidden"}>
           <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
                       <div className="text-sm font-black text-emerald-100">New: Profit & Cash Workspace</div>
                       <div className="mt-1 text-xs leading-5 text-slate-300">Track labor, materials, expenses, job contribution, recorded margins, and planned cash events.</div>
@@ -457,7 +470,7 @@ export default function SboFinance() {
           </GlassCard>
 
           </div>
-          <div className={financeTab==="payments"?"space-y-3":"hidden"}>
+          <div className={financeTab==="payments"?"sw-sbo-finance-detail space-y-3":"hidden"}>
           <div className="grid gap-5 xl:grid-cols-2">
             <GlassCard
               title="Business plan"
@@ -565,7 +578,7 @@ export default function SboFinance() {
           </div>
 
           </div>
-          <div className={financeTab==="reconciliation"?"space-y-3":"hidden"}>
+          <div className={financeTab==="reconciliation"?"sw-sbo-finance-detail space-y-3":"hidden"}>
           <GlassCard
             title="Platform fee reconciliation"
             subtitle="SyncWorks tracks the 1% platform fee regardless of payment method."
