@@ -7,7 +7,7 @@ import { AVATARS, getAvatarPhotoForUser } from "../sync/JarvisAvatar";
 const GROUPS = [
   { title: "People & Growth", subtitle: "Users, businesses, acquisition", icon: Users, tone: "cyan", links: [["users","User Control"],["user_directory","Directory"],["businesses","Businesses"],["prospects","Prospects"],["testers","Testers"],["growth_os","Growth OS"],["affiliates","Affiliates"]] },
   { title: "Revenue & Operations", subtitle: "Payments, service, communications", icon: CreditCard, tone: "violet", links: [["billing","Billing"],["requests","Support"],["ads","Ads"],["broadcasts","Broadcasts"],["news","News"]] },
-  { title: "Build & Automation", subtitle: "Approvals, pipeline and AI workers", icon: Bot, tone: "blue", links: [["__build_backlog","Build Backlog"],["developer_agent","Developer Agent"],["pilot_readiness","Pilot Readiness"]] },
+  { title: "Build & Automation", subtitle: "Approvals, pipeline and AI workers", icon: Bot, tone: "blue", links: [["operations_desk","Operations Desk"],["__build_backlog","Build Backlog"],["developer_agent","Developer Agent"],["pilot_readiness","Pilot Readiness"]] },
   { title: "Quality & Release", subtitle: "Platform readiness and testing", icon: ShieldCheck, tone: "amber", links: [["health_launch_lock","Health Launch"],["health_smoke_test","Health Testing"],["pilot_readiness","Pilot Readiness"]] },
 ];
 
@@ -59,7 +59,7 @@ export default function GodModeCockpit({ onOpen }) {
       <div><p className="sw-god-eyebrow"><Activity size={13}/> Founder command center</p><h1>SYNCWORKS <span>GOD MODE</span></h1><p className="sw-god-tagline">Platform intelligence · Growth · Operations · Launch readiness</p></div>
       <div className="sw-god-header-actions">
         <button type="button" onClick={refresh} aria-label="Refresh platform metrics"><RefreshCw size={16}/><span>Refresh</span></button>
-        <button type="button" onClick={()=>onOpen("developer_agent")}><Bot size={16}/> Developer Agent</button>
+        <button type="button" onClick={()=>onOpen("operations_desk")}><Bot size={16}/> Assign Work</button>
         <button type="button" onClick={()=>onOpen("pilot_readiness")}><ShieldCheck size={16}/> Release</button>
       </div>
     </header>
@@ -87,7 +87,7 @@ export default function GodModeCockpit({ onOpen }) {
         <section className="sw-god-action-panel">
           <p className="sw-god-eyebrow"><Layers3 size={13}/> Quick access</p>
           <h2>Run the platform</h2>
-          <button onClick={()=>onOpen("__build_backlog")}><Workflow size={18}/> Open build pipeline <ArrowUpRight size={15}/></button>
+          <button onClick={()=>onOpen("operations_desk")}><Workflow size={18}/> Operations Desk · Assign work <ArrowUpRight size={15}/></button>
           <button onClick={()=>onOpen("requests")}><BellRing size={18}/> Review support <ArrowUpRight size={15}/></button>
           <button onClick={()=>onOpen("billing")}><CreditCard size={18}/> Revenue & billing <ArrowUpRight size={15}/></button>
           <button onClick={openCommerce}><Activity size={18}/> Commerce KPIs <ArrowUpRight size={15}/></button>
