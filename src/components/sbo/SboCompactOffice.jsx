@@ -1,4 +1,5 @@
 import "./SboCompactOffice.css";
+import "../../styles/SyncWorksMotion.css";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, ClipboardList, DollarSign, Users, X, Settings2, Megaphone, BarChart3, Clock3, Route, Plus, ChevronRight, RefreshCw, Activity, Wrench, PanelLeftClose } from "lucide-react";
@@ -46,6 +47,20 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
   const nav=useNavigate();
   const {user}=useAuth();
   const isPilot=String(user?.email||"").trim().toLowerCase()==="jacoblord7@outlook.com";
+  const readMotion=()=>{try{return JSON.parse(localStorage.getItem("sw_workspace_appearance_v1")||"{}")?.motion!==false;}catch{return true;}};
+  const [motionAllowed,setMotionAllowed]=useState(readMotion);
+  const [reducedMotion,setReducedMotion]=useState(()=>window.matchMedia?.("(prefers-reduced-motion: reduce)").matches||false);
+  useEffect(()=>{
+    const mq=window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync=()=>setReducedMotion(mq.matches);
+    const preference=()=>setMotionAllowed(readMotion());
+    mq.addEventListener?.("change",sync);
+    window.addEventListener("sw:workspace-appearance",preference);
+    window.addEventListener("storage",preference);
+    return()=>{mq.removeEventListener?.("change",sync);window.removeEventListener("sw:workspace-appearance",preference);window.removeEventListener("storage",preference);};
+  },[]);
+  const motionEnabled=motionAllowed&&!reducedMotion;
+  const go=useCallback((path)=>nav(path,{viewTransition:motionEnabled}),[nav,motionEnabled]);
   const [panel,setPanel]=useState(null);
   const rootRef=useRef(null);
   const triggerRef=useRef(null);
@@ -182,8 +197,8 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
   const lastTicketId=lastTicket?.id||lastTicket?.ticket_id;
   const room=({future:"syncworks-future",classic:"classic-office",modern:"modern-dark",light:"clean-light",legacy:"syncworks-future"}[theme]||"syncworks-future");
   const tile="sw-sbo-glass-tile rounded-2xl px-3 py-3 text-left transition hover:border-cyan-300/70";
-  const button=(label,url)=><button key={url} type="button" onClick={()=>nav(url)} className="flex items-center justify-between rounded-xl border border-cyan-400/20 bg-white/[.045] px-3 py-3 text-left text-sm text-white hover:bg-cyan-500/10">{label}<ChevronRight size={16} className="text-cyan-200"/></button>;
-  return <div ref={rootRef} className={`sw-sbo-compact relative isolate h-[calc(100dvh-172px)] min-h-0 overflow-hidden text-white sm:h-[calc(100dvh-110px)] ${theme==="light"?"sw-sbo-light":""}`} style={{"--sw-sbo-room":`url("/office-themes/${room}.webp")`}}>
+  const button=(label,url,i=0)=><button key={url} style={{"--sw-motion-order":Math.min(i,10)}} type="button" onClick={()=>go(url)} className="flex items-center justify-between rounded-xl border border-cyan-400/20 bg-white/[.045] px-3 py-3 text-left text-sm text-white hover:bg-cyan-500/10">{label}<ChevronRight size={16} className="text-cyan-200"/></button>;
+  return <div ref={rootRef} className={`sw-sbo-compact ${motionEnabled?"sw-sbo-motion":""} relative isolate h-[calc(100dvh-172px)] min-h-0 overflow-hidden text-white sm:h-[calc(100dvh-110px)] ${theme==="light"?"sw-sbo-light":""}`} style={{"--sw-sbo-room":`url("/office-themes/${room}.webp")`}}>
     <div aria-hidden="true" className="sw-sbo-room-art absolute inset-0 -z-20"/><div aria-hidden="true" className="sw-sbo-room-shade absolute inset-0 -z-10"/>
     <div className="mx-auto grid h-full max-w-[1540px] grid-cols-1 gap-3 px-3 py-3 md:grid-cols-[165px_minmax(0,1fr)_225px] md:px-5 lg:grid-cols-[205px_minmax(0,1fr)_270px]">
       <aside className="sw-sbo-rail hidden min-h-0 flex-col gap-2 rounded-2xl p-3 md:flex">
@@ -262,7 +277,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
     </div>
     {quickMessageTicket&&<TicketQuickMessage ticketId={quickMessageTicket} onClose={()=>setQuickMessageTicket(null)}/>}
     {panel&&<div className="sw-sbo-panel-shade absolute inset-0 z-40 flex items-end justify-end bg-[#010513]/65 p-2 backdrop-blur-sm sm:p-4" onClick={()=>setPanel(null)}>
-      <section role="dialog" aria-modal="true" aria-label={panel==="subcontractors"?"Subcontractors":menu.find(m=>m.id===panel)?.title||"Operations"} onClick={e=>e.stopPropagation()} className={`sw-sbo-drawer flex h-auto max-h-[96%] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-cyan-300/40 p-4 text-white shadow-2xl ${popoverPosition?"sw-sbo-contextual-popout":""}`} data-arrow-side={popoverPosition?.side} style={popoverPosition?{"--sbo-popout-left":`${popoverPosition.left}px`,"--sbo-popout-top":`${popoverPosition.top}px`,"--sbo-popout-width":`${popoverPosition.width}px`,"--sbo-popout-height":`${popoverPosition.height}px`,"--sbo-arrow-top":`${popoverPosition.arrowTop}px`}:undefined}>
+      <section role="dialog" aria-modal="true" aria-label={panel==="subcontractors"?"Subcontractors":menu.find(m=>m.id===panel)?.title||"Operations"} onClick={e=>e.stopPropagation()} className={`sw-sbo-drawer flex h-auto max-h-[96%] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-cyan-300/40 p-4 text-white shadow-2xl ${popoverPosition?"sw-sbo-contextual-popout":""}`} data-arrow-side={popoverPosition?.side} style={popoverPosition?{"--sbo-popout-left":`${popoverPosition.left}px`,"--sbo-popout-top":`${popoverPosition.top}px`,"--sbo-popout-width":`${popoverPosition.width}px`,"--sbo-popout-height":`${popoverPosition.height}px`,"--sbo-arrow-top":`${popoverPosition.arrowTop}px`,"--sw-motion-origin-x":popoverPosition.side==="right"?"100%":"0%","--sw-motion-origin-y":`${Math.round(popoverPosition.arrowTop/popoverPosition.height*100)}%`,"--sw-motion-enter-x":popoverPosition.side==="right"?"12px":"-12px"}:undefined}>
         <div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-semibold">{panel==="subcontractors"?"Subcontractors":menu.find(m=>m.id===panel)?.title||"Operations"}</h2><button aria-label="Close drawer" onClick={()=>setPanel(null)} className="rounded-xl border border-white/15 p-2"><X size={18}/></button></div>
         {panel==="operations"&&<div className="mb-3 space-y-3 overflow-y-auto text-sm">
           <div className="grid grid-cols-3 gap-2 text-center"><div className="rounded-xl bg-white/5 p-2"><strong className="block text-xl">{ops?summary.scheduled_jobs:"—"}</strong><small>Scheduled</small></div><div className="rounded-xl bg-white/5 p-2"><strong className="block text-xl">{ops?summary.route_conflicts:"—"}</strong><small>Conflicts</small></div><div className="rounded-xl bg-white/5 p-2"><strong className="block text-xl">{averageMinutes??"—"}</strong><small>Avg clock min*</small></div></div>
@@ -277,7 +292,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
           <h3 className="font-semibold">Technician routes today</h3>
           {staff.length?staff.map(p=><div key={p.user_id} className="rounded-xl border border-white/15 bg-white/5 p-3"><div className="flex justify-between"><strong>{p.name}</strong><span>{p.jobs?.length||0} jobs</span></div>{(p.jobs||[]).map(j=><button key={j.ticket_id} onClick={()=>nav(`/tickets/${j.ticket_id}`)} className="mt-2 flex w-full justify-between gap-2 border-t border-white/10 pt-2 text-left text-xs"><span className="truncate">{j.title}</span><span className="shrink-0 text-cyan-200">{j.travel?.minutes??"—"} min travel · {j.risk||"—"}</span></button>)}</div>):<p className="text-slate-400">No schedulable technician routes returned for today.</p>}
         </div>}
-        {panel==="subcontractors"?<SubcontractorQuickInvite activeBusinessId={activeBusinessId}/>:<div className="grid min-h-0 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">{(links[panel]||[]).map(([label,url])=>button(label,url))}{panel==="team"&&<button type="button" onClick={event=>openPanel("subcontractors",event)} className="flex items-center justify-between rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-3 text-left text-sm text-white hover:bg-cyan-500/20">Subcontractors · Invite <ChevronRight size={16} className="text-cyan-200"/></button>}</div>}
+        {panel==="subcontractors"?<SubcontractorQuickInvite activeBusinessId={activeBusinessId}/>:<div className="grid min-h-0 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">{(links[panel]||[]).map(([label,url],i)=>button(label,url,i))}{panel==="team"&&<button type="button" onClick={event=>openPanel("subcontractors",event)} className="flex items-center justify-between rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-3 text-left text-sm text-white hover:bg-cyan-500/20">Subcontractors · Invite <ChevronRight size={16} className="text-cyan-200"/></button>}</div>}
       </section>
     </div>}
   </div>;
