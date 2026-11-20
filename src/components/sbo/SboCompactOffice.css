@@ -493,3 +493,12 @@
 @media(prefers-reduced-motion:reduce){
   .sw-sbo-compact .sw-sbo-contextual-popout{animation:none;}
 }
+
+/* Separate, directly interactive portraits on desktop, not a single group target. */
+@media(min-width:768px){
+ .sw-sbo-compact .sw-sbo-desktop-ai{display:flex!important;gap:5px!important;border:0!important;background:transparent!important;padding:0!important;box-shadow:none!important;flex-shrink:0}
+ .sw-sbo-compact .sw-sbo-desktop-ai-agent{min-width:43px!important;padding:3px 4px!important;border:1px solid var(--sbo-border)!important;border-radius:12px!important;background:var(--sbo-glass)!important;cursor:pointer;position:relative;z-index:3}
+ .sw-sbo-compact .sw-sbo-desktop-ai-agent:hover,.sw-sbo-compact .sw-sbo-desktop-ai-agent:focus-visible{border-color:var(--sbo-accent)!important;transform:translateY(-1px)}
+ .sw-sbo-compact .sw-sbo-desktop-ai-agent img{width:34px!important;height:34px!important}
+}
+@media(min-width:768px) and (max-width:1140px){.sw-sbo-compact .sw-sbo-desktop-ai-agent{min-width:35px!important}.sw-sbo-compact .sw-sbo-desktop-ai-agent img{width:29px!important;height:29px!important}.sw-sbo-compact .sw-sbo-desktop-ai-agent span{font-size:8px!important}}
