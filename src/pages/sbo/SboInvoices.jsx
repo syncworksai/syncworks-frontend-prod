@@ -99,7 +99,7 @@ function InvoiceCard({ invoice, onOpen }) {
     <button type="button" onClick={()=>onOpen(invoice.id)} className="sw-invoice-ledger-row" aria-label={`Open invoice ${invoice.id} for ${invoice.customer_name || "customer"}`}>
       <span className="sw-invoice-ledger-identity">
         <strong>INV-{invoice.id} · {invoice.customer_name || "Customer"}</strong>
-        <small>{invoice.service_title || invoice.title || "Service invoice"} · {fmtDate(invoice.due_date)}</small>
+        <small>{invoice.title || invoice.service_title || "Service invoice"} · {fmtDate(invoice.due_date)}</small>
       </span>
       <span className="sw-invoice-ledger-amounts">
         <span>Paid {money(paid)} of {money(invoice.total)}</span>
@@ -118,7 +118,7 @@ function buildInvoiceMailto(invoice) {
   const message=[
     `Hello ${invoice.customer_name||""},`,
     "",
-    `Here is invoice #${invoice.id} for ${invoice.service_title||invoice.title||"services"}.`,
+    `Here is invoice #${invoice.id} for ${invoice.title||invoice.service_title||"services"}.`,
     `Invoice total: ${money(invoice.total)}`,
     `Remaining balance: ${money(invoice.balance_due)}`,
     `Due date: ${date}`,
@@ -128,8 +128,8 @@ function buildInvoiceMailto(invoice) {
     "",
     "You may need to sign in to view this invoice.",
     "Thank you."
-  ].join("\\n");
-  return `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(`Invoice #${invoice.id} · ${invoice.service_title||invoice.title||"Services"}`)}&body=${encodeURIComponent(message)}`;
+  ].join("\n");
+  return `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(`Invoice #${invoice.id} · ${invoice.title||invoice.service_title||"Services"}`)}&body=${encodeURIComponent(message)}`;
 }
 
 function InvoiceEditForm({invoice,busy,onSave,onCancel}) {
@@ -212,7 +212,7 @@ function DetailPanel({ invoice, busy, onClose, onAction, onEdit, onSendDraft }) 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">Invoice #{invoice.id}</div>
-          <h2 className="mt-1 text-2xl font-black text-white">{invoice.service_title || invoice.title}</h2>
+          <h2 className="mt-1 text-2xl font-black text-white">{invoice.title || invoice.service_title}</h2>
           <div className="mt-1 text-sm text-slate-400">{invoice.customer_name}</div>
         </div>
         <div className="flex items-center gap-2"><StatePill state={invoice.derived_state} /><button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 text-slate-400"><XCircle className="h-5 w-5" /></button></div>
@@ -220,7 +220,7 @@ function DetailPanel({ invoice, busy, onClose, onAction, onEdit, onSendDraft }) 
 
       <div className="mt-3 flex flex-wrap gap-2" aria-label="Invoice quick actions">
         {invoice.derived_state==="DRAFT"&&<button type="button" onClick={()=>setEditing(v=>!v)} className="sw-invoice-toolbar-button"><Pencil size={15}/> Quick edit</button>}
-        <button type="button" onClick={()=>onSendDraft(invoice)} className="sw-invoice-toolbar-button"><Mail size={15}/> {emailAvailable?"Open prefilled email":"Copy invoice link"}</button>
+        {invoice.derived_state!=="VOID"&&<button type="button" disabled={invoice.derived_state==="DRAFT"} title={invoice.derived_state==="DRAFT"?"Issue the invoice in SyncWorks before emailing the customer.":"Opens an editable email draft"} onClick={()=>onSendDraft(invoice)} className="sw-invoice-toolbar-button disabled:opacity-40"><Mail size={15}/> {invoice.derived_state==="DRAFT"?"Issue first to email":emailAvailable?"Open prefilled email":"Copy invoice link"}</button>}
         {Number(invoice.amount_paid)>0&&<button type="button" onClick={()=>setRequestingRefund(v=>!v)} className="sw-invoice-toolbar-button"><RotateCcw size={15}/> Refund review</button>}
       </div>
       <p className="mt-2 text-xs text-slate-400">Email opens your device mail app as a draft. It does not attach a PDF, send automatically or mark the invoice delivered. The customer link requires sign-in.</p>
