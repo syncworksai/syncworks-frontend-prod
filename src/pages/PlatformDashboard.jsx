@@ -11,6 +11,7 @@ import PlatformMobileDashboard from "../components/platform/PlatformMobileDashbo
 import GodModeBuildBacklog from "../components/platform/GodModeBuildBacklog";
 import PlatformGrowthEngineTab from "../components/platform/PlatformGrowthEngineTab";
 import UsersManager from "../components/platform/UsersManager";
+import GodModeLiveUsers from "./GodModeLiveUsers";
 import BusinessesManager from "../components/platform/BusinessesManager";
 import BillingManager from "../components/platform/BillingManager";
 import BroadcastsManager from "../components/platform/BroadcastsManager";
@@ -24,7 +25,8 @@ import PilotReadinessPanel from "./platform/PilotReadinessPanel";
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "growth_os", label: "Growth OS" },
-  { id: "users", label: "Users" },
+  { id: "users", label: "User Control" },
+  { id: "user_directory", label: "User Directory" },
   { id: "businesses", label: "Businesses" },
   { id: "prospects", label: "Prospects" },
   { id: "testers", label: "Business Testers" },
@@ -1480,7 +1482,8 @@ export default function PlatformDashboard() {
             {tab === "overview" ? <div className="hidden lg:block"><PlatformOverviewTab /></div> : null}
             {tab === "__build_backlog" ? <GodModeBuildBacklog /> : null}
             {tab === "growth_os" ? <PlatformGrowthEngineTab /> : null}
-            {tab === "users" ? <UsersManager /> : null}
+            {tab === "users" ? <GodModeLiveUsers /> : null}
+            {tab === "user_directory" ? <UsersManager /> : null}
             {tab === "businesses" ? <BusinessesManager /> : null}
             {tab === "prospects" ? <GodModeProspects /> : null}
             {tab === "testers" ? <GodModeProspects pilotOnly /> : null}
