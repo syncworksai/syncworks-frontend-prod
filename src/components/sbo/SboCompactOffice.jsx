@@ -1,5 +1,5 @@
 import "./SboCompactOffice.css";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, ClipboardList, DollarSign, Users, X, Settings2, Megaphone, BarChart3, Clock3, Route, Plus, ChevronRight, RefreshCw, Activity, Wrench, PanelLeftClose } from "lucide-react";
 import api from "../../api/client";
@@ -47,6 +47,37 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
   const {user}=useAuth();
   const isPilot=String(user?.email||"").trim().toLowerCase()==="jacoblord7@outlook.com";
   const [panel,setPanel]=useState(null);
+  const rootRef=useRef(null);
+  const triggerRef=useRef(null);
+  const [popoverPosition,setPopoverPosition]=useState(null);
+  const positionPanel=useCallback((trigger)=>{
+    if(!trigger||!rootRef.current||window.matchMedia("(max-width: 767px)").matches){
+      setPopoverPosition(null);return;
+    }
+    const root=rootRef.current.getBoundingClientRect();
+    const target=trigger.getBoundingClientRect();
+    const width=Math.min(414,Math.max(280,root.width-36));
+    const height=Math.min(430,root.height-24);
+    const centerX=target.left+target.width/2;
+    const toLeft=centerX>root.left+root.width*.57;
+    const desired=toLeft?target.left-root.left-width-13:target.right-root.left+13;
+    const left=Math.max(8,Math.min(root.width-width-8,desired));
+    const top=Math.max(8,Math.min(root.height-height-8,target.top-root.top-24));
+    const arrowTop=Math.max(20,Math.min(height-22,target.top+target.height/2-root.top-top));
+    setPopoverPosition({left,top,width,height,side:toLeft?"right":"left",arrowTop});
+  },[]);
+  const openPanel=useCallback((next,event)=>{
+    const target=event?.currentTarget||null;
+    triggerRef.current=target;
+    setPanel(next);
+    positionPanel(target);
+  },[positionPanel]);
+  useEffect(()=>{
+    if(!panel)return;
+    const reposition=()=>positionPanel(triggerRef.current);
+    window.addEventListener("resize",reposition);
+    return()=>window.removeEventListener("resize",reposition);
+  },[panel,positionPanel]);
   // Lock only the SBO landing office: the header, main canvas, and dock
   // keep independent fixed anchors instead of moving with document scroll.
   useEffect(()=>{
@@ -87,10 +118,12 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
   },[]);
 
   useEffect(()=>{
-    const openMore=()=>setPanel("more");
+    const openMore=()=>{triggerRef.current=null;setPopoverPosition(null);setPanel("more");};
     window.addEventListener("sw:sbo-more-open",openMore);
     if(new URLSearchParams(window.location.search).get("panel")==="more") {
       setPanel("more");
+      triggerRef.current=null;
+      setPopoverPosition(null);
       window.history.replaceState(window.history.state,"",window.location.pathname);
     }
     return()=>window.removeEventListener("sw:sbo-more-open",openMore);
@@ -148,12 +181,12 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
   const room=({future:"syncworks-future",classic:"classic-office",modern:"modern-dark",light:"clean-light",legacy:"syncworks-future"}[theme]||"syncworks-future");
   const tile="sw-sbo-glass-tile rounded-2xl px-3 py-3 text-left transition hover:border-cyan-300/70";
   const button=(label,url)=><button key={url} type="button" onClick={()=>nav(url)} className="flex items-center justify-between rounded-xl border border-cyan-400/20 bg-white/[.045] px-3 py-3 text-left text-sm text-white hover:bg-cyan-500/10">{label}<ChevronRight size={16} className="text-cyan-200"/></button>;
-  return <div className={`sw-sbo-compact relative isolate h-[calc(100dvh-172px)] min-h-0 overflow-hidden text-white sm:h-[calc(100dvh-110px)] ${theme==="light"?"sw-sbo-light":""}`} style={{"--sw-sbo-room":`url("/office-themes/${room}.webp")`}}>
+  return <div ref={rootRef} className={`sw-sbo-compact relative isolate h-[calc(100dvh-172px)] min-h-0 overflow-hidden text-white sm:h-[calc(100dvh-110px)] ${theme==="light"?"sw-sbo-light":""}`} style={{"--sw-sbo-room":`url("/office-themes/${room}.webp")`}}>
     <div aria-hidden="true" className="sw-sbo-room-art absolute inset-0 -z-20"/><div aria-hidden="true" className="sw-sbo-room-shade absolute inset-0 -z-10"/>
     <div className="mx-auto grid h-full max-w-[1540px] grid-cols-1 gap-3 px-3 py-3 md:grid-cols-[165px_minmax(0,1fr)_225px] md:px-5 lg:grid-cols-[205px_minmax(0,1fr)_270px]">
       <aside className="sw-sbo-rail hidden min-h-0 flex-col gap-2 rounded-2xl p-3 md:flex">
         <div className="mb-2 text-[10px] font-bold uppercase tracking-[.2em] text-cyan-300">Business workspace</div>
-        {menu.map(item=><button key={item.id} onClick={()=>setPanel(item.id)} className="sw-sbo-rail-link flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-left text-sm"><item.icon size={17} className="shrink-0 text-cyan-300"/><span>{item.title}</span><ChevronRight size={13} className="ml-auto shrink-0 text-slate-400"/></button>)}
+        {menu.map(item=><button key={item.id} onClick={event=>openPanel(item.id,event)} className="sw-sbo-rail-link flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-left text-sm"><item.icon size={17} className="shrink-0 text-cyan-300"/><span>{item.title}</span><ChevronRight size={13} className="ml-auto shrink-0 text-slate-400"/></button>)}
       </aside>
       <main className="sw-sbo-office-canvas flex min-h-0 flex-col gap-3">
         <header className="sw-sbo-topbar flex shrink-0 items-start justify-between gap-2 rounded-2xl p-3">
@@ -169,12 +202,12 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
         {err&&<p role="alert" className="shrink-0 truncate rounded-lg bg-rose-900/45 p-2 text-xs">{err}</p>}
         <section className="sw-sbo-briefing flex shrink-0 items-center justify-between gap-2 rounded-2xl p-3">
           <div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-widest text-cyan-300">Operations pulse</div><div className="truncate text-xs text-slate-200">{summary.at_risk_or_late ? `${summary.at_risk_or_late} job(s) at risk` : ops && unassignedStaff.length ? `${unassignedStaff.length} schedulable technician(s) have no assigned jobs today` : "Review calls, scheduling and team performance"}</div></div>
-          <button onClick={()=>setPanel("operations")} className="shrink-0 text-xs font-semibold text-cyan-200">Details →</button>
+          <button onClick={event=>openPanel("operations",event)} className="shrink-0 text-xs font-semibold text-cyan-200">Details →</button>
         </section>
         <div className="sw-sbo-kpis grid shrink-0 grid-cols-3 gap-2">
-          <button className="sw-sbo-stat rounded-xl p-2 text-left" onClick={()=>setPanel("jobs")}><strong className="block text-lg text-cyan-200">{fmt(openTickets)}</strong><small className="text-[10px] text-slate-300">Open jobs</small></button>
-          <button className="sw-sbo-stat rounded-xl p-2 text-left" onClick={()=>setPanel("operations")}><strong className="block text-lg text-amber-200">{ops?fmt(summary.at_risk_or_late):"—"}</strong><small className="text-[10px] text-slate-300">At risk</small></button>
-          <button className="sw-sbo-stat rounded-xl p-2 text-left" onClick={()=>setPanel("operations")}><strong className="block text-lg text-emerald-200">{ops?fmt(summary.active_clocks):"—"}</strong><small className="text-[10px] text-slate-300">Active clocks</small></button>
+          <button className="sw-sbo-stat rounded-xl p-2 text-left" onClick={event=>openPanel("jobs",event)}><strong className="block text-lg text-cyan-200">{fmt(openTickets)}</strong><small className="text-[10px] text-slate-300">Open jobs</small></button>
+          <button className="sw-sbo-stat rounded-xl p-2 text-left" onClick={event=>openPanel("operations",event)}><strong className="block text-lg text-amber-200">{ops?fmt(summary.at_risk_or_late):"—"}</strong><small className="text-[10px] text-slate-300">At risk</small></button>
+          <button className="sw-sbo-stat rounded-xl p-2 text-left" onClick={event=>openPanel("operations",event)}><strong className="block text-lg text-emerald-200">{ops?fmt(summary.active_clocks):"—"}</strong><small className="text-[10px] text-slate-300">Active clocks</small></button>
         </div>
         <div className="sw-sbo-desktop-operations hidden min-h-0 flex-1 gap-3 md:grid" aria-label="Business operations overview">
           <section className="sw-sbo-ops-panel flex min-h-0 flex-col overflow-hidden rounded-2xl border p-3">
@@ -203,7 +236,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
         </div>
         <div className="sw-sbo-action-grid grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-2 md:hidden">
           <button className={tile} onClick={()=>nav("/sbo/tech-board")}><Users className="mb-2 text-cyan-200" size={23}/><div className="font-semibold">Tech Board</div><p className="text-xs text-slate-300">Staff & job progress</p></button>
-          <button className={tile} onClick={()=>setPanel("schedule")}><CalendarDays className="mb-2 text-cyan-200" size={23}/><div className="font-semibold">Schedule</div><p className="text-xs text-slate-300">Jobs & appointments</p></button>
+          <button className={tile} onClick={event=>openPanel("schedule",event)}><CalendarDays className="mb-2 text-cyan-200" size={23}/><div className="font-semibold">Schedule</div><p className="text-xs text-slate-300">Jobs & appointments</p></button>
           <button className={tile} onClick={()=>nav("/sbo/invoices")}><DollarSign className="mb-2 text-cyan-200" size={23}/><div className="font-semibold">Invoicing</div><p className="text-xs text-slate-300">Billing & payments</p></button>
           <button className={tile} onClick={()=>nav("/sbo/leads")}><BarChart3 className="mb-2 text-cyan-200" size={23}/><div className="font-semibold">Leads</div><p className="text-xs text-slate-300">Sales opportunities</p></button>
         </div>
@@ -217,17 +250,17 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
 
       </main>
       <aside className="sw-sbo-rail hidden min-h-0 flex-col gap-3 overflow-hidden rounded-2xl p-3 md:flex">
-        <div className="flex items-center justify-between"><strong className="text-sm">Quick intelligence</strong><button onClick={()=>setPanel("operations")} aria-label="Open KPI details" className="text-cyan-200"><ChevronRight size={17}/></button></div>
+        <div className="flex items-center justify-between"><strong className="text-sm">Quick intelligence</strong><button onClick={event=>openPanel("operations",event)} aria-label="Open KPI details" className="text-cyan-200"><ChevronRight size={17}/></button></div>
         <section className="sw-sbo-stat shrink-0 rounded-xl p-3"><div className="mb-2 flex justify-between text-xs"><strong>Needs Attention</strong><span className={attentionEntries.length?"text-amber-200":"text-emerald-200"}>{ops?attentionEntries.length:"—"}</span></div>
-          <div className="space-y-2">{attentionEntries.length?attentionEntries.slice(0,3).map((entry,i)=><button type="button" key={i} onClick={()=>setPanel(entry.panel)} className="w-full rounded-lg border border-amber-300/20 bg-amber-400/5 px-2 py-2 text-left text-xs text-amber-100">{entry.label} →</button>):<p className="text-xs text-slate-400">{ops?"No operational alerts detected.":"Operations alerts not yet available."}</p>}</div>
+          <div className="space-y-2">{attentionEntries.length?attentionEntries.slice(0,3).map((entry,i)=><button type="button" key={i} onClick={event=>openPanel(entry.panel,event)} className="w-full rounded-lg border border-amber-300/20 bg-amber-400/5 px-2 py-2 text-left text-xs text-amber-100">{entry.label} →</button>):<p className="text-xs text-slate-400">{ops?"No operational alerts detected.":"Operations alerts not yet available."}</p>}</div>
         </section>
         <div className="sw-sbo-stat min-h-0 flex-1 overflow-hidden rounded-xl p-3"><div className="mb-2 text-xs font-semibold">Technician leaderboard</div>{leaderboard.length?leaderboard.map((person,i)=><div key={i} className="flex justify-between border-b border-white/10 py-2 text-xs"><span className="truncate">{i+1}. {person.name}</span><strong className="ml-2">{person.count}</strong></div>):<p className="text-xs text-slate-400">No completed assignments in the loaded job records.</p>}<p className="mt-2 text-[10px] text-slate-400">Completed jobs in loaded records, not all-time totals</p></div>
-        <button onClick={()=>setPanel("operations")} className="sw-sbo-stat shrink-0 rounded-xl px-3 py-2 text-left text-xs">Route conflicts: {ops?fmt(summary.route_conflicts):"—"} · Travel delay: {ops?fmt(summary.traffic_delay_minutes):"—"} min</button>
+        <button onClick={event=>openPanel("operations",event)} className="sw-sbo-stat shrink-0 rounded-xl px-3 py-2 text-left text-xs">Route conflicts: {ops?fmt(summary.route_conflicts):"—"} · Travel delay: {ops?fmt(summary.traffic_delay_minutes):"—"} min</button>
       </aside>
     </div>
     {quickMessageTicket&&<TicketQuickMessage ticketId={quickMessageTicket} onClose={()=>setQuickMessageTicket(null)}/>}
     {panel&&<div className="sw-sbo-panel-shade absolute inset-0 z-40 flex items-end justify-end bg-[#010513]/65 p-2 backdrop-blur-sm sm:p-4" onClick={()=>setPanel(null)}>
-      <section role="dialog" aria-modal="true" aria-label={panel==="subcontractors"?"Subcontractors":menu.find(m=>m.id===panel)?.title||"Operations"} onClick={e=>e.stopPropagation()} className="sw-sbo-drawer flex h-auto max-h-[96%] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-cyan-300/40 p-4 text-white shadow-2xl">
+      <section role="dialog" aria-modal="true" aria-label={panel==="subcontractors"?"Subcontractors":menu.find(m=>m.id===panel)?.title||"Operations"} onClick={e=>e.stopPropagation()} className={`sw-sbo-drawer flex h-auto max-h-[96%] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-cyan-300/40 p-4 text-white shadow-2xl ${popoverPosition?"sw-sbo-contextual-popout":""}`} data-arrow-side={popoverPosition?.side} style={popoverPosition?{"--sbo-popout-left":`${popoverPosition.left}px`,"--sbo-popout-top":`${popoverPosition.top}px`,"--sbo-popout-width":`${popoverPosition.width}px`,"--sbo-popout-height":`${popoverPosition.height}px`,"--sbo-arrow-top":`${popoverPosition.arrowTop}px`}:undefined}>
         <div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-semibold">{panel==="subcontractors"?"Subcontractors":menu.find(m=>m.id===panel)?.title||"Operations"}</h2><button aria-label="Close drawer" onClick={()=>setPanel(null)} className="rounded-xl border border-white/15 p-2"><X size={18}/></button></div>
         {panel==="operations"&&<div className="mb-3 space-y-3 overflow-y-auto text-sm">
           <div className="grid grid-cols-3 gap-2 text-center"><div className="rounded-xl bg-white/5 p-2"><strong className="block text-xl">{ops?summary.scheduled_jobs:"—"}</strong><small>Scheduled</small></div><div className="rounded-xl bg-white/5 p-2"><strong className="block text-xl">{ops?summary.route_conflicts:"—"}</strong><small>Conflicts</small></div><div className="rounded-xl bg-white/5 p-2"><strong className="block text-xl">{averageMinutes??"—"}</strong><small>Avg clock min*</small></div></div>
@@ -242,7 +275,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
           <h3 className="font-semibold">Technician routes today</h3>
           {staff.length?staff.map(p=><div key={p.user_id} className="rounded-xl border border-white/15 bg-white/5 p-3"><div className="flex justify-between"><strong>{p.name}</strong><span>{p.jobs?.length||0} jobs</span></div>{(p.jobs||[]).map(j=><button key={j.ticket_id} onClick={()=>nav(`/tickets/${j.ticket_id}`)} className="mt-2 flex w-full justify-between gap-2 border-t border-white/10 pt-2 text-left text-xs"><span className="truncate">{j.title}</span><span className="shrink-0 text-cyan-200">{j.travel?.minutes??"—"} min travel · {j.risk||"—"}</span></button>)}</div>):<p className="text-slate-400">No schedulable technician routes returned for today.</p>}
         </div>}
-        {panel==="subcontractors"?<SubcontractorQuickInvite activeBusinessId={activeBusinessId}/>:<div className="grid min-h-0 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">{(links[panel]||[]).map(([label,url])=>button(label,url))}{panel==="team"&&<button type="button" onClick={()=>setPanel("subcontractors")} className="flex items-center justify-between rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-3 text-left text-sm text-white hover:bg-cyan-500/20">Subcontractors · Invite <ChevronRight size={16} className="text-cyan-200"/></button>}</div>}
+        {panel==="subcontractors"?<SubcontractorQuickInvite activeBusinessId={activeBusinessId}/>:<div className="grid min-h-0 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">{(links[panel]||[]).map(([label,url])=>button(label,url))}{panel==="team"&&<button type="button" onClick={event=>openPanel("subcontractors",event)} className="flex items-center justify-between rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-3 py-3 text-left text-sm text-white hover:bg-cyan-500/20">Subcontractors · Invite <ChevronRight size={16} className="text-cyan-200"/></button>}</div>}
       </section>
     </div>}
   </div>;
