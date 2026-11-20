@@ -6,6 +6,7 @@ import { AVATARS, getAvatarPhotoForUser } from "./JarvisAvatar";
 import api from "../../api/client";
 import SyncAlertDrawer from "./SyncAlertDrawer";
 import VictoriaCommandCenter from "./VictoriaCommandCenter";
+import BusinessAssistantDock from "./BusinessAssistantDock";
 
 const HIDDEN_PREFIXES = [
   "/login",
@@ -51,6 +52,10 @@ export default function SyncAssistantLauncher() {
     /^\/(?:login|register|logout|forgot-password|reset-password|accept-invite|upgrade)(?:\/|$)/.test(location.pathname);
   const eligibleVictoriaRoute = /^\/(?:customer|sbo|pm|platform|calendar|tickets|tenant|investor|sync|employee|inbox)(?:\/|$)/.test(location.pathname);
   const showChief = pilotFounder && eligibleVictoriaRoute && !excludedVictoria;
+  // All SBO subpages share one persistent AI dock. The SBO landing already
+  // has its header and mobile portrait row, so do not render duplicates there.
+  const businessWorkspaceRoute=/^\/(?:sbo\/|pm(?:\/|$)|employee(?:\/|$)|team\/invites(?:\/|$)|ceo(?:\/|$))/.test(location.pathname);
+  const showBusinessDock=pilotFounder && businessWorkspaceRoute && !taskDialogOpen;
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [unread, setUnread] = useState(0);
 
@@ -138,7 +143,7 @@ export default function SyncAssistantLauncher() {
   return (
     <>
       <div className={`fixed bottom-24 right-4 z-[260] flex flex-col items-end gap-3 lg:bottom-6 lg:right-6 ${taskDialogOpen && showChief ? "hidden" : mobileVisible ? "" : "hidden lg:flex"}`}>
-        {showChief && !isCustomerHome && (
+        {showChief && !isCustomerHome && !showBusinessDock && (
           <>
             <button type="button" aria-haspopup="dialog" aria-label="Open Victoria Chief of Staff briefing" title="Victoria — Chief of Staff" onClick={() => setCommandOpen(true)}
               className="group flex min-h-12 items-center gap-2 rounded-full border border-cyan-300/45 bg-[#061327]/95 py-1 pl-1 pr-2 text-left text-white shadow-[0_0_26px_rgba(34,211,238,.22)] transition hover:border-cyan-300">
@@ -163,6 +168,7 @@ export default function SyncAssistantLauncher() {
 
 
       </div>
+      {showBusinessDock&&<BusinessAssistantDock user={user} onVictoria={()=>setCommandOpen(true)}/>}
       {showChief && <VictoriaCommandCenter open={commandOpen} onClose={()=>setCommandOpen(false)}/>}
       <SyncAlertDrawer open={alertsOpen} onClose={() => { setAlertsOpen(false); loadUnread(); }} onCountChange={setUnread} />
     </>

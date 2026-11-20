@@ -1,0 +1,79 @@
+/* One persistent route-level dock on SBO subpages. The overview already
+   provides the same portraits in its header/mobile office and is excluded. */
+.sw-business-assist-dock {
+  position:fixed;
+  left:max(16px,env(safe-area-inset-left));
+  bottom:18px;
+  z-index:245;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding:6px 10px;
+  max-width:min(94vw,360px);
+  border:1px solid rgba(112,204,249,.32);
+  border-radius:20px;
+  background:rgba(8,20,40,.91);
+  color:#f2f8ff;
+  box-shadow:0 12px 30px rgba(0,0,0,.3);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
+.sw-business-assist-caption {
+  color:#a6c8df;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.08em;
+  white-space:nowrap;
+}
+.sw-business-assist-person {
+  display:flex;
+  align-items:center;
+  flex-direction:column;
+  gap:2px;
+  width:53px;
+  min-width:0;
+  border-radius:12px;
+  padding:2px;
+  color:inherit;
+  transition:transform .15s cubic-bezier(.2,.8,.2,1);
+}
+.sw-business-assist-person:active {transform:scale(.96);}
+.sw-business-assist-person:hover {transform:translateY(-2px);}
+.sw-business-assist-person:focus-visible {outline:2px solid #44d7fa;outline-offset:2px;}
+.sw-business-assist-person img {
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  object-fit:cover;
+  object-position:center top;
+  border:1px solid rgba(109,218,255,.6);
+}
+.sw-business-assist-person span {
+  display:block;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:9px;
+  line-height:1.2;
+}
+@media (max-width:767px) {
+  .sw-business-assist-dock {
+    left:10px;
+    bottom:calc(102px + env(safe-area-inset-bottom));
+    padding:5px 7px;
+    gap:5px;
+    max-width:calc(100vw - 20px);
+  }
+  .sw-business-assist-person {width:44px;}
+  .sw-business-assist-person img {width:30px;height:30px;}
+  .sw-business-assist-person span {font-size:8px;}
+}
+@media (max-height:650px) and (max-width:767px) {
+  .sw-business-assist-dock {bottom:calc(88px + env(safe-area-inset-bottom));}
+  .sw-business-assist-person img {width:26px;height:26px;}
+}
+@media (prefers-reduced-motion:reduce) {
+  .sw-business-assist-person {transition:none;}
+  .sw-business-assist-person:active,.sw-business-assist-person:hover {transform:none;}
+}
