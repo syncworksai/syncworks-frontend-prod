@@ -5,6 +5,7 @@ import api from "../api/client";
 import "./GodModeScene.css";
 
 import GodModeCockpit from "../components/platform/GodModeCockpit";
+import FounderOperationsDesk from "../components/platform/FounderOperationsDesk";
 import PlatformCommerceDock from "../components/platform/PlatformCommerceDock";
 import { X } from "lucide-react";
 import PlatformOverviewTab from "../components/platform/PlatformOverviewTab";
@@ -25,6 +26,7 @@ import PilotReadinessPanel from "./platform/PilotReadinessPanel";
 
 const TABS = [
   { id: "overview", label: "Overview" },
+  { id: "operations_desk", label: "Operations Desk" },
   { id: "growth_os", label: "Growth OS" },
   { id: "users", label: "User Control" },
   { id: "user_directory", label: "User Directory" },
@@ -1457,7 +1459,7 @@ export default function PlatformDashboard() {
     params.set("tab", next);
     setQuery(params);
   };
-  const drawerOrder = ["users","user_directory","businesses","prospects","testers","growth_os","affiliates","billing","requests","ads","broadcasts","news","__build_backlog","developer_agent","pilot_readiness","health_launch_lock","health_smoke_test"];
+  const drawerOrder = ["operations_desk","users","user_directory","businesses","prospects","testers","growth_os","affiliates","billing","requests","ads","broadcasts","news","__build_backlog","developer_agent","pilot_readiness","health_launch_lock","health_smoke_test"];
   const drawerIndex = drawerOrder.indexOf(tab);
   const adjacentTab = (step) => drawerOrder[(drawerIndex + step + drawerOrder.length) % drawerOrder.length];
   useEffect(() => {
@@ -1493,6 +1495,7 @@ export default function PlatformDashboard() {
           {tab !== "overview" && <div className="sw-god-drawer-header flex"><div><p>SYNCWORKS / GOD MODE</p><h2>{TABS.find(t=>t.id===tab)?.label || "Build Backlog"}</h2></div><div className="sw-god-drawer-navigation"><button type="button" onClick={() => setTab(adjacentTab(-1))} aria-label="Previous God Mode tool" title="Previous tool">‹</button><button type="button" onClick={() => setTab(adjacentTab(1))} aria-label="Next God Mode tool" title="Next tool">›</button><button type="button" onClick={() => setTab("overview")} aria-label="Close panel" title="Close panel"><X size={20} /></button></div></div>}
           <div className="sw-god-drawer-body">
             {tab === "overview" ? <div className="hidden lg:block"><PlatformOverviewTab /></div> : null}
+            {tab === "operations_desk" ? <FounderOperationsDesk onOpen={setTab} /> : null}
             {tab === "__build_backlog" ? <GodModeBuildBacklog /> : null}
             {tab === "growth_os" ? <PlatformGrowthEngineTab /> : null}
             {tab === "users" ? <GodModeLiveUsers /> : null}
