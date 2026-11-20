@@ -397,6 +397,7 @@ export default function CustomerDashboard({ workspaceTheme = "legacy" }) {
           </div>
 
           <AroundYouPanel />
+          {workspaceTheme === "legacy" && String(user?.email||"").toLowerCase() !== "jacoblord7@outlook.com" && <AutomationDiscoverCTA /> }
           </div>
         </main>
 
