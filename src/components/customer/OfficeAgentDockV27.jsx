@@ -20,6 +20,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const [chatHistory, setChatHistory] = useState({});
   const [chatError, setChatError] = useState("");
   const [chatBusy, setChatBusy] = useState(false);
+  const [dialogTheme, setDialogTheme] = useState({});
   const chatEndRef = useRef(null);
   const chatFieldRef = useRef(null);
   const dockRef = useRef(null);
@@ -94,6 +95,15 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     return () => { window.removeEventListener("keydown", onEscape); document.body.style.overflow = previous; window.cancelAnimationFrame(id); };
   }, [selected]);
   useEffect(() => { chatEndRef.current?.scrollIntoView({block:"end",behavior:"instant"}); }, [messages.length,selected,chatBusy]);
+  const selectEmployee = (person) => {
+    const computed = dockRef.current ? window.getComputedStyle(dockRef.current) : null;
+    if (computed) {
+      const vars = ["--sw-workspace-accent","--sw-lobby-glass","--sw-ui-surface","--sw-ui-text","--sw-lobby-border"];
+      setDialogTheme(Object.fromEntries(vars.map(key=>[key,computed.getPropertyValue(key).trim()]).filter(([,value])=>value)));
+    }
+    setChatError("");
+    setSelected(current=>current===person.id?null:person.id);
+  };
   const sendMessage = async (event) => {
     event.preventDefault();
     const question = chatDraft.trim();
@@ -143,7 +153,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           {shown.map((person) => (
             <button key={person.id} type="button" className="sw-office-agent"
               aria-label={`Open ${person.name}, ${person.role}`}
-              onClick={() => setSelected((old) => old === person.id ? null : person.id)}>
+              onClick={() => selectEmployee(person)}>
               {person.photo?<img src={person.photo} alt="" loading="lazy" />:<span className="grid h-full w-full place-items-center rounded-full border border-cyan-300/30 bg-cyan-500/15 text-lg font-bold text-cyan-100">{person.name?.charAt(0)||"AI"}</span>}
               <span className="sw-office-agent-names"><strong>{person.name}</strong><small>{person.role}</small></span>
               <ChevronRight size={15} className="sw-office-agent-chevron" aria-hidden="true" />
@@ -161,7 +171,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   );
   const conversation = active && shown.some(person => person.id === active.id) ? createPortal(
     <div className="sw-ai-conversation-overlay" role="presentation" onMouseDown={event => {if(event.target===event.currentTarget)setSelected(null)}}>
-      <section className="sw-ai-conversation" role="dialog" aria-modal="true" aria-labelledby="sw-ai-conversation-title" data-bubble-theme={theme}>
+      <section className="sw-ai-conversation" style={dialogTheme} role="dialog" aria-modal="true" aria-labelledby="sw-ai-conversation-title" data-bubble-theme={theme}>
         <header className="sw-ai-conversation-header">
           <div className="sw-ai-conversation-identity">
             <img className="sw-ai-conversation-photo" src={active.photo} alt={`${active.name}, ${active.role}`} />
