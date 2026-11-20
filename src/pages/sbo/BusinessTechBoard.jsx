@@ -1,6 +1,6 @@
 import React,{useCallback,useEffect,useMemo,useState} from "react";
 import {useNavigate,useSearchParams} from "react-router-dom";
-import {ChevronDown,ChevronRight,RefreshCw,Users,ClipboardList,X,ArrowLeft} from "lucide-react";
+import {ChevronDown,ChevronRight,RefreshCw,Users,ClipboardList,X,ArrowLeft,Clock3} from "lucide-react";
 import api from "../../api/client";
 import TechnicianJobActions from "../../components/sbo/TechnicianJobActions";
 import TicketQuickMessage from "../../components/tickets/TicketQuickMessage";
@@ -22,6 +22,15 @@ export default function BusinessTechBoard({employeeMode=false}){
  const [groups,setGroups]=useState([]),[group,setGroup]=useState(""),[groupName,setGroupName]=useState(""),[groupPanel,setGroupPanel]=useState(false),[messageTicket,setMessageTicket]=useState(null);
  const [offset,setOffset]=useState(0),[workforce,setWorkforce]=useState([]);
  const [mobileTab,setMobileTab]=useState("team"),[filtersOpen,setFiltersOpen]=useState(false);
+ const [shift,setShift]=useState(null),[shiftHistory,setShiftHistory]=useState([]),[shiftBusy,setShiftBusy]=useState(false),[clockError,setClockError]=useState(""),[now,setNow]=useState(Date.now()),[requestedPickups,setRequestedPickups]=useState([]);
+ const shiftHeaders={"X-Business-Id":businessId};
+ const loadShift=async()=>{if(support||!businessId)return;try{const r=await api.get("/business/technician/time/shift/",{headers:shiftHeaders});setShift(r.data?.active||null);setShiftHistory(r.data?.recent||[]);setClockError("");}catch(e){setClockError(e.response?.data?.detail||"Shift clock is not available yet.");}};
+ const changeShift=async(action)=>{if(shiftBusy)return;setShiftBusy(true);setClockError("");try{await api.post("/business/technician/time/shift/",{action},{headers:shiftHeaders});await loadShift();}catch(e){setClockError(e.response?.data?.detail||"Shift update failed.");}finally{setShiftBusy(false);}};
+ useEffect(()=>{loadShift();},[businessId,support]);
+ useEffect(()=>{const t=setInterval(()=>setNow(Date.now()),15000);return()=>clearInterval(t);},[]);
+ const formatDuration=(seconds)=>{const n=Math.max(0,Math.floor(Number(seconds)||0));return `${Math.floor(n/3600)}h ${String(Math.floor(n%3600/60)).padStart(2,"0")}m`;};
+ const stamp=(value)=>value?new Date(value).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}):"—";
+ const timeDiff=(start,end)=>start&&end?formatDuration((new Date(end)-new Date(start))/1000):null;
  const load=useCallback(async()=>{
   setLoading(true);setError("");
   try{
@@ -45,22 +54,23 @@ export default function BusinessTechBoard({employeeMode=false}){
  const profileMap=useMemo(()=>new Map(workforce.map(w=>[String(w.user_id),w.workforce||{}])),[workforce]);
  const filtered=staff.filter(p=>(!group||(String((profileMap.get(String(p.user_id))||p).technician_group_id||"")===group))&&(!skill||(p.skills||[]).some(s=>s.toLowerCase()===skill.toLowerCase()))&&(!search||p.name.toLowerCase().includes(search.toLowerCase())));
  const pageSize=16;
- const shown=filtered.slice(offset,offset+pageSize);
+ const shown=[...filtered].sort((a,b)=>Number(Boolean(b.is_self))-Number(Boolean(a.is_self))).slice(offset,offset+pageSize);
  const createGroup=async()=>{if(!groupName.trim())return;try{const r=await api.post("/sync-ai/business/technician-groups/",{name:groupName.trim()});setGroups(v=>[...v,r.data]);setGroup(String(r.data.id));setGroupName("");setNotice("Crew / region saved.");}catch(e){setError(e.response?.data?.detail||"Could not create group.");}};
  const moveGroup=async(member,groupId)=>{try{await saveWorkforceMember(member,{technician_group_id:groupId?Number(groupId):null});setNotice("Technician group updated.");await load();}catch(e){setError(e.response?.data?.detail||"Could not update technician group.");}};
  const assign=async(ticket,member)=>{if(support||employeeMode)return;setBusy(String(ticket));setError("");
   try{await api.post(`/tickets/${ticket}/assign_member/`,{business_member_id:Number(member)},{headers:{"X-Business-Id":businessId}});setNotice("Job assigned");await load();}
   catch(e){setError(e.response?.data?.detail||"Assignment failed.");}finally{setBusy("");}
  };
- const pickup=async(ticket)=>{setBusy(String(ticket));try{const r=await api.post(`/business/technician/jobs/${ticket}/pickup/`,{});setNotice(r.data?.detail||"Pickup requested. Dispatch approval required.");}catch(e){setError(e.response?.data?.detail||"Cannot request pickup.");}finally{setBusy("");}};
+ const pickup=async(ticket)=>{setBusy(String(ticket));try{const r=await api.post(`/business/technician/jobs/${ticket}/pickup/`,{});setRequestedPickups(ids=>[...new Set([...ids,String(ticket)])]);setNotice(r.data?.detail||"Pickup requested. Dispatch approval required.");}catch(e){setError(e.response?.data?.detail||"Cannot request pickup.");}finally{setBusy("");}};
  const decide=async(id,decision)=>{setBusy(String(id));try{await api.post(`/business/technician/pickups/${id}/respond/`,{decision});setNotice(`Pickup ${decision.toLowerCase()}d`);await load();}catch(e){setError(e.response?.data?.detail||"Approval failed.");}finally{setBusy("");}};
  const jobCard=(j,person=null)=> <article key={j.ticket_id} className="sw-tech-job rounded-xl border border-white/10 p-2.5">
   <div className="flex justify-between gap-2"><button type="button" onClick={()=>nav(`/tickets/${j.ticket_id}`)} className="min-w-0 truncate text-left text-xs font-semibold text-white">{j.title||"Service request"} <span className="text-slate-400">#{j.ticket_id}</span></button><span className="shrink-0 text-[10px] text-cyan-200">{String(j.status||"NEW").replaceAll("_"," ")}</span></div>
   <div className="mt-1 text-[11px] text-slate-300">{hour(j.scheduled_start)}{j.scheduled_end?`–${hour(j.scheduled_end)}`:""} · {(j.required_skills||[]).join(", ")||"General"}</div>
+  <div className="sw-tech-job-times">{j.en_route_at&&<span>Departed {stamp(j.en_route_at)}</span>}{j.on_site_at&&<span>Arrived {stamp(j.on_site_at)}</span>}{j.work_started_at&&<span>Started {stamp(j.work_started_at)}</span>}{j.completed_at&&<span>Finished {stamp(j.completed_at)}</span>}{timeDiff(j.en_route_at,j.on_site_at)&&<strong>Travel {timeDiff(j.en_route_at,j.on_site_at)}</strong>}{timeDiff(j.work_started_at,j.completed_at)&&<strong>Job {timeDiff(j.work_started_at,j.completed_at)}</strong>}</div>
   <button type="button" onClick={()=>setMessageTicket(j.ticket_id)} className="mt-2 rounded-lg border border-cyan-400/30 px-3 py-1 text-[11px] text-cyan-200">Quick message</button>
   {person&&!["COMPLETED","CANCELLED","CLOSED","PAID","INVOICED"].includes(String(j.status||"").toUpperCase())&&<TechnicianJobActions ticket={j} compact canDispatch={!support&&!employeeMode} isAssigned={person.is_self} onSaved={load}/>}
   {!person&&!employeeMode&&!support&&<select aria-label="Assign technician" disabled={busy===String(j.ticket_id)} defaultValue="" onChange={e=>e.target.value&&assign(j.ticket_id,e.target.value)} className="mt-2 w-full rounded-lg border border-white/15 bg-[#09182e] p-2 text-xs"><option value="">Assign technician…</option>{staff.filter(m=>(j.required_skills||[]).every(sk=>(m.skills||[]).some(x=>x.toLowerCase()===sk.toLowerCase()))).map(m=><option key={m.member_id} value={m.member_id}>{m.name}</option>)}</select>}
-  {employeeMode&&!(person?.is_self)&&<button disabled={busy===String(j.ticket_id)} onClick={()=>pickup(j.ticket_id)} className="mt-2 rounded-lg border border-cyan-400/35 px-3 py-1.5 text-[11px] text-cyan-200">Request pickup · dispatch approves</button>}
+  {employeeMode&&!person&&<button disabled={busy===String(j.ticket_id)||requestedPickups.includes(String(j.ticket_id))} onClick={()=>pickup(j.ticket_id)} className="mt-2 rounded-lg border border-cyan-400/35 px-3 py-1.5 text-[11px] text-cyan-200 disabled:opacity-50">{requestedPickups.includes(String(j.ticket_id))?"Pickup requested · awaiting dispatch":"Request pickup · dispatch approves"}</button>}
  </article>;
  return <div {...themeProps} className="sw-tech-page relative isolate h-[calc(100dvh-110px)] min-h-0 overflow-hidden p-3 text-white">
   <div aria-hidden className="sw-tech-bg sw-business-themed-photo absolute inset-0 -z-20"/><div aria-hidden className="sw-business-themed-overlay absolute inset-0 -z-10"/>
@@ -69,6 +79,8 @@ export default function BusinessTechBoard({employeeMode=false}){
     <div><button onClick={()=>nav(employeeMode?"/employee":support?"/platform":"/sbo/dispatch")} className="mb-1 flex items-center gap-1 text-[11px] text-cyan-200"><ArrowLeft size={13}/>Back</button><h1 className="text-lg font-bold sm:text-xl">Technician Board</h1><p className="text-[11px] text-slate-300">Assigned jobs, status, handoffs and skills</p></div>
     <div className="flex flex-wrap gap-2"><input aria-label="Schedule date" type="date" value={date} onChange={e=>setDate(e.target.value)} className="rounded-lg border border-white/20 bg-[#061327] p-2 text-xs"/><button onClick={load} aria-label="Refresh" className="rounded-lg border border-white/15 p-2"><RefreshCw size={16} className={loading?"animate-spin":""}/></button>{employeeMode&&<button onClick={()=>nav("/calendar")} className="rounded-lg border border-cyan-400/30 px-3 py-2 text-xs">My calendar</button>}{!employeeMode&&!support&&<button onClick={()=>nav("/sbo/quick-intake")} className="rounded-lg bg-cyan-500/20 px-3 py-2 text-xs">+ Ticket</button>}</div>
    </header>
+   {!support&&<section className="sw-tech-shift sw-tech-glass sw-business-themed-card" aria-label="Technician shift clock"><div className="sw-tech-shift-label"><Clock3 size={17}/><div><strong>{shift?"Clocked in":"Clocked out"}</strong><span>{shift?`Since ${stamp(shift.clock_in_at)} · ${formatDuration((now-new Date(shift.clock_in_at).getTime())/1000)}`:"Shift time is recorded by the business"}</span></div></div><button type="button" disabled={shiftBusy||!businessId} onClick={()=>changeShift(shift?"CLOCK_OUT":"CLOCK_IN")} className={shift?"sw-tech-clock-out":"sw-tech-clock-in"}>{shiftBusy?"Saving…":shift?"Clock out":"Clock in"}</button></section>}
+   {clockError&&!support&&<p role="alert" className="sw-tech-clock-error">{clockError}</p>}
    <div className="sw-tech-mobile-controls"><div className="sw-tech-mobile-tabs" role="tablist" aria-label="Technician board views"><button type="button" role="tab" aria-selected={mobileTab==="team"} className={mobileTab==="team"?"is-active":""} onClick={()=>setMobileTab("team")}><Users size={15}/> Team <span>{filtered.length}</span></button><button type="button" role="tab" aria-selected={mobileTab==="queue"} className={mobileTab==="queue"?"is-active":""} onClick={()=>setMobileTab("queue")}><ClipboardList size={15}/> Queue <span>{backlog.length+pickups.length}</span></button></div><button type="button" aria-expanded={filtersOpen} onClick={()=>setFiltersOpen(x=>!x)} className="sw-tech-filter-toggle"><ChevronDown size={15}/> Filters</button></div>
    <div className={`sw-tech-filters flex flex-wrap items-center gap-2 ${filtersOpen?"is-open":""}`}>
     <input aria-label="Search technicians" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Find technician…" className="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#061327]/75 p-2 text-xs"/>
