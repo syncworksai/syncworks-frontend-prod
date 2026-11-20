@@ -141,8 +141,10 @@ export default function SboFinance() {
   const navItems = [
     {label:"Business overview",icon:"⌂",onClick:()=>navigate("/sbo")},
     {label:"Finance overview",icon:"$",active:financeTab==="overview",onClick:()=>{setFinanceTab("overview");setShowSetup(false);}},
-    {label:"Needs attention",icon:"!",onClick:()=>navigate("/sbo/invoices")},
+    {label:"Needs attention",icon:"!",onClick:()=>navigate("/sbo/invoices?state=OVERDUE")},
     {label:"Invoices",icon:"▤",onClick:()=>navigate("/sbo/invoices")},
+    {label:"Paid invoices",icon:"✓",onClick:()=>navigate("/sbo/invoices?state=PAID")},
+    {label:"Archived / void",icon:"◌",onClick:()=>navigate("/sbo/invoices?state=VOID")},
     {label:"Billing automation",icon:"◷",onClick:()=>navigate("/sbo/settings/billing-automation")},
     {label:"Catalog",icon:"▦",onClick:()=>navigate("/sbo/catalog")},
     {label:"Profit & Cash",icon:"◫",onClick:()=>navigate("/sbo/finance-intelligence")},
@@ -379,13 +381,13 @@ export default function SboFinance() {
             </div>
             <div className="sw-sbo-finance-invoice-kpis">
               <button type="button" onClick={()=>navigate("/sbo/invoices")}><span>Outstanding</span><strong>{invoiceLoading?"—":invoiceError?"Unavailable":money(invoiceSummary.outstanding)}</strong></button>
-              <button type="button" onClick={()=>navigate("/sbo/invoices")}><span>Overdue invoices</span><strong>{invoiceLoading?"—":invoiceError?"Unavailable":(invoiceSummary.overdue_count??overdueRows.length)}</strong></button>
+              <button type="button" onClick={()=>navigate("/sbo/invoices?state=OVERDUE")}><span>Overdue invoices</span><strong>{invoiceLoading?"—":invoiceError?"Unavailable":(invoiceSummary.overdue_count??overdueRows.length)}</strong></button>
               <button type="button" onClick={()=>navigate("/sbo/invoices")}><span>Ready to bill</span><strong>{invoiceLoading?"—":invoiceError?"Unavailable":(invoiceSummary.ready_to_bill_count??readyToBill.length)}</strong></button>
-              <button type="button" onClick={()=>navigate("/sbo/invoices")}><span>Paid this month</span><strong>{invoiceLoading?"—":invoiceError?"Unavailable":money(invoiceSummary.paid_this_month)}</strong></button>
+              <button type="button" onClick={()=>navigate("/sbo/invoices?state=PAID")}><span>Paid this month</span><strong>{invoiceLoading?"—":invoiceError?"Unavailable":money(invoiceSummary.paid_this_month)}</strong></button>
             </div>
             <section className="sw-sbo-finance-attention">
               <div className="sw-sbo-finance-attention-head"><h2><AlertTriangle size={16}/> Invoices requiring attention</h2><button type="button" onClick={()=>navigate("/sbo/invoices")}>All invoices <ChevronRight size={16}/></button></div>
-              {invoiceError?<p role="alert">{invoiceError}</p>:invoiceLoading?<p>Loading invoice activity…</p>:attentionRows.length?<div className="sw-sbo-finance-attention-list">{attentionRows.map((item,index)=><button type="button" key={item.kind+"-"+item.id+"-"+index} onClick={()=>navigate("/sbo/invoices")}><span><strong>{item.kind==="overdue"?"PAST DUE":"READY TO INVOICE"}</strong> · {item.name}<small>{item.detail} · {daysSince(item.date)===null?"Date unavailable":item.kind==="ready"?daysSince(item.date)+" days since completion":daysSince(item.date)+" days past due"}</small></span><span>{item.amount===null?"Review":money(item.amount)}</span></button>)}</div>:<p>No overdue invoices or completed jobs awaiting billing in the loaded records.</p>}
+              {invoiceError?<p role="alert">{invoiceError}</p>:invoiceLoading?<p>Loading invoice activity…</p>:attentionRows.length?<div className="sw-sbo-finance-attention-list">{attentionRows.map((item,index)=><button type="button" key={item.kind+"-"+item.id+"-"+index} onClick={()=>navigate(item.kind==="overdue"?"/sbo/invoices?state=OVERDUE":"/sbo/invoices")}><span><strong>{item.kind==="overdue"?"PAST DUE":"READY TO INVOICE"}</strong> · {item.name}<small>{item.detail} · {daysSince(item.date)===null?"Date unavailable":item.kind==="ready"?daysSince(item.date)+" days since completion":daysSince(item.date)+" days past due"}</small></span><span>{item.amount===null?"Review":money(item.amount)}</span></button>)}</div>:<p>No overdue invoices or completed jobs awaiting billing in the loaded records.</p>}
             </section>
             <div className="sw-sbo-finance-stats">
               <button type="button" onClick={()=>openFinanceTab("readiness")}><strong>{loading?"—":readinessPercent+"%"}</strong><small>Payment readiness</small></button>
