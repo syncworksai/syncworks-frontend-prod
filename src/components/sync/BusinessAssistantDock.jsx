@@ -22,7 +22,7 @@ export default function BusinessAssistantDock({user,onVictoria}) {
       aria-label={`Open ${agent.name}, ${agent.role}`}
       title={`${agent.name} — ${agent.role}`}
       className="sw-business-assist-person"
-      onClick={()=>agent.role==="Chief of Staff"?onVictoria():navigate("/sync/assist")}
+      onClick={()=>agent.role==="Chief of Staff"?onVictoria():window.dispatchEvent(new CustomEvent("syncworks:business-agent-open",{detail:{agentId:agent.id}}))}
     >
       <img src={getAvatarPhotoForUser(agent,user)} alt="" loading="lazy" onError={(event)=>{const fallback=getAvatarFallbackPhotoForUser(agent,user);if(fallback && event.currentTarget.src !== new URL(fallback,window.location.href).href)event.currentTarget.src=fallback;}}/>
       <span>{agent.name}</span>
