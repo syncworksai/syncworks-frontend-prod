@@ -221,3 +221,43 @@
   .sw-god-mobile-victoria img {width:34px;height:34px;border-radius:50%;object-fit:cover;object-position:top;border:1px solid #67e8f9;}
   .sw-god-mobile-victoria span {flex:1;}
 }
+
+/* God Mode focused tool drawers: Sterling-like anchored shell, no page scrolling. */
+@media (min-width:1024px) {
+ .sw-god-scene .sw-god-tab-stage.sw-god-detail-drawer {
+   top:57px;right:0;height:calc(100dvh - 57px);
+   width:min(1080px,82vw);max-height:none;
+   background:linear-gradient(145deg,rgba(5,18,38,.96),rgba(4,10,26,.985));
+   border-left:1px solid rgba(103,232,249,.32);
+   box-shadow:-26px 0 75px rgba(0,0,0,.62);
+   animation:swGodDrawerIn .43s cubic-bezier(.16,1,.3,1) both;
+ }
+ .sw-god-scene .sw-god-drawer-backdrop {top:57px;}
+ .sw-god-scene .sw-god-drawer-header {
+   padding:11px 22px;min-height:70px;
+   background:rgba(4,17,37,.88);backdrop-filter:blur(18px);
+ }
+ .sw-god-scene .sw-god-drawer-header h2 {font-size:19px;margin-top:2px;}
+ .sw-god-scene .sw-god-drawer-body {padding:12px 20px 25px;scrollbar-gutter:stable;}
+}
+.sw-god-scene .sw-god-drawer-body :is(input,select,textarea) {max-width:100%;}
+.sw-god-scene .sw-god-drawer-body :is(button,a,select,input,textarea):focus-visible {
+ outline:2px solid #67e8f9;outline-offset:2px;
+}
+.sw-god-backlog-summary,.sw-god-backlog-compose,.sw-god-backlog-list {
+ background:rgba(4,12,27,.68);
+ backdrop-filter:blur(14px);
+ box-shadow:inset 0 1px rgba(255,255,255,.035);
+}
+.sw-god-backlog .sw-god-backlog-list {min-width:0;}
+.sw-god-backlog .sw-god-backlog-list input {min-width:0;}
+@media (max-width:1023px) {
+ .sw-god-scene .sw-god-detail-drawer .sw-god-drawer-header {min-height:52px;flex:none;}
+ .sw-god-scene .sw-god-detail-drawer .sw-god-drawer-body {padding:9px 10px 22px;scrollbar-width:thin;}
+ .sw-god-backlog .sw-god-backlog-summary {padding:10px;}
+ .sw-god-backlog .sw-god-backlog-compose,.sw-god-backlog .sw-god-backlog-list {padding:10px;}
+ .sw-god-backlog .sw-god-backlog-list .min-w-60 {min-width:100%;}
+}
+@media (prefers-reduced-motion:reduce) {
+ .sw-god-scene .sw-god-detail-drawer {animation:none!important;}
+}
