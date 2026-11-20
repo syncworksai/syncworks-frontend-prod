@@ -423,3 +423,10 @@
   .sw-sbo-compact .sw-sbo-topbar {gap:8px}
   .sw-sbo-compact .sw-sbo-desktop-operations {gap:8px}
 }
+
+@media(min-width:768px){
+  /* Pilot portraits occupy the header on desktop, never a second bottom row. */
+  .sw-sbo-compact .sw-sbo-ai-dock,
+  .sw-sbo-compact .sw-sbo-action-grid,
+  .sw-sbo-compact .sw-sbo-growth-link {display:none !important;}
+}
