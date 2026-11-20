@@ -220,6 +220,7 @@ function DetailPanel({ invoice, busy, canManage, onClose, onAction, onEdit, onSe
 
       <div className="mt-3 flex flex-wrap gap-2" aria-label="Invoice quick actions">
         {canManage&&invoice.derived_state==="DRAFT"&&<button type="button" onClick={()=>setEditing(v=>!v)} className="sw-invoice-toolbar-button"><Pencil size={15}/> Quick edit</button>}
+        {canManage&&["SENT","OVERDUE","PARTIALLY_PAID","PAID"].includes(invoice.derived_state)&&invoice.customer_email&&<button type="button" disabled={busy} onClick={()=>onAction("email")} className="sw-invoice-toolbar-button disabled:opacity-40"><Mail size={15}/> Send via SyncWorks</button>}
         {canManage&&invoice.derived_state!=="VOID"&&<button type="button" disabled={invoice.derived_state==="DRAFT"} title={invoice.derived_state==="DRAFT"?"Issue the invoice in SyncWorks before emailing the customer.":"Opens an editable email draft"} onClick={()=>onSendDraft(invoice)} className="sw-invoice-toolbar-button disabled:opacity-40"><Mail size={15}/> {invoice.derived_state==="DRAFT"?"Issue first to email":emailAvailable?"Open prefilled email":"Copy invoice link"}</button>}
         {canManage&&Number(invoice.amount_paid)>0&&<button type="button" onClick={()=>setRequestingRefund(v=>!v)} className="sw-invoice-toolbar-button"><RotateCcw size={15}/> Refund review</button>}
       </div>
@@ -321,7 +322,7 @@ export default function SboInvoices() {
     try {
       const updated = await invoiceAction(selected.id, action, payload);
       setSelected(updated);
-      setNotice(action === "request-refund"?"Refund review logged. No funds were returned.":action === "record-payment" ? "External payment recorded; reconcile against the actual receipt." : "Invoice updated in SyncWorks; external email delivery is not implied.");
+      setNotice(action === "email"?"Invoice email accepted by configured provider; final delivery is not confirmed.":action === "request-refund"?"Refund review logged. No funds were returned.":action === "record-payment" ? "External payment recorded; reconcile against the actual receipt." : "Invoice updated in SyncWorks; external email delivery is not implied.");
       await load();
       return true;
     } catch (e) { setError(e?.response?.data?.detail || "Unable to update invoice.");return false; }
