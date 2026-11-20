@@ -8,6 +8,7 @@ import api from "../../api/client";
 import { getLiveOperations } from "../../api/dispatch";
 import TicketQuickMessage from "../tickets/TicketQuickMessage";
 import { AVATARS, getAvatarPhotoForUser } from "../sync/JarvisAvatar";
+import {getPilotAgentsForUser} from "../sync/pilotAgentRoster";
 import { useAuth } from "../../auth/AuthContext";
 import SubcontractorQuickInvite from "./SubcontractorQuickInvite";
 
@@ -48,6 +49,14 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
   const nav=useNavigate();
   const {user}=useAuth();
   const isPilot=String(user?.email||"").trim().toLowerCase()==="jacoblord7@outlook.com";
+  const agents=getPilotAgentsForUser(user,AVATARS);
+  const openAgent=(agent)=>{
+    if(agent.workerRole==="chief_of_staff"||agent.role==="Chief of Staff"){
+      window.dispatchEvent(new Event("syncworks:victoria-open"));
+      return;
+    }
+    window.dispatchEvent(new CustomEvent("syncworks:business-agent-open",{detail:{agentId:agent.id}}));
+  };
   const readMotion=()=>{try{return JSON.parse(localStorage.getItem("sw_workspace_appearance_v1")||"{}")?.motion!==false;}catch{return true;}};
   const [motionAllowed,setMotionAllowed]=useState(readMotion);
   const [reducedMotion,setReducedMotion]=useState(()=>window.matchMedia?.("(prefers-reduced-motion: reduce)").matches||false);
@@ -229,7 +238,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
           <div className="min-w-0"><span className="text-[10px] font-bold uppercase tracking-[.16em] text-cyan-300">Your office · Today</span><h1 className="truncate text-xl font-semibold sm:text-2xl">{businessName||"Business"}</h1><p className="hidden text-xs text-slate-300 sm:block">One command center. Your next action is one tap away.</p></div>
           <div className="flex gap-2">{lastTicketId&&<button type="button" title="Message latest ticket" onClick={()=>setQuickMessageTicket(lastTicketId)} className="rounded-xl border border-cyan-400/35 px-3 py-2 text-xs text-cyan-200">Message</button>}<button aria-label="Refresh dashboard" title="Refresh metrics" onClick={()=>{onRefresh?.();setRefreshKey(v=>v+1);}} className="rounded-xl border border-white/15 p-2"><RefreshCw size={17} className={loading?"animate-spin":""}/></button><button onClick={()=>go("/sbo/quick-intake")} className="hidden items-center gap-1.5 rounded-xl border border-cyan-300/60 bg-cyan-500/25 px-3 py-2 text-xs font-bold text-cyan-50 md:flex"><Plus size={17}/>New Call</button></div>
           {isPilot&&<div className="sw-sbo-desktop-ai hidden xl:flex" role="group" aria-label="AI business team">
-            {AVATARS.map(agent=><button type="button" key={agent.id} className="sw-sbo-desktop-ai-agent" aria-label={`Open ${agent.name} assistant`} title={agent.role} onClick={()=>agent.id==="executive-female"?window.dispatchEvent(new Event("syncworks:victoria-open")):go("/sync/assist")}>
+            {agents.map(agent=><button type="button" key={agent.id} className="sw-sbo-desktop-ai-agent" aria-label={`Open ${agent.name} assistant`} title={agent.role} onClick={()=>openAgent(agent)}>
               <img src={getAvatarPhotoForUser(agent,user)} alt=""/><span>{agent.name}</span>
             </button>)}
             <button type="button" className="sw-sbo-desktop-ai-agent" onClick={()=>go("/sync/assist")} aria-label="Open AI team"><Users size={18}/><span>Team</span></button>
@@ -279,7 +288,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
         <button type="button" className="sw-sbo-growth-link flex shrink-0 md:hidden items-center justify-between gap-3 rounded-xl border border-cyan-300/25 bg-slate-900/45 px-3 py-2 text-left" onClick={()=>go("/sbo/growth")}><span className="flex min-w-0 items-center gap-2"><Megaphone size={19} className="shrink-0 text-cyan-200"/><span className="min-w-0"><strong className="block text-sm">Growth & Marketing</strong><span className="block truncate text-xs text-slate-300">Social, campaigns & outreach</span></span></span><ChevronRight size={17} className="shrink-0 text-cyan-200"/></button>
         {isPilot&&<div className="sw-sbo-ai-dock shrink-0 md:hidden" role="group" aria-label="Business AI assistants">
           <span className="sw-sbo-ai-label">AI TEAM</span>
-          {AVATARS.map(agent=><button type="button" key={agent.id} className="sw-sbo-ai-worker" title={agent.name+" · "+agent.role} aria-label={"Open "+agent.name+", "+agent.role} onClick={()=>agent.id==="executive-female"?window.dispatchEvent(new Event("syncworks:victoria-open")):go("/sync/assist")}>
+          {agents.map(agent=><button type="button" key={agent.id} className="sw-sbo-ai-worker" title={agent.name+" · "+agent.role} aria-label={"Open "+agent.name+", "+agent.role} onClick={()=>agent.id==="executive-female"?window.dispatchEvent(new Event("syncworks:victoria-open")):go("/sync/assist")}>
             <img src={getAvatarPhotoForUser(agent,user)} alt="" loading="lazy"/><span>{agent.name}</span>
           </button>)}
         </div>}
