@@ -109,6 +109,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
         {active && shown.some((person) => person.id === active.id) && (
           <div className="sw-office-agent-detail" role="region" aria-label={`${active.name} actions`}>
             <div><strong>{active.name}</strong><span>{active.configured ? "Employee configured" : "Employee setup required"}</span></div>
+            <button type="button" onClick={() => nav("/sync/assist/assignments")}>Assign a task</button>
             <button type="button" onClick={() => openEmployee(active)}>
               <MessageCircle size={14} /> {active.configured ? "Open employee workspace" : "Set up employee"}
             </button>
@@ -116,6 +117,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
         )}
         {office && !active && <p className="sw-office-agents-hint">Select Victoria for her workspace and assigned duties.</p>}
         {!office && <div className="sw-office-agents-actions">
+          <button type="button" onClick={() => nav("/sync/assist/assignments")}><MessageCircle size={15}/> Assign task</button>
           <button type="button" onClick={() => nav("/sync/assist/employees")}><BriefcaseBusiness size={15}/> Manage team</button>
           <button type="button" aria-label="Refresh AI employee configuration" title="Refresh team" onClick={() => setVersion((v) => v + 1)}><RefreshCw size={15}/></button>
         </div>}
