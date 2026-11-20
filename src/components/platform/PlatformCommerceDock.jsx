@@ -1,20 +1,17 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { BarChart3, X } from "lucide-react";
 import StorefrontRevenueKpis from "../storefront/StorefrontRevenueKpis";
 
 export default function PlatformCommerceDock() {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const handleOpen = () => setOpen(true);
+    window.addEventListener("syncworks:commerce-kpis-open", handleOpen);
+    return () => window.removeEventListener("syncworks:commerce-kpis-open", handleOpen);
+  }, []);
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-5 z-[70] inline-flex min-h-11 items-center gap-2 rounded-xl border border-cyan-300/20 bg-slate-950/95 px-3 text-[10px] font-black text-cyan-100 shadow-2xl backdrop-blur-xl"
-      >
-        <BarChart3 className="h-4 w-4" />
-        Commerce KPIs
-      </button>
 
       {open ? (
         <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Storefront revenue KPIs">
