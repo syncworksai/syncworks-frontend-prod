@@ -32,5 +32,5 @@ test("Theme-aware single-viewport layout and direct share options",()=>{
   assert.match(page,/sms:/);
   assert.match(css,/\.sw-qr-wallet-main\{height:100%/);
   assert.match(css,/overflow:hidden/);
-  assert.match(css,/modern-dark\\.webp/);
+  assert.ok(css.includes("modern-dark.webp"));
 });
