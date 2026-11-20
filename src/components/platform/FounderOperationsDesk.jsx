@@ -65,10 +65,11 @@ export default function FounderOperationsDesk({ onOpen }) {
   }
   return <section className="sw-god-opsdesk" aria-label="Founder Operations Desk">
     <div className="sw-god-opsdesk-intro">
-      <div><p className="sw-god-eyebrow"><Bot size={14}/> Founder operations</p><h3>Delegate with oversight</h3><p>Turn a live request into a Victoria triage conversation or a tracked developer handoff. Founder approval is required before execution.</p></div>
+      <div><p className="sw-god-eyebrow"><Bot size={14}/> Victoria · Chief of Staff</p><h3>Executive Operations Desk</h3><p>Review live requests, ask Victoria for direction, and approve tracked handoffs. Execution remains gated by your authorization.</p></div>
       <button type="button" onClick={load} disabled={loading}><RefreshCw size={16}/> Refresh queue</button>
     </div>
     <div className="sw-god-opsdesk-actions">
+      <button type="button" onClick={()=>window.dispatchEvent(new Event("syncworks:victoria-open"))}><Bot size={18}/> Talk with Victoria <ArrowRight size={15}/></button>
       <button onClick={()=>onOpen("requests")}><ClipboardList size={18}/> Open full support queue <ArrowRight size={15}/></button>
       <button onClick={()=>onOpen("developer_agent")}><Bot size={18}/> Review approved developer jobs <ArrowRight size={15}/></button>
       <button onClick={()=>onOpen("__build_backlog")}><CheckCircle2 size={18}/> View tracked handoffs <ArrowRight size={15}/></button>
