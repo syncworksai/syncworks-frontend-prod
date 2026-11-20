@@ -3,7 +3,7 @@ import { Activity, ArrowUpRight, BellRing, Bot, BriefcaseBusiness, CheckCircle2,
 import api from "../../api/client";
 
 const GROUPS = [
-  { title: "People & Growth", subtitle: "Users, businesses, acquisition", icon: Users, tone: "cyan", links: [["users","Users"],["businesses","Businesses"],["prospects","Prospects"],["testers","Testers"],["growth_os","Growth OS"],["affiliates","Affiliates"]] },
+  { title: "People & Growth", subtitle: "Users, businesses, acquisition", icon: Users, tone: "cyan", links: [["users","User Control"],["user_directory","Directory"],["businesses","Businesses"],["prospects","Prospects"],["testers","Testers"],["growth_os","Growth OS"],["affiliates","Affiliates"]] },
   { title: "Revenue & Operations", subtitle: "Payments, service, communications", icon: CreditCard, tone: "violet", links: [["billing","Billing"],["requests","Support"],["ads","Ads"],["broadcasts","Broadcasts"],["news","News"]] },
   { title: "Build & Automation", subtitle: "Approvals, pipeline and AI workers", icon: Bot, tone: "blue", links: [["__build_backlog","Build Backlog"],["developer_agent","Developer Agent"],["pilot_readiness","Pilot Readiness"]] },
   { title: "Quality & Release", subtitle: "Platform readiness and testing", icon: ShieldCheck, tone: "amber", links: [["health_launch_lock","Health Launch"],["health_smoke_test","Health Testing"],["pilot_readiness","Pilot Readiness"]] },
@@ -19,6 +19,7 @@ function Tile({ icon: Icon, label, value, help, loading }) {
 
 export default function GodModeCockpit({ onOpen }) {
   const [info,setInfo] = useState({ loading:true, summary:null, alerts:null, error:"" });
+  const [mobileGroup, setMobileGroup] = useState(0);
   async function refresh() {
     setInfo(x=>({...x,loading:true,error:""}));
     try {
@@ -54,6 +55,10 @@ export default function GodModeCockpit({ onOpen }) {
       <Tile icon={ShieldCheck} label="Alerts" value={fmt(a?.executive?.alerts_count)} help="Review attention items" loading={info.loading}/>
     </section>
     <div className="sw-god-workarea">
+      <div className="sw-god-mobile-departments" aria-label="Choose God Mode department">
+        <div className="sw-god-mobile-department-switch">{GROUPS.map((g,i)=><button type="button" key={g.title} aria-pressed={mobileGroup===i} onClick={()=>setMobileGroup(i)}><g.icon size={17}/><span>{g.title}</span></button>)}</div>
+        <div className="sw-god-mobile-department-content"><p>{GROUPS[mobileGroup].subtitle}</p><div>{GROUPS[mobileGroup].links.map(([id,label])=><button key={id} type="button" onClick={()=>onOpen(id)}>{label}<ChevronRight size={15}/></button>)}</div></div>
+      </div>
       <section className="sw-god-module-grid" aria-label="God Mode departments">
         {GROUPS.map(g=><article key={g.title} className={"sw-god-department sw-god-"+g.tone}>
           <div className="sw-god-department-heading"><span className="sw-god-department-icon"><g.icon size={23}/></span><div><h2>{g.title}</h2><p>{g.subtitle}</p></div></div>
