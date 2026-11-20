@@ -21,6 +21,8 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const [chatError, setChatError] = useState("");
   const [chatBusy, setChatBusy] = useState(false);
   const [dialogTheme, setDialogTheme] = useState({});
+  const [employeeWork, setEmployeeWork] = useState({});
+  const [workRefresh, setWorkRefresh] = useState(0);
   const chatEndRef = useRef(null);
   const chatFieldRef = useRef(null);
   const dockRef = useRef(null);
@@ -76,6 +78,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     return {
     ...avatar,
     slotId,
+    roleKey: employee?.role || (avatar.id==="accounting-female"?"FINANCE_MANAGER":({ "executive-female":"CHIEF_OF_STAFF", "executive-male":"SALES_MANAGER", "future-female":"MARKETING_MANAGER", "future-male":"RESEARCH_ANALYST"}[avatar.id])),
     photo: employee?.photo || getAvatarPhotoForUser(avatar,user),
     name: employee?.name || avatar.name,
     configured: Boolean(employee),
@@ -85,6 +88,24 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const shown = office ? roster.filter((person) => person.id === "executive-female") : roster;
   const active = roster.find((person) => person.id === selected);
   const messages = active ? (chatHistory[active.id] || []) : [];
+  const currentWork = active ? employeeWork[active.id] : null;
+  useEffect(() => {
+    if (!permitted || !selected) return;
+    const person=roster.find(row=>row.id===selected);
+    if (!person?.roleKey) return;
+    let alive=true;
+    const refresh=async()=>{
+      try {
+        const {data}=await api.get(`/sync-ai/assist/pilot/employees/${encodeURIComponent(person.roleKey)}/work/`,{timeout:15000});
+        if(alive)setEmployeeWork(previous=>({...previous,[person.id]:{status:"ready",data}}));
+      } catch(error) {
+        if(alive)setEmployeeWork(previous=>({...previous,[person.id]:{status:"error",message:error?.response?.data?.detail||"Could not load assigned work."}}));
+      }
+    };
+    refresh();
+    const interval=window.setInterval(refresh,30000);
+    return ()=>{alive=false;window.clearInterval(interval);};
+  },[permitted,selected,employees,workRefresh]);
   useEffect(() => {
     if (!selected) return;
     const onEscape = (event) => { if (event.key === "Escape") setSelected(null); };
@@ -187,6 +208,20 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
         <div className="sw-ai-conversation-toolbar">
           <button type="button" onClick={()=>{setSelected(null);nav("/sync/assist/assignments")}}><BriefcaseBusiness size={15}/> Assign work</button>
           <button type="button" onClick={()=>{setSelected(null);openEmployee(active)}}><Maximize2 size={15}/> Employee workspace</button>
+        </div>
+        <div className="sw-ai-work-summary">
+          <div className="sw-ai-work-summary-head"><strong>Assigned work</strong><span>{currentWork?.status==="ready"?`${currentWork.data.pending_count} awaiting review`:"Review-only pilot"}</span>
+            <button type="button" title="Refresh assigned work" aria-label="Refresh employee assignments" onClick={()=>setWorkRefresh(n=>n+1)}><RefreshCw size={13}/></button>
+          </div>
+          {currentWork?.status==="error"?<p role="status">Assigned work unavailable. {currentWork.message}</p>:
+           currentWork?.status==="ready"?(currentWork.data.assignments?.length?
+           <div className="sw-ai-work-summary-items">{currentWork.data.assignments.slice(0,3).map(item=><button type="button" key={item.assignment_id} onClick={()=>{setSelected(null);nav("/sync/assist/assignments")}}>
+             <span>{item.kind}{item.ticket_id?` #${item.ticket_id}`:""} · {item.state?.replaceAll("_"," ")}</span>
+             <strong>{item.description}</strong>
+             {item.status_changed_since_review&&<em>Ticket status changed — review again</em>}
+           </button>)}</div>:
+           <p>No work assigned to {active.name} yet.</p>):
+           <p>Loading this employee's task inbox…</p>}
         </div>
         <div className="sw-ai-conversation-feed" role="log" aria-live="polite" aria-relevant="additions text">
           {!messages.length && <div className="sw-ai-conversation-intro">
