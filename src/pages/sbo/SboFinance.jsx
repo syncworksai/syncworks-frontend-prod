@@ -331,15 +331,15 @@ export default function SboFinance() {
         </div>
       }
     >
-      <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <div className="grid min-h-0 gap-3 lg:grid-cols-[230px_minmax(0,1fr)]">
         <SidebarNav title="Business OS" subtitle="Finance" items={navItems} />
+        <div className="min-w-0 space-y-4">
           <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
-            <div className="text-sm font-black text-emerald-100">New: Profit & Cash Workspace</div>
-            <div className="mt-1 text-xs leading-5 text-slate-300">Track labor, materials, expenses, job contribution, recorded margins, and planned cash events.</div>
-            <button type="button" onClick={() => navigate("/sbo/finance-intelligence")} className="mt-3 min-h-10 rounded-xl border border-cyan-400/25 bg-cyan-500/10 px-3 text-xs font-black text-cyan-100">Open Profit & Cash →</button>
-          </div>
+                      <div className="text-sm font-black text-emerald-100">New: Profit & Cash Workspace</div>
+                      <div className="mt-1 text-xs leading-5 text-slate-300">Track labor, materials, expenses, job contribution, recorded margins, and planned cash events.</div>
+                      <button type="button" onClick={() => navigate("/sbo/finance-intelligence")} className="mt-3 min-h-10 rounded-xl border border-cyan-400/25 bg-cyan-500/10 px-3 text-xs font-black text-cyan-100">Open Profit & Cash →</button>
+                    </div>
 
-        <div className="min-w-0 space-y-5">
           {error ? (
             <div className="rounded-3xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200">
               {error}
