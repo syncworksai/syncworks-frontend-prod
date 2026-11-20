@@ -141,18 +141,13 @@ export default function SboFinance() {
   const [financeTab,setFinanceTab]=useState("overview");
 
   const navItems = [
-    {label:"Business overview",icon:"⌂",onClick:()=>navigate("/sbo")},
-    {label:"Finance overview",icon:"$",active:financeTab==="overview",onClick:()=>{setFinanceTab("overview");setShowSetup(false);}},
-    {label:"Needs attention",icon:"!",onClick:()=>navigate("/sbo/invoices?state=OVERDUE")},
+    {label:"Overview",icon:"⌂",active:financeTab==="overview",onClick:()=>setFinanceTab("overview")},
     {label:"Invoices",icon:"▤",onClick:()=>navigate("/sbo/invoices")},
-    {label:"Paid invoices",icon:"✓",onClick:()=>navigate("/sbo/invoices?state=PAID")},
-    {label:"Archived / void",icon:"◌",onClick:()=>navigate("/sbo/invoices?state=VOID")},
-    {label:"Billing automation",icon:"◷",onClick:()=>navigate("/sbo/settings/billing-automation")},
+    {label:"Finance setup",icon:"⚙",active:financeTab!=="overview",onClick:()=>setShowSetup(true)},
     {label:"Catalog",icon:"▦",onClick:()=>navigate("/sbo/catalog")},
-    {label:"Profit & Cash",icon:"◫",onClick:()=>navigate("/sbo/finance-intelligence")},
+    {label:"Profit & Cash",icon:"$",onClick:()=>navigate("/sbo/finance-intelligence")},
     {label:"Reports",icon:"↗",onClick:()=>navigate("/sbo/reports")},
-    {label:"Payment settings",icon:"⚙",active:financeTab==="readiness",onClick:()=>{setFinanceTab("readiness");setShowSetup(false);}},
-  ];  const loadAll = useCallback(async () => {
+  ]; const loadAll = useCallback(async () => {
     setLoading(true);
     setInvoiceLoading(true);
     setError("");
@@ -362,20 +357,17 @@ export default function SboFinance() {
       }
     >
       <div className="sw-sbo-finance-cockpit grid min-h-0 gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <SidebarNav title="Business OS" subtitle="Finance" items={navItems} />
+        <aside className="sw-sbo-finance-sterling-rail" aria-label="Finance navigation">
+          <div className="sw-sbo-finance-rail-heading"><span>BUSINESS WORKSPACE</span><strong>Finance</strong></div>
+          <nav>{navItems.map(item=><button key={item.label} type="button" aria-current={item.active?"page":undefined} onClick={item.onClick}><span className="sw-sbo-finance-rail-icon">{item.icon}</span><span>{item.label}</span><ChevronRight size={14}/></button>)}</nav>
+          <button className="sw-sbo-finance-rail-return" type="button" onClick={()=>navigate("/sbo")}>← Business dashboard</button>
+        </aside>
         <div className="sw-sbo-finance-center min-w-0 space-y-4">
-          <nav aria-label="Finance workspace sections" className="sw-business-compact-nav flex flex-wrap gap-2 rounded-xl border border-cyan-300/20 bg-slate-950/75 p-2 backdrop-blur-xl">
-            {[
-              ["overview","Overview"],
-              ["readiness","Payment readiness"],
-              ["payments","Plans & payouts"],
-              ["reconciliation","Fee reconciliation"]
-            ].map(([id,label])=><button key={id} type="button" aria-current={financeTab===id?"page":undefined} onClick={()=>setFinanceTab(id)} className={`min-h-10 rounded-lg border px-3 text-xs font-semibold transition ${financeTab===id?"border-cyan-300/50 bg-cyan-500/20 text-cyan-50":"border-slate-700/70 bg-slate-900/40 text-slate-300 hover:border-cyan-300/30"}`}>{label}</button>)}
-            <button type="button" onClick={()=>navigate("/sbo/invoices")} className="min-h-10 rounded-lg border border-slate-700/70 px-3 text-xs font-semibold text-slate-300">Invoices →</button>
-          </nav>
+
           {financeTab==="overview" && <section className="sw-sbo-finance-overview" aria-label="Finance overview">
             <header className="sw-sbo-finance-hero"><div><span className="sw-sbo-finance-kicker">YOUR OFFICE · FINANCE</span><h1>Finance command center</h1><p>Payment readiness, receivables and accounting access in one place.</p></div><button type="button" onClick={loadAll} disabled={loading} aria-label="Refresh finance status"><RefreshCw size={17} className={loading?"animate-spin":""}/></button></header>
             <div className="sw-sbo-finance-pulse"><div><span>PAYMENT OPERATIONS</span><p>{loading?"Loading live payment status…":readinessScore===3?"Subscriptions, billing and payouts are ready":`${3-readinessScore} of 3 payment setup requirements need attention`}</p></div><button onClick={()=>openFinanceTab("readiness")}>Review <ArrowLeft size={14} className="rotate-180"/></button></div>
+            <div className="sw-sbo-finance-shortcuts"><button type="button" onClick={()=>navigate("/sbo/invoices?state=OVERDUE")}>Past due <span>{invoiceSummary.overdue_count??"—"}</span></button><button type="button" onClick={()=>navigate("/sbo/invoices")}>Ready to invoice <span>{invoiceSummary.ready_to_bill_count??"—"}</span></button><button type="button" onClick={()=>navigate("/sbo/invoices?state=PAID")}>Paid</button><button type="button" onClick={()=>navigate("/sbo/invoices?state=VOID")}>Void / archived</button></div>
             <div className="sw-sbo-finance-invoice-header">
               <div><span>INVOICING PULSE</span><h2>Receivables and job billing</h2></div>
               <button type="button" onClick={()=>setShowSetup(true)} className={setupReady?"is-ready":""} aria-label="Open finance setup"><span className="sw-sbo-finance-status-light"/> {setupReady?"Setup ready":"Setup needs attention"} <Settings2 size={15}/></button>
@@ -408,11 +400,14 @@ export default function SboFinance() {
             <button onClick={()=>navigate("/sbo/settings/billing-automation")}><span className={autoReady?"sw-sbo-setup-green":"sw-sbo-setup-amber"}/> Automated invoicing & reminders <strong>{automation?autoReady?"Enabled":"Review":"Not verified"}</strong></button>
             <button onClick={()=>navigate("/sbo/catalog")}><span className="sw-sbo-setup-amber"/> Service & parts catalog <strong>Manage</strong></button>
             <button onClick={()=>navigate("/sbo/invoices")}><span className="sw-sbo-setup-amber"/> Invoicing center <strong>Manage</strong></button>
+            <button onClick={()=>{setFinanceTab("payments");setShowSetup(false)}}><span className={connectReady?"sw-sbo-setup-green":"sw-sbo-setup-amber"}/> Plans & payouts <strong>Review</strong></button>
+            <button onClick={()=>{setFinanceTab("reconciliation");setShowSetup(false)}}><span className="sw-sbo-setup-amber"/> Fee reconciliation <strong>Review</strong></button>
             <button onClick={()=>navigate("/sbo/reports")}><span className="sw-sbo-setup-amber"/> Reports & archival records <strong>Open</strong></button>
            </div><p className="sw-sbo-finance-setup-help">Green reflects verified payment readiness or saved automation settings. Catalog and other integrations are never marked complete without verification.</p></aside></div>}
           {error ? <div role="alert" className="rounded-lg border border-rose-400/25 bg-rose-900/40 p-3 text-sm text-rose-100">{error}</div> : null}
           {message ? <div role="status" className="rounded-lg border border-emerald-400/25 bg-emerald-900/40 p-3 text-sm text-emerald-100">{message}</div> : null}
-          <div className={financeTab==="readiness"?"sw-sbo-finance-detail space-y-3":"hidden"}>
+          {financeTab!=="overview" && <button type="button" className="sw-sbo-finance-detail-scrim" aria-label="Close finance detail" onClick={()=>setFinanceTab("overview")}/>}
+          <div className={financeTab==="readiness"?"sw-sbo-finance-detail sw-sbo-finance-drawer space-y-3":"hidden"}><div className="sw-sbo-finance-drawer-heading"><div><span>FINANCE WORKSPACE</span><h2>Payment readiness</h2></div><button type="button" onClick={()=>setFinanceTab("overview")} aria-label="Close Payment readiness"><XCircle size={21}/></button></div>
           <div className="mb-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">
                       <div className="text-sm font-black text-emerald-100">New: Profit & Cash Workspace</div>
                       <div className="mt-1 text-xs leading-5 text-slate-300">Track labor, materials, expenses, job contribution, recorded margins, and planned cash events.</div>
@@ -523,7 +518,7 @@ export default function SboFinance() {
           </GlassCard>
 
           </div>
-          <div className={financeTab==="payments"?"sw-sbo-finance-detail space-y-3":"hidden"}>
+          <div className={financeTab==="payments"?"sw-sbo-finance-detail sw-sbo-finance-drawer space-y-3":"hidden"}><div className="sw-sbo-finance-drawer-heading"><div><span>FINANCE WORKSPACE</span><h2>Plans & payouts</h2></div><button type="button" onClick={()=>setFinanceTab("overview")} aria-label="Close Plans & payouts"><XCircle size={21}/></button></div>
           <div className="grid gap-5 xl:grid-cols-2">
             <GlassCard
               title="Business plan"
@@ -631,7 +626,7 @@ export default function SboFinance() {
           </div>
 
           </div>
-          <div className={financeTab==="reconciliation"?"sw-sbo-finance-detail space-y-3":"hidden"}>
+          <div className={financeTab==="reconciliation"?"sw-sbo-finance-detail sw-sbo-finance-drawer space-y-3":"hidden"}><div className="sw-sbo-finance-drawer-heading"><div><span>FINANCE WORKSPACE</span><h2>Fee reconciliation</h2></div><button type="button" onClick={()=>setFinanceTab("overview")} aria-label="Close Fee reconciliation"><XCircle size={21}/></button></div>
           <GlassCard
             title="Platform fee reconciliation"
             subtitle="SyncWorks tracks the 1% platform fee regardless of payment method."
