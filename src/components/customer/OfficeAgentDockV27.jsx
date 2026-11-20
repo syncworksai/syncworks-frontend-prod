@@ -57,12 +57,15 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
         setFetchState("ready");
       })
       .catch(() => { if (live) setFetchState("unavailable"); });
-    return () => { live = false; };
+    const refresh=()=>setVersion(v=>v+1);
+    window.addEventListener("sw:assist-team-updated",refresh);
+    return () => { live = false; window.removeEventListener("sw:assist-team-updated",refresh); };
   }, [permitted, version]);
 
   const roster = useMemo(() => AVATARS.map((avatar) => ({
     ...avatar,
-    photo: getAvatarPhotoForUser(avatar, user),
+    photo: employees.find(worker=>worker.id===avatar.id)?.photo || getAvatarPhotoForUser(avatar, user),
+    name: employees.find(worker=>worker.id===avatar.id)?.name || avatar.name,
     configured: employees.some((worker) => worker.id === avatar.id),
   })), [employees, user?.email]);
 
@@ -113,7 +116,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
         )}
         {office && !active && <p className="sw-office-agents-hint">Select Victoria for her workspace and assigned duties.</p>}
         {!office && <div className="sw-office-agents-actions">
-          <button type="button" onClick={() => nav("/sync/assist")}><BriefcaseBusiness size={15}/> Manage team</button>
+          <button type="button" onClick={() => nav("/sync/assist/employees")}><BriefcaseBusiness size={15}/> Manage team</button>
           <button type="button" aria-label="Refresh AI employee configuration" title="Refresh team" onClick={() => setVersion((v) => v + 1)}><RefreshCw size={15}/></button>
         </div>}
       </div>
