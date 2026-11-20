@@ -80,7 +80,6 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     configured: Boolean(employee),
   }}), [employees, user?.email]);
 
-  if (!permitted) return null;
   const office = placement === "office";
   const shown = office ? roster.filter((person) => person.id === "executive-female") : roster;
   const active = roster.find((person) => person.id === selected);
@@ -121,6 +120,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     ? `/sync/assist/employee/${encodeURIComponent(person.slotId)}`
     : "/sync/assist");
 
+  if (!permitted) return null;
   const dock = (
     <section data-bubble-theme={theme} ref={dockRef} style={moveable ? {"--sw-team-x": offset.x + "px", "--sw-team-y": offset.y + "px"} : undefined} className={`sw-office-agents sw-office-agents--${placement} ${moveable ? "sw-office-agents--bubbles" : ""}`} aria-label={office ? "Chief of Staff" : "My AI team"}>
       <div className="sw-office-agents-head">
