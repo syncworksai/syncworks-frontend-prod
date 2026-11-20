@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, ArrowRight, Bot, CheckCircle2, ClipboardList, ExternalLink, RefreshCw, ShieldAlert } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { ArrowRight, Bot, CheckCircle2, ClipboardList, RefreshCw, Send, ShieldAlert } from "lucide-react";
 import api from "../../api/client";
+import { sendSyncAiMessage, getSyncAiErrorMessage } from "../../api/syncAi";
 
 function listOf(payload) {
   return Array.isArray(payload) ? payload : Array.isArray(payload?.results) ? payload.results : [];
@@ -10,7 +10,6 @@ function ticketDescription(item) {
   return ["Support request #"+item.id, item.kind || "OTHER", item.title || "Untitled request", item.body || ""].filter(Boolean).join(" · ");
 }
 export default function FounderOperationsDesk({ onOpen }) {
-  const navigate = useNavigate();
   const [tickets,setTickets] = useState([]);
   const [loading,setLoading] = useState(true);
   const [error,setError] = useState("");
@@ -18,6 +17,29 @@ export default function FounderOperationsDesk({ onOpen }) {
   const [saving,setSaving] = useState(false);
   const [notice,setNotice] = useState("");
   const [draft,setDraft] = useState({title:"",module:"Infrastructure",notes:""});
+  const [chatInput,setChatInput] = useState("");
+  const [chatHistory,setChatHistory] = useState([]);
+  const [chatBusy,setChatBusy] = useState(false);
+  const [chatError,setChatError] = useState("");
+  async function askInDesk(text) {
+    const message=String(text || "").trim();
+    if(!message || chatBusy)return;
+    setChatBusy(true);setChatError("");
+    setChatHistory(prev=>[...prev,{role:"founder",text:message}].slice(-12));
+    setChatInput("");
+    try {
+      const output=await sendSyncAiMessage({
+        workspace:"personal",
+        message:"You are responding inside the founder-only SyncWorks God Mode Operations Desk. "+
+          "Assist with business operations and explain limits of data access. "+
+          "Never claim a ticket was assigned, code was changed, or a message was sent without confirmed tool output. "+
+          "Founder instruction: "+message
+      });
+      setChatHistory(prev=>[...prev,{role:"victoria",text:String(output?.message || "No response text returned.")}].slice(-12));
+    } catch(err) {setChatError(getSyncAiErrorMessage(err));}
+    finally {setChatBusy(false);}
+  }
+
   const load = useCallback(async()=>{
     setLoading(true);setError("");
     try {
@@ -29,14 +51,9 @@ export default function FounderOperationsDesk({ onOpen }) {
   },[]);
   useEffect(()=>{load();},[load]);
   const askVictoria=(item)=>{
-    const prompt = [
-      "Victoria, act as my SyncWorks Chief of Staff. Triage this platform support request:",
-      ticketDescription(item),
-      "Classify urgency, customer/business impact, the likely responsible specialist, first diagnostic steps and any missing information.",
-      "Propose an assignment and next update. Check live records you can actually access; do not claim a ticket was assigned, code was changed, or a customer was contacted.",
-      "Keep code changes, customer communications, billing and production deployments behind founder approval."
-    ].join("\n");
-    navigate("/sync",{state:{victoriaPrompt:prompt}});
+    const prompt=["Triage this SyncWorks platform support request:",ticketDescription(item),
+      "Give urgency, customer impact, likely owner and next steps. Ask for missing details. Do not claim execution."].join("\n");
+    askInDesk(prompt);
   };
   const startHandoff=(item)=>{
     setNotice("");
@@ -68,8 +85,22 @@ export default function FounderOperationsDesk({ onOpen }) {
       <div><p className="sw-god-eyebrow"><Bot size={14}/> Victoria · Chief of Staff</p><h3>Executive Operations Desk</h3><p>Review live requests, ask Victoria for direction, and approve tracked handoffs. Execution remains gated by your authorization.</p></div>
       <button type="button" onClick={load} disabled={loading}><RefreshCw size={16}/> Refresh queue</button>
     </div>
+
+    <section className="sw-god-opsdesk-chat" aria-label="Victoria business chat">
+      <div className="sw-god-opsdesk-chat-heading"><Bot size={19}/><div><strong>Speak with Victoria</strong><span>Founder command conversation · recommendations require your approval</span></div></div>
+      <div className="sw-god-opsdesk-chat-log" role="log" aria-live="polite">
+        {chatHistory.length===0 && <p className="sw-god-opsdesk-chat-empty">Ask about priorities, customer support, billing operations, or which agent should handle a task. Responses distinguish verified records from missing connections.</p>}
+        {chatHistory.map((entry,index)=><div key={index} className={"sw-god-opsdesk-chat-bubble "+(entry.role==="founder"?"from-founder":"from-victoria")}><strong>{entry.role==="founder"?"You":"Victoria"}</strong><p>{entry.text}</p></div>)}
+        {chatBusy && <p className="sw-god-opsdesk-chat-empty">Victoria is preparing a response…</p>}
+      </div>
+      {chatError && <p className="sw-god-opsdesk-error" role="alert">{chatError}</p>}
+      <form className="sw-god-opsdesk-chat-compose" onSubmit={e=>{e.preventDefault();askInDesk(chatInput);}}>
+        <input value={chatInput} onChange={e=>setChatInput(e.target.value)} maxLength={1800} placeholder="Victoria, what needs my attention in SyncWorks?" aria-label="Message Victoria" />
+        <button type="submit" disabled={!chatInput.trim()||chatBusy}><Send size={16}/> Send</button>
+      </form>
+    </section>
     <div className="sw-god-opsdesk-actions">
-      <button type="button" onClick={()=>window.dispatchEvent(new Event("syncworks:victoria-open"))}><Bot size={18}/> Talk with Victoria <ArrowRight size={15}/></button>
+      <button type="button" onClick={()=>askInDesk("Review our highest-priority SyncWorks operating needs. Tell me what you can verify and what records need to be opened.")}><Bot size={18}/> Ask for priorities <ArrowRight size={15}/></button>
       <button onClick={()=>onOpen("requests")}><ClipboardList size={18}/> Open full support queue <ArrowRight size={15}/></button>
       <button onClick={()=>onOpen("developer_agent")}><Bot size={18}/> Review approved developer jobs <ArrowRight size={15}/></button>
       <button onClick={()=>onOpen("__build_backlog")}><CheckCircle2 size={18}/> View tracked handoffs <ArrowRight size={15}/></button>
