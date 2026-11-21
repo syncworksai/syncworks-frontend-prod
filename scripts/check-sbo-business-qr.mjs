@@ -19,7 +19,8 @@ test("Business QR uses a verified backend code rather than guessed IDs",()=>{
 });
 test("Permanent QR is separate from time-limited promo and unimplemented affiliate payout",()=>{
  assert.match(qr,/Expiring a promotion will never disable this business QR/);
- assert.match(qr,/Affiliate attribution, 10% commission accounting and payouts must be verified/);
+ assert.match(qr,/God Mode approval is required/);
+ assert.match(qr,/Apply to Become an Affiliate/);
  assert.doesNotMatch(qr,/referralCode=/);
 });
 test("Centered mobile-safe popup respects viewport",()=>{
