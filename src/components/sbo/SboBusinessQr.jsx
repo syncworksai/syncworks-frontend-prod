@@ -1,4 +1,5 @@
 import React,{useEffect,useState} from "react";
+import {createPortal} from "react-dom";
 import {QRCodeSVG} from "qrcode.react";
 import {QrCode,Copy,Share2,X,ExternalLink,Gift,ShieldCheck} from "lucide-react";
 import api from "../../api/client";
@@ -32,7 +33,7 @@ export default function SboBusinessQr({businessId,businessName,onClose}){
   const name=info?.name||info?.business_name||businessName||"Your business";
   const copy=async()=>{if(!url)return;try{await navigator.clipboard.writeText(url);setNotice("Business link copied.");}catch{setNotice("Clipboard unavailable; use Share instead.");}};
   const share=async()=>{if(!url)return;try{if(navigator.share)await navigator.share({title:`${name} on SyncWorks`,url});else await copy();}catch(e){if(e?.name!=="AbortError")setNotice("Sharing failed. Try Copy link.");}};
-  return <div className="sw-sbo-qr-shade" onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}>
+  return createPortal(<div className="sw-sbo-qr-shade" onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}>
     <section className="sw-sbo-qr-dialog" role="dialog" aria-modal="true" aria-label="Business QR and referral campaigns">
       <header><div><small>BUSINESS IDENTITY</small><h2>Business QR & sharing</h2></div><button type="button" onClick={onClose} aria-label="Close business QR"><X size={19}/></button></header>
       <div className="sw-sbo-qr-body">
@@ -44,5 +45,5 @@ export default function SboBusinessQr({businessId,businessName,onClose}){
         <div className="sw-sbo-qr-disclaimer"><ShieldCheck size={16}/><span>This QR shares only public business-card information. It does not give visitors staff, finance or admin access.</span></div>
       </div>
     </section>
-  </div>;
+  </div>,document.body);
 }
