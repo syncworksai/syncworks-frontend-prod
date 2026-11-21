@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import AffiliateKpiCards from "../../components/affiliates/AffiliateKpiCards";
+import AffiliateApplicationReview from "./AffiliateApplicationReview";
 import {
   assignBusinessToAffiliate,
   createGodModeAffiliate,
@@ -80,6 +81,7 @@ export default function GodModeAffiliates() {
       {err ? <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3 text-rose-200 text-sm">{String(err)}</div> : null}
 
       <AffiliateKpiCards metrics={overview} godMode />
+      <AffiliateApplicationReview />
 
       <div className="grid lg:grid-cols-2 gap-4">
         <form onSubmit={createAffiliate} className="rounded-3xl border border-slate-800 bg-slate-950/35 p-5">
