@@ -3,7 +3,7 @@ import "../../styles/SyncWorksMotion.css";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays, ClipboardList, DollarSign, Users, X, Settings2, Megaphone, BarChart3, Clock3, Route, Plus, ChevronRight, RefreshCw, Activity, Wrench, PanelLeftClose } from "lucide-react";
+import { CalendarDays, ClipboardList, DollarSign, Users, X, Settings2, Megaphone, BarChart3, Clock3, Route, Plus, ChevronRight, RefreshCw, Activity, Wrench, PanelLeftClose, QrCode } from "lucide-react";
 import api from "../../api/client";
 import { getLiveOperations } from "../../api/dispatch";
 import TicketQuickMessage from "../tickets/TicketQuickMessage";
@@ -12,6 +12,7 @@ import {getPilotAgentsForUser} from "../sync/pilotAgentRoster";
 import { useAuth } from "../../auth/AuthContext";
 import SubcontractorQuickInvite from "./SubcontractorQuickInvite";
 import BusinessAgentQuickChat from "../sync/BusinessAgentQuickChat";
+import SboBusinessQr from "./SboBusinessQr";
 
 const links = {
   more: [["Team & employees","/team/invites"],["HR & timeclock","/sbo/settings/workforce"],["Finance","/sbo/finance"],["Invoices","/sbo/invoices"],["Customers","/sbo/customers"],["Leads & growth","/sbo/leads"],["Social marketing","/sbo/growth"],["Reports","/sbo/reports"],["Partners & subcontractors","/sbo/partners"],["Catalog & pricing","/sbo/catalog"],["Business settings","/sbo/settings"]],
@@ -48,7 +49,10 @@ function MiniBars({rows}) {
 
 export default function SboCompactOffice({businessName,loading,err,ticketRows=[],kpiRows=[],openTickets,revenueThisMonth,completedJobs,onRefresh,activeBusinessId}) {
   const nav=useNavigate();
-  const {user}=useAuth();
+  const {user,myBusinesses=[]}=useAuth();
+  const [showBusinessQr,setShowBusinessQr]=useState(false);
+  const selectedBusiness=Array.isArray(myBusinesses)?myBusinesses.find(b=>String(b?.business_id||b?.id||b?.business?.id)===String(activeBusinessId)):null;
+  const isBusinessOwner=Boolean(selectedBusiness&&(selectedBusiness.is_owner===true||String(selectedBusiness.role||"").toUpperCase()==="OWNER"));
   const isPilot=String(user?.email||"").trim().toLowerCase()==="jacoblord7@outlook.com";
   const agents=getPilotAgentsForUser(user,AVATARS);
   const [selectedAgent,setSelectedAgent]=useState(null);
@@ -228,6 +232,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
       <aside className="sw-sbo-rail hidden min-h-0 flex-col gap-2 rounded-2xl p-3 md:flex">
         <div className="mb-2 text-[10px] font-bold uppercase tracking-[.2em] text-cyan-300">Business workspace</div>
         {menu.map(item=><button key={item.id} onClick={event=>openPanel(item.id,event)} aria-expanded={panel===item.id} className={`sw-sbo-rail-link flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-left text-sm ${panel===item.id?"is-active":""}`}><item.icon size={17} className="shrink-0 text-cyan-300"/><span>{item.title}</span><ChevronRight size={13} className="ml-auto shrink-0 text-slate-400"/></button>)}
+        {isBusinessOwner&&<button type="button" className="sw-sbo-ceo-qr-link mt-auto flex items-center justify-between gap-2 rounded-xl border border-cyan-200/35 bg-slate-900/70 px-3 py-2 text-left text-xs" onClick={()=>setShowBusinessQr(true)}><span className="flex items-center gap-2"><QrCode size={17}/> Business QR & affiliates</span><ChevronRight size={14}/></button>}
       </aside>
       <main className="sw-sbo-office-canvas flex min-h-0 flex-col gap-3">
         <header className="sw-sbo-topbar flex shrink-0 items-start justify-between gap-2 rounded-2xl p-3">
@@ -299,6 +304,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
         <button onClick={event=>openPanel("operations",event)} className="sw-sbo-stat shrink-0 rounded-xl px-3 py-2 text-left text-xs">Route conflicts: {ops?fmt(summary.route_conflicts):"—"} · Travel delay: {ops?fmt(summary.traffic_delay_minutes):"—"} min</button>
       </aside>
     </div>
+    {isBusinessOwner&&showBusinessQr&&<SboBusinessQr businessId={activeBusinessId} businessName={businessName} onClose={()=>setShowBusinessQr(false)}/>}
     {quickMessageTicket&&<TicketQuickMessage ticketId={quickMessageTicket} onClose={()=>setQuickMessageTicket(null)}/>}
     {panel&&<div className="sw-sbo-panel-shade absolute inset-0 z-40 flex items-end justify-end bg-[#010513]/65 p-2 backdrop-blur-sm sm:p-4" onClick={()=>setPanel(null)}>
       <section role="dialog" aria-modal="true" aria-label={panel==="subcontractors"?"Subcontractors":menu.find(m=>m.id===panel)?.title||"Operations"} onClick={e=>e.stopPropagation()} className={`sw-sbo-drawer flex h-auto max-h-[96%] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-cyan-300/40 p-4 text-white shadow-2xl ${popoverPosition?"sw-sbo-contextual-popout":""}`} data-arrow-side={popoverPosition?.side} style={popoverPosition?{"--sbo-popout-left":`${popoverPosition.left}px`,"--sbo-popout-top":`${popoverPosition.top}px`,"--sbo-popout-width":`${popoverPosition.width}px`,"--sbo-popout-height":`${popoverPosition.height}px`,"--sbo-arrow-top":`${popoverPosition.arrowTop}px`,"--sw-motion-origin-x":popoverPosition.side==="right"?"100%":"0%","--sw-motion-origin-y":`${Math.round(popoverPosition.arrowTop/popoverPosition.height*100)}%`,"--sw-motion-enter-x":popoverPosition.side==="right"?"12px":"-12px",viewTransitionName:motionEnabled&&popoverPosition?"sw-sbo-shared-panel":undefined}:undefined}>
