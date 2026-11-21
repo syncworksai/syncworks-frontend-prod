@@ -33,6 +33,6 @@ test("No fictional star ratings, reviews or unauthorized submission",()=>{
 test("Theme and single screen drawers are respected",()=>{
  assert.ok(css.includes("modern-dark.webp"));
  assert.match(css,/sw-rolo-compact-main\{[^}]*overflow:hidden!important/);
- assert.match(css,/\.sw-rolo-drawer\{[^}]*height:100dvh/);
+ assert.match(css,/\.sw-rolo-drawer\{[^}]*height:min\(82dvh,760px\)/);\n assert.match(css,/justify-content:center;align-items:center/);
  assert.match(page,/e\.key==="Escape"/);
 });
