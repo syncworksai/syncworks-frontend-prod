@@ -12,7 +12,7 @@ test("CEO-only launch uses backend-issued ownership role",()=>{
 test("Business QR uses a verified backend code rather than guessed IDs",()=>{
  assert.match(qr,/api\.get\("\/me\/businesses\/"\)/);
  assert.match(qr,/business\?\.business_card_code/);
- assert.match(qr,/validCode\(code\)/);
+ assert.match(qr,/validCode\(x\)/);
  assert.match(qr,/customer\/rolodex\?code=/);
  assert.match(qr,/navigator\.share/);
  assert.match(qr,/navigator\.clipboard/);
