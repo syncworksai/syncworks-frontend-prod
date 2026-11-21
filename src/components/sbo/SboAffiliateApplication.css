@@ -1,0 +1,16 @@
+.sw-sbo-affiliate-apply{display:flex;flex-direction:column;gap:12px;min-height:0;color:#eaf2f7}
+.sw-sbo-affiliate-intro{display:flex;flex-direction:column;gap:9px}.sw-sbo-affiliate-intro>button{display:flex;align-items:center;gap:6px;width:fit-content;padding:7px 10px;border:1px solid rgba(149,184,204,.4);border-radius:9px;font-size:11px}.sw-sbo-affiliate-intro small{font-size:10px;letter-spacing:.12em;color:#a6c8db;font-weight:800}.sw-sbo-affiliate-intro h3{font-size:20px;font-weight:800}.sw-sbo-affiliate-intro p,.sw-sbo-affiliate-current p{font-size:12px;color:#bbcbd8}
+.sw-sbo-affiliate-form{display:flex;flex-direction:column;gap:10px}
+.sw-sbo-affiliate-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.sw-sbo-affiliate-form label{display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:700}
+.sw-sbo-affiliate-form input:not([type=checkbox]),.sw-sbo-affiliate-form select,.sw-sbo-affiliate-form textarea{width:100%;min-width:0;color:#f6f9fd;background:#192633;border:1px solid rgba(148,185,206,.39);padding:9px;border-radius:8px;font-size:12px}
+.sw-sbo-affiliate-form textarea{resize:vertical;min-height:72px}
+.sw-sbo-affiliate-agreement{border:1px solid rgba(158,193,212,.31);border-radius:11px;padding:10px;display:flex;flex-direction:column;gap:7px}
+.sw-sbo-affiliate-agreement strong{font-size:12px}.sw-sbo-affiliate-agreement small{font-size:10px;color:#aec8d9}
+.sw-sbo-affiliate-terms{font-size:11px;white-space:pre-wrap;line-height:1.55;max-height:122px;overflow-y:auto;overscroll-behavior:contain;padding:8px;border:1px solid rgba(148,179,201,.25);border-radius:8px;background:#0c141e}
+.sw-sbo-affiliate-form .sw-sbo-affiliate-consent{flex-direction:row;align-items:flex-start;gap:8px;line-height:1.5}
+.sw-sbo-affiliate-form button[type=submit]{display:flex;align-items:center;justify-content:center;gap:8px;min-height:39px;border:1px solid #8fbbd3;border-radius:9px;background:#29485c;font-weight:800;font-size:12px}
+.sw-sbo-affiliate-form button[type=submit]:disabled{opacity:.4}
+.sw-sbo-affiliate-current{padding:15px;border:1px solid rgba(150,185,209,.32);border-radius:12px}.sw-sbo-affiliate-current svg{color:#92d8ac}.sw-sbo-affiliate-current h4{font-weight:800;font-size:16px}
+.sw-sbo-affiliate-error{color:#f4acaa;font-size:12px}.sw-sbo-affiliate-success{color:#a0e3ae;font-size:12px}
+@media(max-width:560px){.sw-sbo-affiliate-fields{grid-template-columns:1fr}.sw-sbo-affiliate-terms{max-height:100px}}
