@@ -52,7 +52,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
   const {user,myBusinesses=[]}=useAuth();
   const [showBusinessQr,setShowBusinessQr]=useState(false);
   const selectedBusiness=Array.isArray(myBusinesses)?myBusinesses.find(b=>String(b?.business_id||b?.id||b?.business?.id)===String(activeBusinessId)):null;
-  const isBusinessOwner=Boolean(selectedBusiness&&String(selectedBusiness.owner?.id||selectedBusiness.owner||selectedBusiness.owner_id||"")===String(user?.id||user?.user?.id||""));
+  const isBusinessOwner=Boolean(selectedBusiness&&(selectedBusiness.is_owner===true||String(selectedBusiness.role||"").toUpperCase()==="OWNER"));
   const isPilot=String(user?.email||"").trim().toLowerCase()==="jacoblord7@outlook.com";
   const agents=getPilotAgentsForUser(user,AVATARS);
   const [selectedAgent,setSelectedAgent]=useState(null);
