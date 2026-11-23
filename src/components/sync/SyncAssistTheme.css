@@ -299,3 +299,38 @@
     height: calc(100dvh - 115px);
   }
 }
+
+
+/* Assignment Center follows the exact Customer Workspace appearance preference.
+   All panels and focused dialogs use the same shared theme tokens. */
+.sw-assist-themed.sw-assist-assignments {
+  --assist-room-position: center center;
+}
+.sw-assist-themed.sw-assist-assignments .sw-assist-panel,
+.sw-assist-themed.sw-assist-assignments .sw-assist-task-card {
+  background: var(--assist-glass);
+  border-color: rgba(var(--assist-accent), .24);
+  box-shadow: inset 0 1px rgba(255,255,255,.055),0 10px 30px rgba(0,0,0,.12);
+}
+.sw-assist-themed.sw-assist-assignments .sw-assist-task-card:hover {
+  background: var(--assist-glass-strong);
+  border-color: rgba(var(--assist-accent), .52);
+}
+.sw-assist-themed.sw-assist-assignments .sw-assist-assignment-overlay {
+  background: rgba(1,5,14,.54);
+}
+.sw-assist-themed.sw-assist-assignments .sw-assist-assignment-dialog {
+  background: var(--assist-glass-strong);
+  border-color: rgba(var(--assist-accent), .48);
+  box-shadow: 0 22px 80px rgba(0,0,0,.48),0 0 22px rgba(var(--assist-accent),.13);
+}
+.sw-assist-themed.sw-assist-assignments [aria-pressed="true"],
+.sw-assist-themed.sw-assist-assignments button:hover {
+  border-color: rgba(var(--assist-accent),.55);
+}
+.sw-assist-themed.sw-assist-assignments button:focus-visible,
+.sw-assist-themed.sw-assist-assignments select:focus-visible,
+.sw-assist-themed.sw-assist-assignments textarea:focus-visible {
+  outline: 2px solid rgba(var(--assist-accent),.8);
+  outline-offset: 2px;
+}
