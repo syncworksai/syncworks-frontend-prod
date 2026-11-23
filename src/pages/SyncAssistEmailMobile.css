@@ -58,3 +58,55 @@
    border-color:rgba(var(--assist-accent),.35)!important;
  }
 }
+
+
+/* Unified desktop/mobile one-screen Mail Desk: no browser zoom or page scroll required. */
+.sw-assist-themed.sw-mail-page {
+ height:calc(100dvh - 155px)!important;
+ min-height:360px!important;
+ overflow:hidden!important;
+ padding:8px 12px 12px!important;
+}
+.sw-assist-themed.sw-mail-page .sw-mail-layout {
+ height:100%;min-height:0;display:flex;flex-direction:column;gap:8px;overflow:hidden!important;padding-bottom:0!important;
+}
+.sw-assist-themed.sw-mail-page .sw-mail-hero {
+ flex:none!important;margin:0!important;padding:10px 14px!important;border-radius:14px!important;
+}
+.sw-assist-themed.sw-mail-page .sw-mail-hero p:last-child {display:none!important;}
+.sw-assist-themed.sw-mail-page .sw-mail-mobile-tabs {
+ display:flex!important;flex:none;min-height:37px;gap:7px;overflow-x:auto;scrollbar-width:none;padding:0 1px;
+}
+.sw-assist-themed.sw-mail-page .sw-mail-mobile-tabs button {
+ white-space:nowrap;min-height:35px;min-width:0;border-radius:10px;padding:0 12px;
+ border:1px solid rgba(var(--assist-accent),.26);
+ background:var(--assist-glass);font-size:11px;font-weight:700;color:var(--assist-ink);
+}
+.sw-assist-themed.sw-mail-page .sw-mail-mobile-tabs button[aria-pressed="true"] {
+ background:rgba(var(--assist-accent),.20);border-color:rgba(var(--assist-accent),.7);
+}
+.sw-assist-themed.sw-mail-page .sw-mail-connection,
+.sw-assist-themed.sw-mail-page .sw-mail-preferences,
+.sw-assist-themed.sw-mail-page .sw-mail-inbox,
+.sw-assist-themed.sw-mail-page .sw-mail-brief,
+.sw-assist-themed.sw-mail-page .sw-mail-compose {
+ display:none!important;flex:1 1 auto;min-height:0;overflow-y:auto!important;overscroll-behavior:contain;
+ margin:0!important;border-radius:14px!important;padding:13px!important;background:var(--assist-glass)!important;
+}
+.sw-assist-themed.sw-mail-page[data-mobile-panel="connection"] .sw-mail-connection,
+.sw-assist-themed.sw-mail-page[data-mobile-panel="preferences"] .sw-mail-preferences,
+.sw-assist-themed.sw-mail-page[data-mobile-panel="inbox"] .sw-mail-inbox,
+.sw-assist-themed.sw-mail-page[data-mobile-panel="brief"] .sw-mail-brief,
+.sw-assist-themed.sw-mail-page[data-mobile-panel="compose"] .sw-mail-compose {
+ display:block!important;
+}
+.sw-assist-themed.sw-mail-page .sw-mail-layout>p[role="alert"],
+.sw-assist-themed.sw-mail-page .sw-mail-layout>p[role="status"] {
+ flex:none;margin:0!important;padding:7px 10px;font-size:11px;
+}
+@media(max-width:767px){
+ .sw-assist-themed.sw-mail-page {height:calc(100dvh - 112px)!important;padding:6px 9px 98px!important;}
+ .sw-assist-themed.sw-mail-page .sw-mail-layout {gap:7px;}
+ .sw-assist-themed.sw-mail-page .sw-mail-hero {padding:9px 11px!important;}
+ .sw-assist-themed.sw-mail-page .sw-mail-hero h1 {font-size:17px!important;}
+}
