@@ -7,7 +7,7 @@ import {useWorkspaceAppearance} from "../components/customer/CustomerWorkspace";
 import "../components/sync/SyncAssistTheme.css";
 import VictoriaWeeklyPlanner from "../components/sync/VictoriaWeeklyPlanner";
 
-const portraits={CHIEF_OF_STAFF:"/jarvis-avatars/Victoria.png",SALES_MANAGER:"/jarvis-avatars/Scarlett.png",MARKETING_MANAGER:"/jarvis-avatars/Elizabeth.png",RESEARCH_ANALYST:"/jarvis-avatars/Sophia.png",FINANCE_MANAGER:"/jarvis-avatars/Charlotte.png"};
+const portraits={CHIEF_OF_STAFF:"/jarvis-avatars/Victoria.png",SALES_MANAGER:"/jarvis-avatars/Scarlett.png",MARKETING_MANAGER:"/jarvis-avatars/Elizabeth.png",RESEARCH_ANALYST:"/jarvis-avatars/Sophia.png",FINANCE_MANAGER:"/jarvis-avatars/Charlotte.png",PROPERTY_MANAGER:"/jarvis-avatars/Sarah.png"};
 const readableError=(e,fallback)=>{const status=e?.response?.status;const body=e?.response?.data;const detail=typeof body?.detail==="string"?body.detail:"";if(detail)return `${detail}${status?` (HTTP ${status})`:""}`;if(status===401)return "Session expired. Sign in again, then retry.";if(status===403)return "This account is not authorized for the private pilot.";if(status===404)return "Assignment API endpoint not found on the deployed backend (404).";if(status>=500)return `Server error (${status}). Check Render backend logs; assignment may not have saved.`;if(!e?.response)return "Cannot reach the backend. Check your connection and Render API status.";return `${fallback}${status?` (HTTP ${status})`:""}`};
 const roles=[
  ["CHIEF_OF_STAFF","Victoria · Chief of Staff"],
@@ -17,7 +17,7 @@ const roles=[
  ["FINANCE_MANAGER","Charlotte · Finance"],
  ["BUSINESS_MANAGER","Business Operations"],
  ["CUSTOMER_SERVICE","Customer Service"],
- ["PROPERTY_MANAGER","Property Assistant"],
+ ["PROPERTY_MANAGER","Sarah · Property Assistant"],
  ["EXECUTIVE_ASSISTANT","Executive Assistant"],
 ];
 export default function AIAssignments(){
