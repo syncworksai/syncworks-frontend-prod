@@ -25,3 +25,36 @@
  @keyframes sw-mail-panel-in{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
 }
 @media(prefers-reduced-motion:reduce){.sw-mail-connection,.sw-mail-preferences,.sw-mail-inbox,.sw-mail-brief,.sw-mail-compose{animation:none!important}}
+
+
+/* Theme-aware Mail Desk; one-screen shell with contained content scrolling. */
+.sw-assist-themed.sw-mail-page {background-color:#071426!important;isolation:isolate;}
+.sw-assist-themed.sw-mail-page .sw-mail-layout {position:relative;z-index:1;scrollbar-width:thin;scrollbar-color:rgba(var(--assist-accent),.35) transparent;}
+.sw-assist-themed.sw-mail-page .sw-mail-hero,
+.sw-assist-themed.sw-mail-page .sw-mail-connection,
+.sw-assist-themed.sw-mail-page .sw-mail-preferences,
+.sw-assist-themed.sw-mail-page .sw-mail-compose,
+.sw-assist-themed.sw-mail-page .sw-mail-inbox,
+.sw-assist-themed.sw-mail-page .sw-mail-brief{
+ background:var(--assist-glass)!important;
+ border-color:rgba(var(--assist-accent),.3)!important;
+ backdrop-filter:blur(22px) saturate(120%);
+}
+.sw-assist-themed.sw-mail-page .sw-mail-account-card {background:rgba(2,9,23,.25);}
+.sw-assist-themed.sw-mail-page button:focus-visible{outline:2px solid rgba(var(--assist-accent),.85);outline-offset:2px;}
+@media(min-width:768px){
+ .sw-assist-themed.sw-mail-page {height:calc(100dvh - 155px);min-height:360px;overflow:hidden;}
+ .sw-assist-themed.sw-mail-page .sw-mail-layout {max-width:1100px;overflow-y:auto;}
+}
+@media(max-width:767px){
+ .sw-assist-themed.sw-mail-page {height:calc(100dvh - 112px)!important;padding:8px 12px 112px!important;}
+ .sw-assist-themed.sw-mail-page .sw-mail-layout {overflow:hidden;}
+ .sw-assist-themed.sw-mail-page .sw-mail-connection,
+ .sw-assist-themed.sw-mail-page .sw-mail-preferences,
+ .sw-assist-themed.sw-mail-page .sw-mail-inbox,
+ .sw-assist-themed.sw-mail-page .sw-mail-brief,
+ .sw-assist-themed.sw-mail-page .sw-mail-compose {
+   background:var(--assist-glass)!important;
+   border-color:rgba(var(--assist-accent),.35)!important;
+ }
+}
