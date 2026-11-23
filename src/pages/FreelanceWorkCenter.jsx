@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthContext";
 import FreelanceJobsPage from "./FreelanceJobsPage";
 import FreelanceOverviewDashboard from "./FreelanceOverviewDashboard";
 import FreelanceUpworkDesk from "./FreelanceUpworkDeskV2";
+import FreelanceWorkspaceShell from "./FreelanceWorkspaceShell";
 import FreelanceProjectsPage from "./FreelanceProjectsPage";
 import FreelanceAutomationStudio from "./FreelanceAutomationStudio";
 import { BriefcaseBusiness, Search, FileText, FolderKanban, Wallet, PlugZap, Bot, Bell, ExternalLink, Plus, Trash2, ArrowLeft } from "lucide-react";
@@ -69,6 +70,8 @@ export default function FreelanceWorkCenter(){
  if(!SECTIONS.some(([id])=>id===section))return <Navigate to="/customer/freelance/overview" replace/>;
  const byStatus=(statuses)=>items.filter(j=>statuses.includes(j.status));
  if(section==="upwork")return <FreelanceUpworkDesk items={items} addJob={addJob} updateJob={updateJob}/>;
+ return <FreelanceWorkspaceShell section={section} items={items} totals={totals} addJob={addJob} updateJob={updateJob} deleteJob={deleteJob} updatedAt={data.updatedAt}/>;
+ /* Kept for reference during rollout; all active sections now render in the new shell. */
  return <main className="min-h-dvh bg-[#060d19] px-4 pb-16 pt-6 text-slate-100 sm:px-7" data-sw-feature="freelance-pilot">
  <div className="mx-auto max-w-6xl">
  <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><button onClick={()=>nav("/customer")} type="button" className={linkClass}><ArrowLeft size={16}/> Customer Workspace</button><span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200">Founder visual pilot · Demo</span></div>
