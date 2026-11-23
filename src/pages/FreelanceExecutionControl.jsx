@@ -20,7 +20,7 @@ export default function FreelanceExecutionControl(){
   setLoading(true);setError("");
   try {
    const [access,queue]=await Promise.all([api.get(ACCESS),api.get(ROOT)]);
-   if(!access?.data?.allowed)throw Error("Founder access has not been enabled for this account.");
+   if(!access?.data?.enabled)throw Error("Founder access has not been enabled for this account.");
    setEnabled(true);setJobs(queue.data.jobs||[]);
   }catch(e){
    setEnabled(false);
