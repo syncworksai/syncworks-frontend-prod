@@ -1,0 +1,45 @@
+/* One anchored shell for every founder Freelance route; details move to drawers. */
+.sw-freelance-unified-content{grid-template-rows:auto auto auto minmax(0,1fr) auto auto;gap:clamp(7px,1vh,12px)}
+.sw-freelance-unified-top{padding:10px 16px}
+.sw-freelance-unified-top .sw-upwork-heading h1{font-size:clamp(22px,2.3vw,31px);letter-spacing:-.035em}
+.sw-freelance-header-buttons{display:flex;align-items:center;gap:8px}
+.sw-freelance-unified-nav{display:flex;align-items:center;gap:6px;padding:4px;min-height:40px;max-width:100%;overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain}
+.sw-freelance-unified-nav::-webkit-scrollbar{display:none}
+.sw-freelance-tab{display:flex;align-items:center;gap:6px;flex:none;color:var(--uw-muted);background:var(--uw-inset);border:1px solid var(--uw-border);padding:8px 11px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .2s,border-color .2s,transform .2s}
+.sw-freelance-tab:hover{border-color:var(--uw-accent);color:var(--uw-ink)}
+.sw-freelance-tab.selected{border-color:color-mix(in srgb,var(--uw-accent) 60%,transparent);background:color-mix(in srgb,var(--uw-accent) 18%,var(--uw-inset));color:var(--uw-ink)}
+.sw-freelance-unified-main{grid-template-columns:minmax(0,1.45fr) minmax(260px,.83fr)}
+.sw-freelance-focus{padding:clamp(15px,1.8vw,24px);display:flex;flex-direction:column;justify-content:space-between;gap:12px;min-height:0}
+.sw-freelance-mini-status{font-size:10px;font-weight:800;color:var(--uw-accent);border:1px solid var(--uw-border);padding:5px 10px;border-radius:99px;white-space:nowrap}
+.sw-freelance-focus-center{display:flex;align-items:center;gap:18px;min-height:0;flex:1}
+.sw-freelance-big-icon{height:76px;width:76px;flex:none;display:grid;place-items:center;border-radius:22px;background:color-mix(in srgb,var(--uw-accent) 14%,var(--uw-inset));border:1px solid var(--uw-border);color:var(--uw-accent)}
+.sw-freelance-focus-center h2{font-size:clamp(19px,2.1vw,29px);font-weight:820;line-height:1.16;letter-spacing:-.03em;max-width:440px}
+.sw-freelance-focus-center p{font-size:clamp(11px,1vw,13px);color:var(--uw-muted);line-height:1.5;margin-top:8px;max-width:470px}
+.sw-freelance-focus-actions{display:flex;flex-wrap:wrap;gap:8px}
+.sw-freelance-right{grid-template-rows:repeat(2,minmax(0,1fr))}
+.sw-freelance-insight-card{padding:clamp(13px,1.6vw,20px);display:flex;flex-direction:column;gap:8px;overflow:hidden;min-height:0}
+.sw-freelance-insight-card strong{font-size:clamp(12px,1.15vw,16px)}
+.sw-freelance-insight-card p{font-size:11px;line-height:1.48;color:var(--uw-muted)}
+.sw-freelance-insight-card .sw-upwork-plain{align-self:flex-start;margin-top:auto}
+.sw-freelance-wide-drawer{width:min(900px,100%)}
+.sw-freelance-drawer-body{color:var(--uw-ink);display:block}
+.sw-freelance-drawer-body h2,.sw-freelance-drawer-body h3,.sw-freelance-drawer-body h4,
+.sw-freelance-drawer-body .text-white{color:var(--uw-ink)!important}
+.sw-freelance-drawer-body .text-slate-400,.sw-freelance-drawer-body .text-slate-500,
+.sw-freelance-drawer-body .text-slate-300{color:var(--uw-muted)!important}
+.sw-freelance-drawer-body .bg-slate-900\/70,.sw-freelance-drawer-body .bg-slate-900\/75,.sw-freelance-drawer-body .bg-slate-900\/80,
+.sw-freelance-drawer-body .bg-\[\#101b30\]\/85,.sw-freelance-drawer-body .bg-slate-950{background:var(--uw-inset)!important}
+.sw-freelance-drawer-body .text-cyan-200,.sw-freelance-drawer-body .text-cyan-100{color:var(--uw-accent)!important}
+.sw-freelance-drawer-body input,.sw-freelance-drawer-body textarea,.sw-freelance-drawer-body select{max-width:100%;background:var(--uw-inset);color:var(--uw-ink);border-color:var(--uw-border)}
+.sw-freelance-drawer-body .bg-gradient-to-br{background:var(--uw-inset)!important}
+.sw-freelance-drawer-stack{display:flex;flex-direction:column;gap:14px}
+.sw-freelance-drawer-stack>p{font-size:13px;line-height:1.5;color:var(--uw-muted)}
+.sw-freelance-drawer-stack .sw-upwork-drawer-card{display:flex;flex-direction:column;gap:9px}
+.sw-freelance-drawer-stack .sw-upwork-ledger-row strong{white-space:nowrap}
+.sw-freelance-task{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid var(--uw-border);border-radius:12px;background:var(--uw-inset);text-align:left;color:var(--uw-ink);font-size:13px;cursor:pointer}
+.sw-freelance-task span{flex:1}.sw-freelance-task svg:first-child{color:var(--uw-accent)}
+.sw-freelance-input{width:100%;padding:12px;border:1px solid var(--uw-border);background:var(--uw-inset);color:var(--uw-ink);border-radius:9px}
+.sw-freelance-wide-drawer .sw-upwork-drawer-scroll{padding:22px 28px 28px}
+@media(max-height:700px) and (min-width:760px){.sw-freelance-unified-content{gap:5px;padding-top:8px;padding-bottom:12px}.sw-freelance-unified-nav{min-height:32px}.sw-freelance-tab{padding:6px 9px}.sw-freelance-big-icon{height:55px;width:55px}.sw-freelance-focus{gap:6px;padding:12px}.sw-freelance-insight-card{gap:4px;padding:10px}.sw-freelance-focus-center p{margin-top:4px}}
+@media(max-width:720px){.sw-freelance-unified-content{padding-bottom:16px}.sw-freelance-unified-top{padding:10px 11px}.sw-freelance-unified-top .sw-upwork-heading h1{font-size:21px}.sw-freelance-header-buttons>.sw-upwork-icon-button{display:none}.sw-freelance-header-buttons>.sw-upwork-action{padding:8px}.sw-freelance-unified-nav{min-height:35px;gap:5px}.sw-freelance-tab{padding:7px 9px;font-size:10px}.sw-freelance-unified-main{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}.sw-freelance-focus{padding:12px;gap:8px}.sw-freelance-big-icon{height:45px;width:45px;border-radius:12px}.sw-freelance-big-icon svg{width:22px}.sw-freelance-focus-center{gap:10px}.sw-freelance-focus-center h2{font-size:17px}.sw-freelance-focus-center p{font-size:10px;margin-top:4px}.sw-freelance-insight-card:nth-child(2){display:none}.sw-freelance-insight-card{padding:9px 12px;gap:4px}.sw-freelance-insight-card strong{font-size:12px}.sw-freelance-insight-card p{font-size:10px}.sw-freelance-insight-card .sw-upwork-plain{display:none}.sw-freelance-wide-drawer .sw-upwork-drawer-scroll{padding:15px 16px 24px}}
+@media(max-width:400px){.sw-freelance-unified-main{grid-template-rows:minmax(0,1fr)}.sw-freelance-right{display:none}.sw-freelance-focus-actions .sw-upwork-action{font-size:10px}.sw-freelance-focus-center h2{font-size:16px}}
