@@ -7,4 +7,5 @@ export const APPROVED_AI_IDENTITIES = Object.freeze({
   MARKETING_MANAGER: {name:"Elizabeth",voiceName:"Laura - Enthusiast, Quirky Attitude",voiceId:"FGY2WhTYpPnrIDTdsKH5",approvedPortrait:"Elizabeth.png",portraitAvailable:true},
   SALES_MANAGER: {name:"Scarlett",voiceName:"Emily - Friendly & Confident",voiceId:"uc7PdIi19FG6Iu2Iqkdc",approvedPortrait:"Scarlett.png",portraitAvailable:true},
   RESEARCH_ANALYST: {name:"Sophia",voiceName:"Alice - Clear, Engaging Educator",voiceId:"Xb7hH8MSUJpSbSDYk0k2",approvedPortrait:"Sophia.png",portraitAvailable:true},
+  PROPERTY_MANAGER: {name:"Sarah",voiceName:"Tiffany - Warm, Conversational Narrator",voiceId:"6fLd3vCll0LutxnciLI8",approvedPortrait:"Sarah.png",portraitAvailable:false},
 });
