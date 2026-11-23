@@ -6,6 +6,7 @@ export const PILOT_AGENTS = Object.freeze([
   { id: "future-female", name: "Elizabeth", role: "Marketing Manager", workerRole: "social_media_marketing", voiceName: "Laura", voiceId: "FGY2WhTYpPnrIDTdsKH5", photo: "/jarvis-avatars/Elizabeth.png", fallbackPhoto: "/jarvis-avatars/elizabeth.jpeg" },
   { id: "executive-male", name: "Scarlett", role: "Sales Manager", workerRole: "sales_manager", voiceName: "Emily", voiceId: "uc7PdIi19FG6Iu2Iqkdc", photo: "/jarvis-avatars/Scarlett.png", fallbackPhoto: "/jarvis-avatars/james.jpeg" },
   { id: "future-male", name: "Sophia", role: "Research Analyst", workerRole: "research_analyst", voiceName: "Alice", voiceId: "Xb7hH8MSUJpSbSDYk0k2", photo: "/jarvis-avatars/Sophia.png", fallbackPhoto: "/jarvis-avatars/william.jpeg" },
+  { id: "property-female", name: "Sarah", role: "Property Assistant", workerRole: "property_manager", voiceName: "Tiffany - Warm, Conversational Narrator", voiceId: "6fLd3vCll0LutxnciLI8", photo: "/jarvis-avatars/Sarah.png", fallbackPhoto: "/jarvis-avatars/Victoria.png" },
 ]);
 export const isFounderPilot = (user) => String(user?.email || "").trim().toLowerCase() === PILOT_EMAIL;
 export const getPilotAgentsForUser = (user, defaultAgents) => isFounderPilot(user) ? PILOT_AGENTS : defaultAgents;
