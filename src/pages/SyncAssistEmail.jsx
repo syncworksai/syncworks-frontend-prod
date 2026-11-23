@@ -6,6 +6,7 @@ import "./SyncAssistEmailMobile.css";
 import {useAuth} from "../auth/AuthContext";
 import {useWorkspaceAppearance} from "../components/customer/CustomerWorkspace";
 import "../components/sync/SyncAssistTheme.css";
+import SyncAssistMultiMailboxes from "../components/sync/SyncAssistMultiMailboxes";
 
 const BASE="/sync-ai/assist/pilot/outlook/";
 export default function SyncAssistEmail() {
@@ -13,7 +14,7 @@ export default function SyncAssistEmail() {
   const [searchParams]=useSearchParams();
   const {user}=useAuth();
   const [appearance]=useWorkspaceAppearance();
-  const [setupOpen,setSetupOpen]=useState(true);
+  const [setupOpen,setSetupOpen]=useState(false);
   const pilot=String(user?.email||"").trim().toLowerCase()==="jacoblord7@outlook.com";
   const [status,setStatus]=useState(null),[messages,setMessages]=useState([]),[busy,setBusy]=useState(false);
   const [error,setError]=useState(""),[notice,setNotice]=useState(""),[selected,setSelected]=useState(null);
@@ -113,52 +114,44 @@ export default function SyncAssistEmail() {
     catch(e){setError(e?.response?.data?.detail||"Disconnect failed.");}
     finally {setBusy(false);}
   }
-  return <main data-mobile-panel={mobilePanel} data-assist-theme={appearance.theme} data-assist-motion={appearance.motion?"on":"off"} className="sw-assist-themed sw-mail-page h-[calc(100dvh-155px)] min-h-[360px] overflow-hidden px-3 py-3 text-white sm:px-4"><div className="sw-mail-layout mx-auto flex h-full min-h-0 max-w-6xl flex-col overflow-y-auto overscroll-contain pb-4">
-    <button onClick={()=>navigate("/sync/assist/daily")} className="mb-3 flex min-h-10 shrink-0 items-center gap-2 self-start rounded-xl border border-white/20 bg-black/20 px-4 text-xs"><ArrowLeft size={17}/> Daily Briefing</button>
+  return <main data-mobile-panel={mobilePanel} data-assist-theme={appearance.theme} data-assist-motion={appearance.motion?"on":"off"} className="sw-assist-themed sw-mail-page h-[calc(100dvh-155px)] min-h-[360px] overflow-hidden px-3 py-3 text-white sm:px-4"><div className="sw-mail-layout mx-auto flex h-full min-h-0 max-w-6xl flex-col overflow-hidden">
+
     <section className="sw-mail-hero sw-assist-panel shrink-0 rounded-2xl border p-4">
       <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-cyan-200"><Mail size={18}/> Chief of Staff</div>
-      <h1 className="mt-2 text-2xl font-black">SYNC Mail Desk</h1>
-      <p className="mt-2 text-sm leading-6 text-slate-300">Review Outlook, compose messages, prepare replies, and explicitly approve sending. Nothing is sent automatically.</p>
+      <div className="flex items-center justify-between gap-2"><h1 className="mt-1 text-lg font-black">SYNC Mail Desk</h1><button onClick={()=>navigate("/sync/assist/daily")} className="flex items-center gap-1 rounded-lg border border-white/20 px-3 py-2 text-xs"><ArrowLeft size={14}/> Back</button></div>
+      <p className="mt-1 text-xs text-slate-300">Connect and label mailboxes · read messages · prepare reviewed replies · no automatic sends</p>
       <p className="mt-3 flex items-center gap-2 text-xs text-emerald-200"><ShieldCheck size={16}/> Server-side OAuth · Private pilot · Manual send confirmation</p>
     </section>
     {!pilot && <p className="mt-4 text-sm text-rose-300">Pilot account only.</p>}
     {connection && <p role="status" className="mt-3 rounded-xl border border-cyan-400/30 p-3 text-sm">Microsoft connection: {connection==="connected"?"connected":connection==="wrong_account"?"wrong email account selected":"not completed"}</p>}
     {error && <p role="alert" className="mt-3 rounded-xl border border-rose-400/50 p-3 text-sm text-rose-200">{error}</p>}
     {notice && <p role="status" className="mt-3 rounded-xl border border-emerald-400/30 p-3 text-sm text-emerald-200">{notice}</p>}
-    <div className="sw-mail-mobile-tabs" role="group" aria-label="Mail Desk views"><button type="button" onClick={()=>setMobilePanel("inbox")} aria-pressed={mobilePanel==="inbox"}>Inbox</button><button type="button" onClick={()=>setMobilePanel("connection")} aria-pressed={mobilePanel==="connection"}>Connection</button><button type="button" onClick={()=>{setMobilePanel("preferences");setPrefsOpen(true);}} aria-pressed={mobilePanel==="preferences"}>Writing</button>{brief&&<button type="button" onClick={()=>setMobilePanel("brief")} aria-pressed={mobilePanel==="brief"}>Brief</button>}</div>
+    <nav className="sw-mail-mobile-tabs" role="group" aria-label="Mail Desk views">
+      <button type="button" onClick={()=>setMobilePanel("connection")} aria-pressed={mobilePanel==="connection"}>Accounts</button>
+      <button type="button" onClick={()=>setMobilePanel("inbox")} aria-pressed={mobilePanel==="inbox"}>Primary inbox</button>
+      <button type="button" onClick={()=>{setMobilePanel("preferences");setPrefsOpen(true)}} aria-pressed={mobilePanel==="preferences"}>Writing</button>
+      <button type="button" onClick={()=>compose(null)} aria-pressed={mobilePanel==="compose"}>Compose</button>
+      {brief&&<button type="button" onClick={()=>setMobilePanel("brief")} aria-pressed={mobilePanel==="brief"}>Brief</button>}
+    </nav>
     <section className="sw-mail-connection sw-assist-panel mt-3 rounded-2xl border p-4">
-      <div className="flex items-center justify-between gap-2"><h2 className="font-black">Outlook connection</h2><span className="text-xs font-bold text-cyan-200">{status?.connected?"Connected":status?.configured?"Ready to connect":"Setup required"}</span></div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <div className="sw-mail-account-card rounded-xl border border-white/15 p-3">
-          <div className="flex items-center justify-between gap-2"><strong className="text-sm">Primary Outlook mailbox</strong><span className="text-[10px] text-cyan-200">{status?.connected?"Connected":status?.configured?"Ready to authorize":"Setup required"}</span></div>
-          <p className="mt-1 text-xs text-slate-300">jacoblord7@outlook.com</p>
-          <p className="mt-2 text-[11px] text-slate-400">Private pilot · Microsoft account authorization · per-message send approval</p>
-        </div>
-        <div className="sw-mail-account-card rounded-xl border border-dashed border-white/20 p-3">
-          <div className="flex items-center justify-between gap-2"><strong className="text-sm">Additional mailboxes</strong><span className="text-[10px] text-amber-200">Backend upgrade required</span></div>
-          <p className="mt-1 text-xs text-slate-300">Separate Property Management, SyncWorks, and other email accounts.</p>
-          <p className="mt-2 text-[11px] text-slate-400">Multi-account authentication and mailbox isolation are not enabled yet. An additional account cannot be connected through this pilot endpoint.</p>
-        </div>
+      <div className="mb-3 flex items-center justify-between gap-2"><h2 className="text-sm font-bold">Mail accounts and permissions</h2><span className="text-[11px] text-slate-300">{status?.configured?"Primary OAuth configured":"Microsoft OAuth setup required"}</span></div>
+      <SyncAssistMultiMailboxes/>
+      <div className="mt-3 rounded-xl border border-white/15 bg-black/10 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2"><div><strong className="text-xs">Legacy primary Outlook connection</strong><p className="text-[11px] text-slate-300">jacoblord7@outlook.com · existing mail drafting and approval workflow</p></div><span className="text-[10px] text-cyan-200">{status?.connected?"Connected":status?.configured?"Ready to connect":"Setup required"}</span></div>
+        <div className="mt-2 flex flex-wrap gap-2">{status?.configured&&!status?.connected&&<button disabled={busy} onClick={connect} className="rounded-lg border border-cyan-300/40 bg-cyan-400/15 px-3 py-2 text-xs">Connect primary Outlook</button>}
+        {status?.connected&&<><button disabled={busy} onClick={()=>{setMobilePanel("inbox");refresh()}} className="rounded-lg border border-white/20 px-3 py-2 text-xs">Open primary inbox</button><button disabled={busy} onClick={briefMe} className="rounded-lg border border-white/20 px-3 py-2 text-xs">Brief inbox</button><button disabled={busy} onClick={()=>compose(null)} className="rounded-lg border border-white/20 px-3 py-2 text-xs">Compose</button><button disabled={busy} onClick={disconnect} className="rounded-lg border border-rose-300/25 px-3 py-2 text-xs">Disconnect primary</button></>}</div>
       </div>
       <div className="mt-3 rounded-xl border border-white/15 bg-black/10 p-3">
-        <button type="button" className="flex w-full items-center justify-between gap-3 text-left text-sm font-semibold" onClick={()=>setSetupOpen(v=>!v)} aria-expanded={setupOpen}><span>Connection setup instructions</span><span>{setupOpen?"−":"+"}</span></button>
-        {setupOpen&&<ol className="mt-3 list-inside list-decimal space-y-2 text-xs leading-5 text-slate-200">
-          <li><strong>SyncWorks administrator:</strong> Register a Microsoft Entra application supporting the intended Outlook account types.</li>
-          <li>Configure Microsoft Graph delegated permissions, a secure authorization callback, and the approved client credentials on Render. Do not paste passwords, secrets, or tokens into this page.</li>
-          <li>Verify the server reports <strong>Ready to connect</strong>. If it still says Setup required, OAuth has not been configured.</li>
-          <li>Click <strong>Connect my Outlook</strong> and sign in through Microsoft's own consent screen. The current pilot only accepts jacoblord7@outlook.com.</li>
-          <li>Return here and confirm the inbox loads. Test a read-only inbox review before creating or sending a draft.</li>
-          <li>For additional accounts, the backend must first support distinct encrypted tokens, mailbox selection and scoped access for Sarah and Victoria.</li>
+        <button type="button" onClick={()=>setSetupOpen(v=>!v)} aria-expanded={setupOpen} className="flex w-full items-center justify-between text-left text-xs font-bold"><span>Microsoft setup instructions</span><span>{setupOpen?"−":"+"}</span></button>
+        {setupOpen&&<ol className="mt-2 list-inside list-decimal space-y-1.5 text-[11px] leading-5 text-slate-200">
+          <li>An administrator registers a Microsoft Entra application with personal and organizational account support.</li>
+          <li>Configure Graph delegated permissions for the intended mailbox scopes. Keep application credentials on Render, not in the browser.</li>
+          <li>Register the exact callback path <code>/api/v1/sync-ai/assist/pilot/mailboxes/callback/</code> on the backend's HTTPS host and set <code>SYNC_ASSIST_MS_MULTI_REDIRECT_URI</code> to that URL.</li>
+          <li>Set the Microsoft client ID, client secret and encryption key as server environment values.</li>
+          <li>When the service reports ready, choose a mailbox label, purpose and importance, then use Microsoft's authorization screen.</li>
+          <li>Connect each mailbox independently; Sarah receives only property-approved data after role-specific delegation is implemented.</li>
         </ol>}
       </div>
-      {!status?.configured ? <p className="mt-3 text-sm leading-6 text-amber-200">Microsoft authorization is not configured on the SyncWorks server. Connection controls are disabled until the administrator finishes OAuth setup. No Microsoft password should be given to an AI assistant.</p> :
-        !status?.connected ? <button disabled={busy} onClick={connect} className="mt-3 flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 text-sm font-black"><PlugZap size={17}/> Connect my Outlook</button> :
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button disabled={busy} onClick={briefMe} className="flex min-h-11 items-center gap-2 rounded-xl border border-purple-400/30 px-4 text-sm text-purple-200">✨ Brief my inbox</button>
-          <button disabled={busy} onClick={refresh} className="flex min-h-11 items-center gap-2 rounded-xl border border-cyan-400/30 px-4 text-sm"><RefreshCw size={16}/> Refresh inbox</button>
-          <button disabled={busy} onClick={()=>compose(null)} className="flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 text-sm font-black"><Plus size={16}/> New message</button>
-          <button disabled={busy} onClick={disconnect} className="min-h-11 rounded-xl border border-slate-600 px-4 text-xs text-slate-300">Disconnect</button>
-        </div>}
     </section>
     {briefOpen && brief && <section className="sw-mail-brief sw-assist-panel mt-3 rounded-2xl border p-4">
       <div className="flex items-center justify-between"><h2 className="font-black">Inbox Brief</h2><button onClick={()=>setBriefOpen(false)} className="min-h-10 rounded-lg border border-slate-600 px-3 text-xs">Close</button></div>
@@ -208,6 +201,6 @@ export default function SyncAssistEmail() {
           <button type="button" onClick={()=>compose(m)} className="mt-2 flex min-h-10 items-center gap-2 rounded-lg border border-cyan-400/30 px-3 text-xs text-cyan-100"><Reply size={15}/> Prepare reply</button>
         </article>)}</div>}
     </section>}
-    <p className="mt-4 text-xs leading-5 text-slate-400">Inbox refresh is on demand in this build. On-demand AI email briefings and your explicit writing preferences are available after connecting Outlook. Unattended scanning and automatic sending are not yet enabled.</p>
+
   </div></main>;
 }
