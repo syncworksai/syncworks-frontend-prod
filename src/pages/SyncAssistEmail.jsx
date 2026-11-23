@@ -4,12 +4,16 @@ import {ArrowLeft,Mail,ShieldCheck,RefreshCw,Send,Plus,Reply,PlugZap} from "luci
 import api from "../api/client";
 import "./SyncAssistEmailMobile.css";
 import {useAuth} from "../auth/AuthContext";
+import {useWorkspaceAppearance} from "../components/customer/CustomerWorkspace";
+import "../components/sync/SyncAssistTheme.css";
 
 const BASE="/sync-ai/assist/pilot/outlook/";
 export default function SyncAssistEmail() {
   const navigate=useNavigate();
   const [searchParams]=useSearchParams();
   const {user}=useAuth();
+  const [appearance]=useWorkspaceAppearance();
+  const [setupOpen,setSetupOpen]=useState(true);
   const pilot=String(user?.email||"").trim().toLowerCase()==="jacoblord7@outlook.com";
   const [status,setStatus]=useState(null),[messages,setMessages]=useState([]),[busy,setBusy]=useState(false);
   const [error,setError]=useState(""),[notice,setNotice]=useState(""),[selected,setSelected]=useState(null);
@@ -109,9 +113,9 @@ export default function SyncAssistEmail() {
     catch(e){setError(e?.response?.data?.detail||"Disconnect failed.");}
     finally {setBusy(false);}
   }
-  return <main data-mobile-panel={mobilePanel} className="sw-mail-page min-h-dvh bg-[#020617] px-4 pb-32 pt-28 text-white"><div className="sw-mail-layout mx-auto max-w-3xl">
-    <button onClick={()=>navigate("/sync/assist/daily")} className="mb-4 flex min-h-11 items-center gap-2 rounded-xl border border-white/20 px-4 text-sm"><ArrowLeft size={17}/> Daily Briefing</button>
-    <section className="sw-mail-hero rounded-3xl border border-cyan-400/30 bg-gradient-to-br from-[#063047] to-[#1d103e] p-5">
+  return <main data-mobile-panel={mobilePanel} data-assist-theme={appearance.theme} data-assist-motion={appearance.motion?"on":"off"} className="sw-assist-themed sw-mail-page h-[calc(100dvh-155px)] min-h-[360px] overflow-hidden px-3 py-3 text-white sm:px-4"><div className="sw-mail-layout mx-auto flex h-full min-h-0 max-w-6xl flex-col overflow-y-auto overscroll-contain pb-4">
+    <button onClick={()=>navigate("/sync/assist/daily")} className="mb-3 flex min-h-10 shrink-0 items-center gap-2 self-start rounded-xl border border-white/20 bg-black/20 px-4 text-xs"><ArrowLeft size={17}/> Daily Briefing</button>
+    <section className="sw-mail-hero sw-assist-panel shrink-0 rounded-2xl border p-4">
       <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-cyan-200"><Mail size={18}/> Chief of Staff</div>
       <h1 className="mt-2 text-2xl font-black">SYNC Mail Desk</h1>
       <p className="mt-2 text-sm leading-6 text-slate-300">Review Outlook, compose messages, prepare replies, and explicitly approve sending. Nothing is sent automatically.</p>
@@ -122,9 +126,32 @@ export default function SyncAssistEmail() {
     {error && <p role="alert" className="mt-3 rounded-xl border border-rose-400/50 p-3 text-sm text-rose-200">{error}</p>}
     {notice && <p role="status" className="mt-3 rounded-xl border border-emerald-400/30 p-3 text-sm text-emerald-200">{notice}</p>}
     <div className="sw-mail-mobile-tabs" role="group" aria-label="Mail Desk views"><button type="button" onClick={()=>setMobilePanel("inbox")} aria-pressed={mobilePanel==="inbox"}>Inbox</button><button type="button" onClick={()=>setMobilePanel("connection")} aria-pressed={mobilePanel==="connection"}>Connection</button><button type="button" onClick={()=>{setMobilePanel("preferences");setPrefsOpen(true);}} aria-pressed={mobilePanel==="preferences"}>Writing</button>{brief&&<button type="button" onClick={()=>setMobilePanel("brief")} aria-pressed={mobilePanel==="brief"}>Brief</button>}</div>
-    <section className="sw-mail-connection mt-4 rounded-2xl border border-white/10 bg-slate-900/60 p-4">
+    <section className="sw-mail-connection sw-assist-panel mt-3 rounded-2xl border p-4">
       <div className="flex items-center justify-between gap-2"><h2 className="font-black">Outlook connection</h2><span className="text-xs font-bold text-cyan-200">{status?.connected?"Connected":status?.configured?"Ready to connect":"Setup required"}</span></div>
-      {!status?.configured ? <p className="mt-3 text-sm leading-6 text-amber-200">Microsoft authorization must be configured on the SyncWorks server before connecting. You do not need to provide your Microsoft password to Jarvis.</p> :
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <div className="sw-mail-account-card rounded-xl border border-white/15 p-3">
+          <div className="flex items-center justify-between gap-2"><strong className="text-sm">Primary Outlook mailbox</strong><span className="text-[10px] text-cyan-200">{status?.connected?"Connected":status?.configured?"Ready to authorize":"Setup required"}</span></div>
+          <p className="mt-1 text-xs text-slate-300">jacoblord7@outlook.com</p>
+          <p className="mt-2 text-[11px] text-slate-400">Private pilot · Microsoft account authorization · per-message send approval</p>
+        </div>
+        <div className="sw-mail-account-card rounded-xl border border-dashed border-white/20 p-3">
+          <div className="flex items-center justify-between gap-2"><strong className="text-sm">Additional mailboxes</strong><span className="text-[10px] text-amber-200">Backend upgrade required</span></div>
+          <p className="mt-1 text-xs text-slate-300">Separate Property Management, SyncWorks, and other email accounts.</p>
+          <p className="mt-2 text-[11px] text-slate-400">Multi-account authentication and mailbox isolation are not enabled yet. An additional account cannot be connected through this pilot endpoint.</p>
+        </div>
+      </div>
+      <div className="mt-3 rounded-xl border border-white/15 bg-black/10 p-3">
+        <button type="button" className="flex w-full items-center justify-between gap-3 text-left text-sm font-semibold" onClick={()=>setSetupOpen(v=>!v)} aria-expanded={setupOpen}><span>Connection setup instructions</span><span>{setupOpen?"−":"+"}</span></button>
+        {setupOpen&&<ol className="mt-3 list-inside list-decimal space-y-2 text-xs leading-5 text-slate-200">
+          <li><strong>SyncWorks administrator:</strong> Register a Microsoft Entra application supporting the intended Outlook account types.</li>
+          <li>Configure Microsoft Graph delegated permissions, a secure authorization callback, and the approved client credentials on Render. Do not paste passwords, secrets, or tokens into this page.</li>
+          <li>Verify the server reports <strong>Ready to connect</strong>. If it still says Setup required, OAuth has not been configured.</li>
+          <li>Click <strong>Connect my Outlook</strong> and sign in through Microsoft's own consent screen. The current pilot only accepts jacoblord7@outlook.com.</li>
+          <li>Return here and confirm the inbox loads. Test a read-only inbox review before creating or sending a draft.</li>
+          <li>For additional accounts, the backend must first support distinct encrypted tokens, mailbox selection and scoped access for Sarah and Victoria.</li>
+        </ol>}
+      </div>
+      {!status?.configured ? <p className="mt-3 text-sm leading-6 text-amber-200">Microsoft authorization is not configured on the SyncWorks server. Connection controls are disabled until the administrator finishes OAuth setup. No Microsoft password should be given to an AI assistant.</p> :
         !status?.connected ? <button disabled={busy} onClick={connect} className="mt-3 flex min-h-11 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-4 text-sm font-black"><PlugZap size={17}/> Connect my Outlook</button> :
         <div className="mt-3 flex flex-wrap gap-2">
           <button disabled={busy} onClick={briefMe} className="flex min-h-11 items-center gap-2 rounded-xl border border-purple-400/30 px-4 text-sm text-purple-200">✨ Brief my inbox</button>
@@ -133,12 +160,12 @@ export default function SyncAssistEmail() {
           <button disabled={busy} onClick={disconnect} className="min-h-11 rounded-xl border border-slate-600 px-4 text-xs text-slate-300">Disconnect</button>
         </div>}
     </section>
-    {briefOpen && brief && <section className="sw-mail-brief mt-4 rounded-2xl border border-purple-400/30 bg-slate-900 p-4">
+    {briefOpen && brief && <section className="sw-mail-brief sw-assist-panel mt-3 rounded-2xl border p-4">
       <div className="flex items-center justify-between"><h2 className="font-black">Inbox Brief</h2><button onClick={()=>setBriefOpen(false)} className="min-h-10 rounded-lg border border-slate-600 px-3 text-xs">Close</button></div>
       <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-200">{brief.summary}</p>
       <p className="mt-2 text-xs text-slate-400">{brief.messages_reviewed} recent messages reviewed · {brief.unread_in_sample} unread in sample. Based on previews only; open full threads for verification.</p>
     </section>}
-    <section className="sw-mail-preferences mt-4 rounded-2xl border border-white/10 bg-slate-900/60 p-4">
+    <section className="sw-mail-preferences sw-assist-panel mt-3 rounded-2xl border p-4">
       <button type="button" aria-expanded={prefsOpen} onClick={()=>setPrefsOpen(v=>!v)} className="flex min-h-11 w-full items-center justify-between text-left font-black text-cyan-100">
         <span>Writing preferences<span className="block text-xs font-normal text-slate-400">Tone · Signature · Instructions · Review required</span></span><span>{prefsOpen?"−":"+"}</span>
       </button>
@@ -152,7 +179,7 @@ export default function SyncAssistEmail() {
         </>}
       </form>}
     </section>
-        {editor && status?.connected && <section className="sw-mail-compose mt-4 rounded-2xl border border-cyan-400/30 bg-slate-900 p-4">
+        {editor && status?.connected && <section className="sw-mail-compose sw-assist-panel mt-3 rounded-2xl border p-4">
       <h2 className="mb-3 font-black">{form.reply_to_id?"Reply to message":"Compose email"}</h2>
       <form onSubmit={saveDraft} className="space-y-3">
         <label className="block text-xs text-slate-300">To<input type="email" disabled={Boolean(form.reply_to_id)} required value={form.recipient} onChange={e=>setForm(v=>({...v,recipient:e.target.value}))} className="mt-1 min-h-11 w-full rounded-xl border border-white/20 bg-slate-950 p-3 text-white disabled:opacity-65"/></label>
@@ -171,7 +198,7 @@ export default function SyncAssistEmail() {
       </div>}
       <button type="button" onClick={()=>{setEditor(false);setDraft(null);setMobilePanel("inbox");}} className="mt-3 min-h-10 rounded-xl border border-slate-700 px-4 text-xs">Close editor</button>
     </section>}
-    {status?.connected && <section className="sw-mail-inbox mt-4 rounded-2xl border border-white/10 bg-slate-900/50 p-4">
+    {status?.connected && <section className="sw-mail-inbox sw-assist-panel mt-3 rounded-2xl border p-4">
       <h2 className="mb-3 text-lg font-black">Recent incoming mail</h2>
       {messages.length===0 ? <p className="text-sm text-slate-400">{busy?"Loading…":"No recent messages returned."}</p> :
         <div className="space-y-2">{messages.map(m=><article key={m.id} className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
