@@ -120,9 +120,9 @@ export default function SyncAssistEmail() {
       <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-cyan-200"><Mail size={18}/> Chief of Staff</div>
       <div className="flex items-center justify-between gap-2"><h1 className="mt-1 text-lg font-black">SYNC Mail Desk</h1><button onClick={()=>navigate("/sync/assist/daily")} className="flex items-center gap-1 rounded-lg border border-white/20 px-3 py-2 text-xs"><ArrowLeft size={14}/> Back</button></div>
       <p className="mt-1 text-xs text-slate-300">Connect and label mailboxes · read messages · prepare reviewed replies · no automatic sends</p>
-      <p className="mt-3 flex items-center gap-2 text-xs text-emerald-200"><ShieldCheck size={16}/> Server-side OAuth · Private pilot · Manual send confirmation</p>
+      <p className="mt-3 flex items-center gap-2 text-xs text-emerald-200"><ShieldCheck size={16}/> Secure Microsoft connection · Send approval required</p>
     </section>
-    {!pilot && <p className="mt-4 text-sm text-rose-300">Pilot account only.</p>}
+    {!pilot && <p className="mt-4 text-sm text-rose-300">Email connections are not yet available for this account.</p>}
     {connection && <p role="status" className="mt-3 rounded-xl border border-cyan-400/30 p-3 text-sm">Microsoft connection: {connection==="connected"?"connected":connection==="wrong_account"?"wrong email account selected":"not completed"}</p>}
     {error && <p role="alert" className="mt-3 rounded-xl border border-rose-400/50 p-3 text-sm text-rose-200">{error}</p>}
     {notice && <p role="status" className="mt-3 rounded-xl border border-emerald-400/30 p-3 text-sm text-emerald-200">{notice}</p>}
@@ -137,12 +137,12 @@ export default function SyncAssistEmail() {
       <div className="mb-3 flex items-center justify-between gap-2"><h2 className="text-sm font-bold">Mail accounts and permissions</h2><span className="text-[11px] text-slate-300">{status?.configured?"Primary OAuth configured":"Microsoft OAuth setup required"}</span></div>
       <SyncAssistMultiMailboxes/>
       <div className="mt-3 rounded-xl border border-white/15 bg-black/10 p-3">
-        <div className="flex flex-wrap items-center justify-between gap-2"><div><strong className="text-xs">Legacy primary Outlook connection</strong><p className="text-[11px] text-slate-300">jacoblord7@outlook.com · existing mail drafting and approval workflow</p></div><span className="text-[10px] text-cyan-200">{status?.connected?"Connected":status?.configured?"Ready to connect":"Setup required"}</span></div>
+        <div className="flex flex-wrap items-center justify-between gap-2"><div><strong className="text-xs">Primary Outlook account</strong><p className="text-[11px] text-slate-300">jacoblord7@outlook.com · Email drafts and approvals</p></div><span className="text-[10px] text-cyan-200">{status?.connected?"Connected":status?.configured?"Ready to connect":"Setup required"}</span></div>
         <div className="mt-2 flex flex-wrap gap-2">{status?.configured&&!status?.connected&&<button disabled={busy} onClick={connect} className="rounded-lg border border-cyan-300/40 bg-cyan-400/15 px-3 py-2 text-xs">Connect primary Outlook</button>}
         {status?.connected&&<><button disabled={busy} onClick={()=>{setMobilePanel("inbox");refresh()}} className="rounded-lg border border-white/20 px-3 py-2 text-xs">Open primary inbox</button><button disabled={busy} onClick={briefMe} className="rounded-lg border border-white/20 px-3 py-2 text-xs">Brief inbox</button><button disabled={busy} onClick={()=>compose(null)} className="rounded-lg border border-white/20 px-3 py-2 text-xs">Compose</button><button disabled={busy} onClick={disconnect} className="rounded-lg border border-rose-300/25 px-3 py-2 text-xs">Disconnect primary</button></>}</div>
       </div>
       <div className="mt-3 rounded-xl border border-white/15 bg-black/10 p-3">
-        <button type="button" onClick={()=>setSetupOpen(v=>!v)} aria-expanded={setupOpen} className="flex w-full items-center justify-between text-left text-xs font-bold"><span>Microsoft setup instructions</span><span>{setupOpen?"−":"+"}</span></button>
+        <button type="button" onClick={()=>setSetupOpen(v=>!v)} aria-expanded={setupOpen} className="flex w-full items-center justify-between text-left text-xs font-bold"><span>Connect your email · Setup guide</span><span>{setupOpen?"−":"+"}</span></button>
         {setupOpen&&<ol className="mt-2 list-inside list-decimal space-y-1.5 text-[11px] leading-5 text-slate-200">
           <li>An administrator registers a Microsoft Entra application with personal and organizational account support.</li>
           <li>Configure Graph delegated permissions for the intended mailbox scopes. Keep application credentials on Render, not in the browser.</li>
