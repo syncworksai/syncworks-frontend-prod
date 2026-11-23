@@ -18,10 +18,33 @@ const SECTIONS = [
 const STATUSES = ["Saved","Proposal drafted","Applied","Interview","Contracted","In progress","Submitted","Paid","Declined"];
 const storageKey = (userId) => `sw_freelance_pilot_v1_${userId}`;
 const money = (n) => Number(n || 0).toLocaleString("en-US",{style:"currency",currency:"USD"});
-function initialState(){ return { opportunities: [], updatedAt: null }; }
+// Imported once from the founder's confirmed Upwork proposal, NOT a live Upwork sync.
+// Keep contracted and paid revenue at zero until verified independently.
+const VERIFIED_FIRST_PROPOSAL = Object.freeze({
+  id:"upwork-proposal-2124993311948001281",
+  title:"Manual Amazon Product Research and Spreadsheet Curation",
+  platform:"Upwork",
+  url:"https://www.upwork.com/jobs/~022124978383444007582",
+  type:"Fixed price",
+  budget:30,
+  status:"Applied",
+  proposalId:"2124993311948001281",
+  upworkJobId:"2124978383444007582",
+  connectsSpent:8,
+  submittedAt:"2026-11-23T22:27:40.691Z",
+  source:"Upwork submission verified in ChatGPT on 2026-11-23; snapshot, not live status",
+});
+function initialState(){ return { opportunities: [], updatedAt: null, firstProposalImported: false }; }
 function loadState(userId) {
-  try { const value = JSON.parse(window.localStorage.getItem(storageKey(userId)) || "null"); return value && Array.isArray(value.opportunities) ? value : initialState(); }
-  catch { return initialState(); }
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(storageKey(userId)) || "null");
+    const state = saved && Array.isArray(saved.opportunities) ? saved : initialState();
+    if(state.firstProposalImported) return state;
+    const duplicate = state.opportunities.some(j=>j.proposalId===VERIFIED_FIRST_PROPOSAL.proposalId || j.upworkJobId===VERIFIED_FIRST_PROPOSAL.upworkJobId);
+    return {...state, firstProposalImported:true, opportunities:duplicate?state.opportunities:[VERIFIED_FIRST_PROPOSAL,...state.opportunities]};
+  } catch {
+    return {...initialState(), firstProposalImported:true, opportunities:[VERIFIED_FIRST_PROPOSAL]};
+  }
 }
 const panelClass = "rounded-2xl border border-white/10 bg-slate-900/80 p-5";
 const inputClass = "w-full min-w-0 rounded-xl border border-white/20 bg-slate-950/90 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none";
