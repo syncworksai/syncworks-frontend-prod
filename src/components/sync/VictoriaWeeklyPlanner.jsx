@@ -1,6 +1,6 @@
-import React,{useCallback,useEffect,useState} from "react";
+import React,{useCallback,useEffect,useRef,useState} from "react";
 import api from "../../api/client";
-import {ChevronLeft,RefreshCw,CalendarDays} from "lucide-react";
+import {ChevronLeft,CalendarDays} from "lucide-react";
 
 const WEEK=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const initial={work_start:"09:00",work_end:"15:00",gym_time:"07:00",forge_time:"06:30",lunch_time:"12:00",email_time:"09:00",work_days:[0,1,2,3,4],gym_days:[0,2,4],forge_enabled:true,lunch_enabled:true,email_enabled:true,focus:""};
@@ -17,15 +17,17 @@ function timeInput(label,value,onChange){return <label className="block text-xs 
 function toggler(label,on,onChange){return <label className="flex items-center gap-2 text-xs text-slate-200"><input type="checkbox" checked={on} onChange={e=>onChange(e.target.checked)}/>{label}</label>}
 function fmt(stamp){try{return new Date(stamp).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}catch{return stamp}}
 export default function VictoriaWeeklyPlanner({assignmentId,onClose}){
+ const panelRef=useRef(null);
  const [step,setStep]=useState(0),[prefs,setPrefs]=useState(initial),[draft,setDraft]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
  const update=(key,value)=>setPrefs(p=>({...p,[key]:value}));
  const load=useCallback(async()=>{try{const r=await api.get(`/sync-ai/assist/pilot/assignments/${assignmentId}/weekly-plan/`);if(r.data?.draft){setDraft(r.data.draft);setStep(3)}}catch(e){setError(e.response?.data?.detail||"Could not retrieve saved plan.")}},[assignmentId]);
  useEffect(()=>{load()},[load]);
+ useEffect(()=>{if(panelRef.current)panelRef.current.scrollTop=0;},[step]);
  const build=async()=>{setBusy(true);setError("");setNotice("");try{const r=await api.post(`/sync-ai/assist/pilot/assignments/${assignmentId}/weekly-plan/`,prefs);setDraft(r.data.draft);setNotice(r.data.notice||"Draft created.");setStep(3)}catch(e){setError(e.response?.data?.detail||"Could not build the weekly draft. Check the API deployment.");}finally{setBusy(false)}};
  return <div className="flex min-h-0 flex-1 flex-col text-white">
-  <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3"><div><p className="text-[10px] uppercase tracking-widest text-cyan-200">Victoria's planning interview</p><strong className="text-sm">{sections[step].title}</strong><p className="mt-1 text-[11px] text-slate-300">{sections[step].help}</p></div><button type="button" onClick={onClose} className="rounded-lg border border-white/15 px-3 py-2 text-xs">Close</button></div>
-  <div className="flex shrink-0 gap-1 px-4 pt-2">{sections.map((s,i)=><button key={s.title} type="button" aria-label={s.title} onClick={()=>setStep(i)} className={`h-1.5 flex-1 rounded-full ${i<=step?"bg-cyan-400/75":"bg-white/20"}`}/>)}</div>
-  <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
+  <div className="shrink-0 border-b border-white/10 px-4 py-3"><div><p className="text-[10px] uppercase tracking-widest text-cyan-200">Victoria's planning interview</p><strong className="text-sm">{sections[step].title}</strong><p className="mt-1 text-[11px] text-slate-300">{sections[step].help}</p></div></div>
+  <div className="flex shrink-0 gap-1 px-4 py-3">{sections.map((s,i)=><button key={s.title} type="button" aria-label={s.title} onClick={()=>setStep(i)} className={`h-1.5 flex-1 rounded-full ${i<=step?"bg-cyan-400/75":"bg-white/20"}`}/>)}</div>
+  <div ref={panelRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 pb-5 pt-2">
    {step===0&&<><div><p className="mb-2 text-xs">Which days are workdays?</p>{weekDays(prefs.work_days,v=>update("work_days",v))}</div><div className="grid grid-cols-2 gap-3">{timeInput("Work starts",prefs.work_start,v=>update("work_start",v))}{timeInput("Work ends",prefs.work_end,v=>update("work_end",v))}</div><label className="block text-xs">What matters most this week?<textarea maxLength={400} value={prefs.focus} onChange={e=>update("focus",e.target.value)} placeholder="Business projects, family time, priority appointments..." rows={3} className="mt-1 w-full rounded-lg border border-white/20 bg-slate-950/70 p-2 text-white"/></label></>}
    {step===1&&<><div><p className="mb-2 text-xs">Which days should we reserve for the gym?</p>{weekDays(prefs.gym_days,v=>update("gym_days",v))}</div>{timeInput("Preferred gym time",prefs.gym_time,v=>update("gym_time",v))}{toggler("Include Forge morning routine each day",prefs.forge_enabled,v=>update("forge_enabled",v))}{prefs.forge_enabled&&timeInput("Forge time",prefs.forge_time,v=>update("forge_time",v))}<p className="text-xs text-amber-100">This reserves workout time. Detailed Health workouts and Forge content require their own module integration.</p></>}
    {step===2&&<>{toggler("Include lunch",prefs.lunch_enabled,v=>update("lunch_enabled",v))}{prefs.lunch_enabled&&timeInput("Lunch time",prefs.lunch_time,v=>update("lunch_time",v))}{toggler("Review email and create a to-do list on workdays",prefs.email_enabled,v=>update("email_enabled",v))}{prefs.email_enabled&&timeInput("Email review time",prefs.email_time,v=>update("email_time",v))}<div className="rounded-lg border border-amber-400/25 bg-black/15 p-3 text-xs leading-5 text-slate-300"><strong>Finance and property checks</strong><p className="mt-1">Mortgage payments, bill amounts, rent due, and rent collected will require verified finance and property-management records. Victoria will not invent balances or deadlines. Email triage is a proposed time block, not an inbox scan yet.</p></div></>}
