@@ -5,13 +5,14 @@ import FreelanceJobsPage from "./FreelanceJobsPage";
 import { useWorkspaceAppearance, WORKSPACE_THEMES } from "../components/customer/CustomerWorkspace";
 import "./FreelanceOfficeThemes.css";
 import FreelanceOverviewDashboard from "./FreelanceOverviewDashboard";
+import FreelanceBusinessCenter from "./FreelanceBusinessCenter";
 import FreelanceProjectsPage from "./FreelanceProjectsPage";
 import FreelanceAutomationStudio from "./FreelanceAutomationStudio";
 import { BriefcaseBusiness, Search, FileText, FolderKanban, Wallet, PlugZap, Bot, Bell, ExternalLink, Plus, Trash2, ArrowLeft } from "lucide-react";
 
 const PILOT_EMAIL = "jacoblord7@outlook.com";
 const SECTIONS = [
-  ["overview","Overview",BriefcaseBusiness],["jobs","Jobs",Search],["proposals","Proposals",FileText],
+  ["overview","Overview",BriefcaseBusiness],["business","Business OS",Wallet],["jobs","Jobs",Search],["proposals","Proposals",FileText],
   ["projects","Projects",FolderKanban],["studio","Automation Studio",Bot],["earnings","Earnings",Wallet],["connections","Connections",PlugZap],
   ["jarvis","Jarvis",Bot],["updates","Updates",Bell],
 ];
@@ -75,7 +76,8 @@ export default function FreelanceWorkCenter(){
  <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><button onClick={()=>nav("/customer")} type="button" className={linkClass}><ArrowLeft size={16}/> Customer Workspace</button><div className="flex flex-wrap items-center gap-2"><label className="text-xs font-semibold" htmlFor="freelance-theme">Office theme</label><select id="freelance-theme" aria-label="SyncWorks office theme" className="rounded-xl border border-white/20 bg-slate-900/80 px-3 py-2 text-sm" value={appearance.theme} onChange={e=>updateAppearance({theme:e.target.value})}>{WORKSPACE_THEMES.map(k=><option key={k} value={k}>{{legacy:"Original",classic:"Classic Office",future:"SyncWorks Future",modern:"Modern Dark",light:"Clean Light"}[k]}</option>)}</select><span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200">Founder visual pilot · Demo</span></div></div>
  <header className="mb-7"><p className="text-xs font-black uppercase tracking-[.22em] text-cyan-300">SYNCWORKS / WORKSPACE</p><h1 className="mt-2 text-3xl font-black text-white">Freelance Work Center</h1><p className="mt-2 max-w-2xl text-sm text-slate-400">Jobs, proposals, projects, local automation, earnings and Jarvis in one place. Upwork is not yet connected; job and earnings figures are manually recorded pilot values.</p></header>
  <nav aria-label="Freelance sections" className="mb-7 flex gap-2 overflow-x-auto pb-2">{SECTIONS.map(([id,label,Icon])=><NavLink key={id} to={`/customer/freelance/${id}`} className={({isActive})=>`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold ${isActive?"border-cyan-400/40 bg-cyan-500/20 text-cyan-100":"border-white/10 bg-slate-900/65 text-slate-300 hover:bg-slate-800"}`}><Icon size={15}/>{label}</NavLink>)}</nav>
- {section==="overview"&&<FreelanceOverviewDashboard items={items} totals={totals}/>}
+ {section==="overview"&&<><FreelanceOverviewDashboard items={items} totals={totals}/><div className="mt-5 rounded-xl border border-cyan-400/15 bg-slate-900/60 p-4 text-sm text-slate-300"><strong>Business accounting:</strong> Track application decisions, contracted value, paid revenue and Connects spending separately in <button type="button" className={linkClass} onClick={()=>nav("/customer/freelance/business")}>Business OS</button>. The overview above remains browser-local demo data, not your verified Upwork financials.</div></>} 
+ {section==="business"&&<FreelanceBusinessCenter/>}
  {section==="jobs"&&<FreelanceJobsPage items={items} addJob={addJob} updateJob={updateJob} deleteJob={deleteJob}/>}
  {section==="proposals"&&<><SectionHeader title="Proposal pipeline" detail="Review your drafts and applications. Sending requires your approval on Upwork."/><JobRows items={byStatus(["Proposal drafted","Applied","Interview"])} updateJob={updateJob} deleteJob={deleteJob}/><div className={`${panelClass} mt-4`}><button type="button" className={buttonClass} onClick={()=>nav("/sync/assist")}>Draft with Jarvis</button><p className="mt-2 text-xs text-slate-400">Paste the job description into Sync Assist. No proposals are auto-submitted.</p></div></>}
  {section==="projects"&&<FreelanceProjectsPage items={items} updateJob={updateJob}/>} 
