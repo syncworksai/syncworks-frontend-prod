@@ -3,13 +3,14 @@ import { NavLink, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import FreelanceJobsPage from "./FreelanceJobsPage";
 import FreelanceOverviewDashboard from "./FreelanceOverviewDashboard";
+import FreelanceUpworkDesk from "./FreelanceUpworkDesk";
 import FreelanceProjectsPage from "./FreelanceProjectsPage";
 import FreelanceAutomationStudio from "./FreelanceAutomationStudio";
 import { BriefcaseBusiness, Search, FileText, FolderKanban, Wallet, PlugZap, Bot, Bell, ExternalLink, Plus, Trash2, ArrowLeft } from "lucide-react";
 
 const PILOT_EMAIL = "jacoblord7@outlook.com";
 const SECTIONS = [
-  ["overview","Overview",BriefcaseBusiness],["jobs","Jobs",Search],["proposals","Proposals",FileText],
+  ["overview","Overview",BriefcaseBusiness],["upwork","Upwork Desk",BriefcaseBusiness],["jobs","Jobs",Search],["proposals","Proposals",FileText],
   ["projects","Projects",FolderKanban],["studio","Automation Studio",Bot],["earnings","Earnings",Wallet],["connections","Connections",PlugZap],
   ["jarvis","Jarvis",Bot],["updates","Updates",Bell],
 ];
@@ -60,7 +61,7 @@ export default function FreelanceWorkCenter(){
  useEffect(()=>{if(enabled)setData(loadState(key));},[enabled,key]);
  useEffect(()=>{if(enabled){try{window.localStorage.setItem(storageKey(key),JSON.stringify(data));}catch{/* storage unavailable */}}},[enabled,key,data]);
  const items=data.opportunities||[];
- const addJob=form=>setData(d=>({...d,updatedAt:new Date().toISOString(),opportunities:[{...form,id:crypto.randomUUID(),budget:Math.max(0,Number(form.budget)||0),status:"Saved"},...d.opportunities]}));
+ const addJob=form=>setData(d=>({...d,updatedAt:new Date().toISOString(),opportunities:[{...form,id:crypto.randomUUID(),budget:Math.max(0,Number(form.budget)||0),status:form.status||"Saved"},...d.opportunities]}));
  const updateJob=(id,changes)=>setData(d=>({...d,updatedAt:new Date().toISOString(),opportunities:d.opportunities.map(j=>j.id===id?{...j,...changes}:j)}));
  const deleteJob=id=>setData(d=>({...d,updatedAt:new Date().toISOString(),opportunities:d.opportunities.filter(j=>j.id!==id)}));
  const totals=useMemo(()=>({saved:items.length,active:items.filter(j=>["Contracted","In progress","Submitted"].includes(j.status)).length,paid:items.filter(j=>j.status==="Paid").reduce((s,j)=>s+Number(j.budget||0),0),pipeline:items.filter(j=>!["Paid","Declined"].includes(j.status)).reduce((s,j)=>s+Number(j.budget||0),0)}),[items]);
@@ -72,7 +73,8 @@ export default function FreelanceWorkCenter(){
  <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><button onClick={()=>nav("/customer")} type="button" className={linkClass}><ArrowLeft size={16}/> Customer Workspace</button><span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200">Founder visual pilot · Demo</span></div>
  <header className="mb-7"><p className="text-xs font-black uppercase tracking-[.22em] text-cyan-300">SYNCWORKS / WORKSPACE</p><h1 className="mt-2 text-3xl font-black text-white">Freelance Work Center</h1><p className="mt-2 max-w-2xl text-sm text-slate-400">Jobs, proposals, projects, local automation, earnings and Jarvis in one place. Upwork is not yet connected; job and earnings figures are manually recorded pilot values.</p></header>
  <nav aria-label="Freelance sections" className="mb-7 flex gap-2 overflow-x-auto pb-2">{SECTIONS.map(([id,label,Icon])=><NavLink key={id} to={`/customer/freelance/${id}`} className={({isActive})=>`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold ${isActive?"border-cyan-400/40 bg-cyan-500/20 text-cyan-100":"border-white/10 bg-slate-900/65 text-slate-300 hover:bg-slate-800"}`}><Icon size={15}/>{label}</NavLink>)}</nav>
- {section==="overview"&&<FreelanceOverviewDashboard items={items} totals={totals}/>}
+ {section==="overview"&&<><div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-4"><div><p className="font-bold text-white">Upwork Desk is ready</p><p className="text-xs text-slate-300">Track the first submitted proposal in your founder-only workspace.</p></div><button className={buttonClass} type="button" onClick={()=>nav("/customer/freelance/upwork")}>Open Upwork Desk</button></div><FreelanceOverviewDashboard items={items} totals={totals}/></>}
+ {section==="upwork"&&<FreelanceUpworkDesk items={items} addJob={addJob}/>}
  {section==="jobs"&&<FreelanceJobsPage items={items} addJob={addJob} updateJob={updateJob} deleteJob={deleteJob}/>}
  {section==="proposals"&&<><SectionHeader title="Proposal pipeline" detail="Review your drafts and applications. Sending requires your approval on Upwork."/><JobRows items={byStatus(["Proposal drafted","Applied","Interview"])} updateJob={updateJob} deleteJob={deleteJob}/><div className={`${panelClass} mt-4`}><button type="button" className={buttonClass} onClick={()=>nav("/sync/assist")}>Draft with Jarvis</button><p className="mt-2 text-xs text-slate-400">Paste the job description into Sync Assist. No proposals are auto-submitted.</p></div></>}
  {section==="projects"&&<FreelanceProjectsPage items={items} updateJob={updateJob}/>} 
