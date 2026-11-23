@@ -1,5 +1,6 @@
 import React, {useCallback,useEffect,useMemo,useState} from "react";
 import api from "../api/client";
+import FreelanceJobShortlist from "./FreelanceJobShortlist";
 import {BriefcaseBusiness,Wallet,Receipt,Clock3,Plus,RefreshCcw,ShieldAlert,Bot,ExternalLink} from "lucide-react";
 
 const ROOT="/sync-ai/freelance/pilot/business-ledger/";
@@ -53,6 +54,7 @@ export default function FreelanceBusinessCenter(){
    {card("Declined",summary?.declined??0,"Recorded decisions, not a live API",ShieldAlert)}
    {card("Connects used",summary?.connects_used??0,"Units spent, not cash dollars",Bot)}
   </div>
+  <FreelanceJobShortlist enabled={active} existing={records} onSaved={load}/>
   <div className="flex flex-wrap gap-2"><button onClick={()=>setSelected("jobs")} type="button" className={btn} aria-pressed={selected==="jobs"}>Job pipeline</button><button onClick={()=>setSelected("expenses")} type="button" className={btn} aria-pressed={selected==="expenses"}>Expense ledger</button></div>
   {selected==="jobs"?<div className="grid gap-4 lg:grid-cols-[1fr_1.55fr]">
    <form className={box+" space-y-3"} onSubmit={e=>submit("JOB",e)}><h3 className="flex items-center gap-2 font-bold text-white"><Plus size={17}/> Add an Upwork opportunity</h3>
