@@ -9,6 +9,7 @@ import FreelanceProjectsPage from "./FreelanceProjectsPage";
 import FreelanceAutomationStudio from "./FreelanceAutomationStudio";
 import FreelanceCloudLedger from "./FreelanceCloudLedger";
 import FreelanceExecutionControl from "./FreelanceExecutionControl";
+import FreelanceBackendStatus from "./FreelanceBackendStatus";
 import "./FreelanceUpworkDesk.css";
 import "./FreelanceWorkspaceShell.css";
 
@@ -83,7 +84,7 @@ export default function FreelanceWorkspaceShell({section,items,totals,addJob,upd
     </section>
     <aside className="sw-upwork-insights sw-freelance-right">
      <section className="sw-upwork-glass sw-freelance-insight-card"><div className="sw-upwork-section-head"><span className="sw-upwork-eyebrow">CURRENT FOCUS</span></div><strong>First application submitted</strong><p>Amazon Product Research · $30 proposed · 8 Connects. Awaiting a verified client response.</p><button onClick={()=>go("upwork")} className="sw-upwork-plain" type="button">Review submission <ArrowUpRight size={14}/></button></section>
-     <section className="sw-upwork-glass sw-freelance-insight-card"><div className="sw-upwork-section-head"><span className="sw-upwork-eyebrow"><ShieldAlert size={14}/> SYSTEM STATUS</span></div><strong>Development pilot</strong><p>Upwork account tools work in ChatGPT. SyncWorks website has no live Upwork feed or paid AI worker enabled.</p><button onClick={()=>setDrawer("connections")} className="sw-upwork-plain" type="button">Review connections <ArrowUpRight size={14}/></button></section>
+     <FreelanceBackendStatus onOpen={()=>setDrawer("studio")}/>
     </aside>
    </div>
    <nav className="sw-upwork-quick" aria-label="Business quick actions">{SIMPLE_PANELS.map(([name,IconLabel,id,Icon])=><button className="sw-upwork-glass" type="button" key={id} onClick={()=>setDrawer(id)}><Icon size={17}/><span>{name}</span><ChevronRight size={14}/></button>)}</nav>
