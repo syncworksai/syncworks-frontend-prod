@@ -4,6 +4,8 @@ import api from "../api/client";
 import PMPropertyPaperworkDock from "../components/pm/PMPropertyPaperworkDock";
 import PMPropertyDetailsDrawer from "../components/pm/PMPropertyDetailsDrawer";
 import PMProperty360Snapshot from "../components/pm/PMProperty360Snapshot";
+import SarahPropertyActionDesk from "../components/pm/SarahPropertyActionDesk";
+import "../components/pm/SarahPropertyActionDesk.css";
 import PMTenantReview from "../components/pm/PMTenantReview";
 import PMTenantPilotPreview from "../components/pm/PMTenantPilotPreview";
 import { ROXANA_RENT_REVIEW_DATE, isRoxanaPilotProperty } from "../components/pm/roxanaPilotMilestones";
@@ -279,6 +281,7 @@ export default function PMPropertyDetail() {
       </Panel>
     </div> : null}
     {tab === "correspondence" ? <div className="space-y-3">
+      <SarahPropertyActionDesk property={property} reports={correspondenceReports} workOrders={workOrders} onOpenTab={setTab} onFindMail={()=>nav("/sync/assist/email")}/>
       <Panel title="Sarah · Correspondence & Briefings"
         subtitle="Property-specific evidence, activity timeline and handoff to Victoria. Reviewed records only."
         action={<div className="flex flex-wrap gap-2"><Button onClick={()=>nav("/sync/assist/email")}>Find correspondence</Button><Button tone="cyan" onClick={()=>nav("/sync/assist/daily")}>Victoria's briefing</Button></div>}>
