@@ -53,9 +53,12 @@ export default function BusinessAgentQuickChat({agentId,user,onClose}){
   const [error,setError]=useState("");
   const scrollRef=useRef(null);
   const businessId=getActiveBusinessId();
+  const propertyAgent=agent?.workerRole==="property_manager";
+  const needsBusiness=!propertyAgent;
   useEffect(()=>{
     let active=true;
     setOps(null);setLoading(true);setLoadError("");setMessages([]);setError("");
+    if(propertyAgent){setLoadError("Property records are available from Property Management. This chat is advisory; it does not read confidential tenant correspondence without an approved mailbox connection.");setLoading(false);return;}
     if(!businessId){setLoadError("Select a business workspace first. No cross-business data will be loaded.");setLoading(false);return;}
     getLiveOperations().then(v=>{if(active)setOps(v);}).catch(e=>{if(active)setLoadError(e?.response?.data?.detail||"Unable to load the selected business's live operations.");}).finally(()=>{if(active)setLoading(false);});
     return()=>{active=false;};
@@ -63,9 +66,10 @@ export default function BusinessAgentQuickChat({agentId,user,onClose}){
   useEffect(()=>{const key=e=>{if(e.key==="Escape")onClose();};window.addEventListener("keydown",key);return()=>window.removeEventListener("keydown",key);},[onClose]);
   useEffect(()=>{scrollRef.current?.scrollTo({top:scrollRef.current.scrollHeight,behavior:"smooth"});},[messages]);
   if(!agent)return null;
-  const suggestions=ROLE_SUGGESTIONS[agent.workerRole]||ROLE_SUGGESTIONS.chief_of_staff;
+  const suggestions=propertyAgent?["What is my next property management priority?","How should I prepare an inspection follow-up?","What must I verify before marking rent as paid?"]:(ROLE_SUGGESTIONS[agent.workerRole]||ROLE_SUGGESTIONS.chief_of_staff);
   const immediate=(question)=>{
     setError("");
+    if(propertyAgent){setMessages(m=>[...m,{by:"user",text:question},{by:"agent",text:"Open Property Management to review the property-specific records, tenant ledger, inspections and correspondence. I can help plan actions, but cannot verify private property records from this chat alone."}]);return;}
     if(/health/i.test(question)){
       if(!ops){setMessages(m=>[...m,{by:"user",text:question},{by:"agent",text:"The live operations snapshot could not be verified. I cannot calculate a business-health score from unavailable records. Open Dispatch to review active jobs and assignments."}]);return;}
       const s=ops.summary||{};
@@ -75,39 +79,40 @@ export default function BusinessAgentQuickChat({agentId,user,onClose}){
     setMessages(m=>[...m,{by:"user",text:question},{by:"agent",text:nextPriority(ops)}]);
   };
   const send=async(q)=>{
-    const question=String(q||input).trim();if(!question||working||!businessId)return;
+    const question=String(q||input).trim();if(!question||working||(needsBusiness&&!businessId))return;
     setInput("");setError("");
     setMessages(m=>[...m,{by:"user",text:question}]);setWorking(true);
     try{
-      const result=await sendSyncAiMessage({workspace:"business",message:agentMessage(agent,question,ops?.summary)});
+      const result=await sendSyncAiMessage({workspace:propertyAgent?"pm":"business",message:propertyAgent?`You are ${agent.name}, property-management advisor. Provide only advice and clearly mark records not verified; do not claim to read tenant records or emails. Request: ${question}`:agentMessage(agent,question,ops?.summary)});
       setMessages(m=>[...m,{by:"agent",text:result?.message||"No response was returned."}]);
     }catch(e){setError(getSyncAiErrorMessage(e)||"Assistant is unavailable. No paid operation or external action was performed.");}
     finally{setWorking(false);}
   };
   return <div className="sw-agent-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}>
-    <aside role="dialog" aria-modal="true" aria-label={`${agent.name} business assistant`} className="sw-agent-drawer">
+    <aside role="dialog" aria-modal="true" aria-label={`${agent.name} assistant`} className="sw-agent-drawer">
       <header className="sw-agent-header">
         <img alt="" src={getAvatarPhotoForUser(agent,user)}/>
-        <div><strong>{agent.name}</strong><small>{agent.role} · Business workspace</small></div>
+        <div><strong>{agent.name}</strong><small>{agent.role} · {propertyAgent?"Property Management":"Business workspace"}</small></div>
         <button type="button" onClick={onClose} aria-label="Close assistant"><X size={21}/></button>
       </header>
       <div ref={scrollRef} className="sw-agent-scroll">
         <div className="sw-agent-intro">Ask about operations and next steps. Responses use the selected business context; unverified data stays labeled as unavailable.</div>
-        <Snapshot ops={ops} error={loadError} loading={loading}/>
+        {!propertyAgent&&<Snapshot ops={ops} error={loadError} loading={loading}/>}
+        {propertyAgent&&<p className="sw-agent-muted">For verified property records, open Sarah Briefings on the relevant property.</p>}
         <div className="sw-agent-shortcuts">
           <button type="button" onClick={()=>immediate("How healthy is this business right now?")}>Business health <ChevronRight size={14}/></button>
           <button type="button" onClick={()=>immediate("What is the next task to stay on target?")}>Next task <ChevronRight size={14}/></button>
           <button type="button" onClick={()=>{onClose();nav("/sync/assist");}}>Agent jobs <ChevronRight size={14}/></button>
         </div>
         <h3>Ask {agent.name}</h3>
-        <div className="sw-agent-suggestions">{suggestions.map(s=><button type="button" key={s} disabled={working||!businessId} onClick={()=>send(s)}>{s}</button>)}</div>
+        <div className="sw-agent-suggestions">{suggestions.map(s=><button type="button" key={s} disabled={working||(needsBusiness&&!businessId)} onClick={()=>send(s)}>{s}</button>)}</div>
         <div className="sw-agent-thread" aria-live="polite">{messages.map((m,i)=><div className={`sw-agent-message ${m.by==="user"?"is-user":""}`} key={i}><b>{m.by==="user"?"You":agent.name}</b><p>{m.text}</p></div>)}</div>
         {working&&<p className="sw-agent-muted" role="status">Checking the authorized business context…</p>}
         {error&&<p className="sw-agent-error" role="alert"><AlertTriangle size={15}/> {error}</p>}
       </div>
       <form className="sw-agent-compose" onSubmit={e=>{e.preventDefault();send();}}>
         <input aria-label={`Message ${agent.name}`} value={input} onChange={e=>setInput(e.target.value)} placeholder="Ask a business question…" maxLength={1200}/>
-        <button type="submit" disabled={!input.trim()||working||!businessId} aria-label="Send message"><Send size={18}/></button>
+        <button type="submit" disabled={!input.trim()||working||(needsBusiness&&!businessId)} aria-label="Send message"><Send size={18}/></button>
       </form>
       <p className="sw-agent-footnote">AI replies may incur pilot usage. Advice only: no emails, payments, assignments or approvals are executed by this chat.</p>
     </aside>
