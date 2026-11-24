@@ -107,3 +107,52 @@
  .sarah-pm-tile,.sarah-pm-controls button,.sarah-pm-foot button,.sarah-pm-drawer-actions button,.sarah-property-tabs button{transition:none!important}
  .sarah-pm-tile:hover,.sarah-pm-controls button:hover,.sarah-pm-foot button:hover,.sarah-pm-drawer-actions button:hover{transform:none!important}
 }
+
+/* Correspondence briefs: one clear primary collection, never duplicated maintenance/ledger widgets. */
+.sarah-briefings-desk{gap:12px}
+.sarah-briefings-stats{display:flex;flex-wrap:wrap;align-items:center;gap:18px;padding:11px 0;border-block:1px solid var(--sarah-line);font-size:11px;color:#bacbd3}
+.sarah-briefings-stats b{color:#f3f6f8;font-size:15px;margin-right:4px}
+.sarah-briefings-stats>span:last-child{margin-left:auto;color:#d5c69e}
+.sarah-briefings-main{display:flex;min-height:0;flex:1;flex-direction:column;gap:10px}
+.sarah-briefings-list-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.sarah-briefings-list-head strong{font-size:13px}.sarah-briefings-list-head small{font-size:10px;color:#aebdc5}
+.sarah-briefings-list{display:flex;flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;flex-direction:column;gap:8px;padding-right:4px}
+.sarah-briefing-row{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--sarah-line);border-radius:12px;background:linear-gradient(140deg,rgba(34,45,53,.55),rgba(10,17,24,.55));box-shadow:inset 0 1px rgba(255,255,255,.035)}
+.sarah-briefing-row-icon{color:var(--sarah-accent);background:rgba(var(--sarah-rgb),.09);border:1px solid var(--sarah-line);border-radius:10px;padding:9px}
+.sarah-briefing-row-content{min-width:0;flex:1}
+.sarah-briefing-row-content strong{display:block;font-size:12px}
+.sarah-briefing-row-content small{font-size:10px;color:#aabcc5}
+.sarah-briefing-row-content p{font-size:11px;color:#d2dde0;margin-top:6px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sarah-briefing-row>button,.sarah-briefing-empty button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:35px;padding:8px 12px;border:1px solid rgba(var(--sarah-rgb),.36);border-radius:9px;color:var(--sarah-accent);background:rgba(var(--sarah-rgb),.09);font-size:11px;font-weight:800}
+.sarah-briefing-row>button:hover,.sarah-briefing-empty button:hover{background:rgba(var(--sarah-rgb),.17)}
+.sarah-briefing-empty{flex:1;display:flex;min-height:130px;align-items:center;justify-content:center;flex-direction:column;gap:9px;text-align:center;border:1px dashed var(--sarah-line);border-radius:12px;padding:24px;background:rgba(4,9,14,.16)}
+.sarah-briefing-empty svg{color:var(--sarah-accent);opacity:.8}
+.sarah-briefing-empty strong{font-size:14px}.sarah-briefing-empty p{font-size:11px;max-width:460px;color:#aebcc4;line-height:1.6}
+.sarah-briefing-disclaimer{display:flex;align-items:center;gap:8px;color:#d6c8a5;font-size:10px;line-height:1.45}
+.sarah-briefing-disclaimer svg{flex-shrink:0}
+@media(max-width:640px){.sarah-briefings-stats{gap:8px}.sarah-briefings-stats>span:last-child{margin-left:0}.sarah-briefings-list-head{align-items:flex-start;flex-direction:column;gap:3px}.sarah-briefing-row{padding:9px;gap:8px}.sarah-briefing-row-icon{padding:6px}.sarah-briefings-desk .sarah-pm-controls button{flex:1}.sarah-briefing-empty{padding:12px}.sarah-briefings-main{overflow:hidden}}
+
+/* Compact Overview is a read-only navigation snapshot, not a second work-order/tenant dashboard. */
+@media(min-width:1024px){
+ main.sarah-property-main.pm-overview-main{height:calc(100dvh - 240px)!important;min-height:400px;overflow:hidden!important;display:flex;flex-direction:column}
+ main.pm-overview-main .pm-overview-snapshot{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+ main.pm-overview-main .pm-overview-snapshot>section:first-child{flex:0 0 auto}
+ main.pm-overview-main .pm-overview-snapshot>div.grid{flex:1;min-height:0}
+ main.pm-overview-main .pm-overview-snapshot>div.grid>section{min-height:0;overflow:hidden}
+ main.pm-overview-main .pm-overview-snapshot>div.grid>section:nth-child(2) .grid{gap:5px}
+ main.pm-overview-main .pm-overview-snapshot>div.grid>section:nth-child(2) .grid button{padding:6px 8px}
+ main.pm-overview-main>.pm-overview-actions{flex:0 0 auto}
+}
+.pm-overview-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--sarah-line,rgba(200,216,220,.24));border-radius:12px;background:linear-gradient(120deg,rgba(32,44,51,.55),rgba(9,17,24,.65))}
+.pm-overview-actions>div:first-child{display:flex;flex-direction:column;gap:3px}
+.pm-overview-actions strong{font-size:12px}.pm-overview-actions span{font-size:10px;color:#bdcad2}
+.pm-overview-action-buttons{display:flex;flex-wrap:wrap;gap:6px}
+.pm-overview-action-buttons button{min-height:33px;border-radius:8px;padding:7px 11px;font-size:11px;font-weight:800;color:#eaf4f5;border:1px solid rgba(191,214,218,.28);background:linear-gradient(145deg,rgba(44,59,66,.55),rgba(12,21,28,.66));transition:background .16s,border-color .16s}
+.pm-overview-action-buttons button:hover{border-color:var(--pm-scene-accent,#c9dcdf);background:rgba(176,209,214,.15)}
+.pm-property-loading{min-height:300px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px;background:radial-gradient(ellipse at center,rgba(var(--pm-scene-accent-rgb,176,208,214),.07),transparent 60%);color:#e5f0f1}
+.pm-property-loading strong{font-size:16px}.pm-property-loading p{font-size:11px;color:#bdcbd2}
+.pm-property-loading-indicator{width:55px;height:55px;border-radius:50%;border:1px solid rgba(var(--pm-scene-accent-rgb,176,208,214),.4);display:grid;place-items:center;animation:pm-loading-spin 1.6s linear infinite}
+.pm-property-loading-indicator span{height:27px;width:27px;border-radius:50%;border:3px solid rgba(var(--pm-scene-accent-rgb,176,208,214),.22);border-top-color:var(--pm-scene-accent,#c9dee0)}
+@keyframes pm-loading-spin{to{transform:rotate(360deg)}}
+@media(max-width:1023px){.pm-overview-main{padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))!important}.pm-overview-actions{align-items:flex-start}.pm-overview-action-buttons{width:100%}.pm-overview-action-buttons button{flex:1}}
+@media(prefers-reduced-motion:reduce){.pm-property-loading-indicator{animation:none}}
