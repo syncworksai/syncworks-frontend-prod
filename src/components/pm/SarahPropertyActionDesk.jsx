@@ -1,5 +1,5 @@
 import React,{useMemo,useState} from "react";
-import {AlertTriangle,ClipboardCheck,FileClock,FileSearch,MessagesSquare,WalletCards,Work} from "lucide-react";
+import {AlertTriangle,ClipboardCheck,FileClock,FileSearch,MessagesSquare,WalletCards,Wrench} from "lucide-react";
 import {addVictoriaTask} from "../../api/syncWorkspaceRecords";
 
 const uniqueReferences=reports=>{
@@ -23,7 +23,7 @@ export default function SarahPropertyActionDesk({property,reports=[],workOrders=
   {id:"inspection",icon:ClipboardCheck,title:"Inspection & compliance",count:inspection.length,kind:"email reference(s)",detail:"Confirm inspection date, pass/fail documentation and any abatement resolution with the housing authority.",tab:"correspondence",source:inspection},
   {id:"funds",icon:WalletCards,title:"Rent & housing assistance",count:finance.length,kind:"email reference(s)",detail:"Reconcile claimed payments against the property ledger and bank or housing-authority statements before posting funds.",tab:"ledger",source:finance},
   {id:"lease",icon:FileClock,title:"Lease & documents",count:paperwork.length,kind:"email reference(s)",detail:"Check lease terms, notices, renewals and required supporting documents against signed records.",tab:"documents",source:paperwork},
-  {id:"work",icon:Work,title:"Open maintenance",count:pendingWork.length,kind:"open work order(s)",detail:"Review uncompleted work orders, vendor assignments and emergency priority.",tab:"maintenance",source:[]},
+  {id:"work",icon:Wrench,title:"Open maintenance",count:pendingWork.length,kind:"open work order(s)",detail:"Review uncompleted work orders, vendor assignments and emergency priority.",tab:"maintenance",source:[]},
  ];
  async function assign(row){
   if(saving)return;
