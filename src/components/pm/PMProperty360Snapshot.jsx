@@ -12,7 +12,7 @@ const navTiles=[
   {key:"handoff",label:"Setup & transfer",hint:"Opening balances, agency",icon:Handshake},
   {key:"investors",label:"Owners & investors",hint:"Updates and payout history",icon:Wallet},
 ];
-export default function PMProperty360Snapshot({data,loading,error,property,openTab,navigate,onDetails,reload}){
+export default function PMProperty360Snapshot({data,loading,error,property,openTab,navigate,onDetails,reload,compact=false}){
   const p=data?.property || property;
   const metrics=data?.operations;
   const propertyId=String(p?.id||"");
@@ -21,7 +21,7 @@ export default function PMProperty360Snapshot({data,loading,error,property,openT
     if(key==="investors")return navigate("/pm/investors");
     return openTab(key);
   };
-  return <div className="space-y-3">
+  return <div className={`space-y-3 ${compact?"pm-overview-snapshot":""}`}>
     <section className="rounded-2xl border border-cyan-400/20 bg-[linear-gradient(130deg,rgba(8,47,67,.86),rgba(7,17,31,.96)_60%,rgba(70,22,81,.18))] p-3 sm:p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -60,10 +60,10 @@ export default function PMProperty360Snapshot({data,loading,error,property,openT
       </section>
       <section className="min-w-0 rounded-xl border border-slate-700 bg-[#07111f] p-3">
         <h2 className="mb-2 text-sm font-black text-white">Quick navigation</h2>
-        <div className="grid grid-cols-2 gap-2">{navTiles.map(({key,label,hint,icon:Icon})=><button key={key} type="button" onClick={()=>action(key)} className="min-w-0 rounded-lg border border-slate-700 bg-black/20 p-2.5 text-left hover:border-cyan-400/35"><Icon className="mb-2 h-4 w-4 text-cyan-300"/><div className="text-[11px] font-black text-white">{label}</div><p className="mt-0.5 text-[10px] leading-4 text-slate-500">{hint}</p></button>)}</div>
+        <div className={`grid gap-2 ${compact?"grid-cols-3":"grid-cols-2"}`}>{navTiles.map(({key,label,hint,icon:Icon})=><button key={key} type="button" onClick={()=>action(key)} className="min-w-0 rounded-lg border border-slate-700 bg-black/20 p-2 text-left hover:border-cyan-400/35"><Icon className="mb-1 h-4 w-4 text-cyan-300"/><div className="text-[11px] font-black text-white">{label}</div><p className="mt-0.5 text-[10px] leading-4 text-slate-500">{hint}</p></button>)}</div>
       </section>
     </div>
-    {data ? <div className="grid gap-3 lg:grid-cols-2">
+    {!compact && data ? <div className="grid gap-3 lg:grid-cols-2">
       <section className="rounded-xl border border-slate-700 bg-[#07111f] p-3"><div className="flex items-center justify-between"><h2 className="text-sm font-black">People & leases</h2><button type="button" className="text-[11px] font-bold text-cyan-300" onClick={()=>openTab("tenants")}>View all →</button></div>
         {data.tenants.length?<div className="mt-2 space-y-2">{data.tenants.slice(0,3).map(t=><div key={t.id} className="flex items-start justify-between gap-2 rounded-lg border border-slate-700/70 p-2.5"><div className="min-w-0"><div className="truncate text-xs font-bold">{t.name}</div><div className="text-[10px] text-slate-400">{t.unit_label||"Unassigned unit"}{t.lease?` · Lease ${t.lease.start}`:" · No linked lease"}</div>{t.link_status==="REVIEW_NAME_MATCH"?<div className="mt-1 text-[10px] text-amber-200">Verify property link</div>:null}</div><span className="shrink-0 text-[11px] text-cyan-200">{t.lease?cash(t.lease.rent)+"/mo":"—"}</span></div>)}</div>:<div className="mt-2 text-xs text-slate-400">No confirmed tenant link. Review occupancy and lease records before creating another tenant.</div>}
         <div className="mt-2 text-[11px] text-slate-400">Owner: {data.owners.map(x=>x.name).join(", ")||"No linked ownership record"}</div>
