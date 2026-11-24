@@ -10,8 +10,8 @@ import { ROXANA_RENT_REVIEW_DATE, isRoxanaPilotProperty } from "../components/pm
 
 const list = (data) => Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
 const money = (value) => Number(value || 0).toLocaleString("en-US", { style: "currency", currency: "USD" });
-const tabs = ["overview", "review", "tenantpreview", "units", "tenants", "ledger", "maintenance", "projects", "messages", "documents", "reports"];
-const tabLabels = {overview:"Overview",review:"Tenant Review",tenantpreview:"Resident Preview",units:"Units",tenants:"Tenants",ledger:"Advanced Ledger",maintenance:"Work",projects:"Projects",messages:"Inbox",documents:"Files",reports:"Owners"};
+const tabs = ["overview", "review", "tenantpreview", "units", "tenants", "ledger", "maintenance", "projects", "messages", "correspondence", "documents", "reports"];
+const tabLabels = {overview:"Overview",review:"Tenant Review",tenantpreview:"Resident Preview",units:"Units",tenants:"Tenants",ledger:"Advanced Ledger",maintenance:"Work",projects:"Projects",messages:"Inbox",correspondence:"Sarah Briefings",documents:"Files",reports:"Owners"};
 
 function Panel({ title, subtitle, action, children }) {
   return <section className="rounded-xl border border-cyan-500/15 bg-[#07111f]"><div className="flex flex-wrap items-start justify-between gap-2 border-b border-cyan-500/10 px-3 py-3"><div><h2 className="text-sm font-black text-white">{title}</h2>{subtitle ? <p className="mt-1 text-[11px] text-slate-500">{subtitle}</p> : null}</div>{action}</div><div className="p-3">{children}</div></section>;
@@ -75,7 +75,7 @@ export default function PMPropertyDetail() {
   },[workspace?.id,propertyId]);
 
   useEffect(()=>{
-    if(!propertyId||!["messages","reports"].includes(tab))return;
+    if(!propertyId||!["messages","correspondence","reports"].includes(tab))return;
     let active=true;
     api.get("https://syncworks-backend-prod.onrender.com/api/v1/sync-ai/assist/pilot/pm-properties/"+propertyId+"/correspondence-reports/")
       .then(r=>{if(active){setCorrespondenceReports(r.data.reports||[]);setReportsError("")}})
@@ -276,6 +276,34 @@ export default function PMPropertyDetail() {
           <p className="mt-1 text-xs text-amber-200">Not verified payment or inspection proof; reconcile before action.</p>
           <div className="mt-2 space-y-1">{(r.references||[]).map(m=><div key={m.message_id} className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 py-1 text-xs"><span>{m.subject} · {m.category}</span>{m.outlook_url&&<a href={m.outlook_url} target="_blank" rel="noopener noreferrer" className="underline">Open source</a>}</div>)}</div>
         </article>)}</div>}
+      </Panel>
+    </div> : null}
+    {tab === "correspondence" ? <div className="space-y-3">
+      <Panel title="Sarah · Correspondence & Briefings"
+        subtitle="Property-specific evidence, activity timeline and handoff to Victoria. Reviewed records only."
+        action={<div className="flex flex-wrap gap-2"><Button onClick={()=>nav("/sync/assist/email")}>Find correspondence</Button><Button tone="cyan" onClick={()=>nav("/sync/assist/daily")}>Victoria's briefing</Button></div>}>
+        {reportsError&&<p role="alert" className="text-xs text-amber-200">{reportsError}</p>}
+        <div className="grid gap-2 sm:grid-cols-3">
+          <div className="rounded-lg border border-white/15 p-3"><div className="text-xl font-black">{correspondenceReports.length}</div><div className="text-xs text-slate-400">Reviewed reports</div></div>
+          <div className="rounded-lg border border-white/15 p-3"><div className="text-xl font-black">{new Set(correspondenceReports.flatMap(r=>(r.references||[]).map(m=>m.message_id))).size}</div><div className="text-xs text-slate-400">Unique email references</div></div>
+          <div className="rounded-lg border border-white/15 p-3"><div className="text-sm font-black">Manual review</div><div className="text-xs text-slate-400">Evidence verification status</div></div>
+        </div>
+        <p className="mt-3 text-xs text-amber-200">No rent balance, payment receipt, inspection, lease renewal or work-order completion is confirmed by an email summary. Open the linked source and reconcile against property records.</p>
+      </Panel>
+      <Panel title="Correspondence Timeline" subtitle="Newest first · duplicates excluded · open original source for context">
+        {(() => {
+          const unique=new Map();
+          correspondenceReports.forEach(r=>(r.references||[]).forEach(item=>{if(item.message_id&&!unique.has(item.message_id))unique.set(item.message_id,item)}));
+          const sorted=[...unique.values()].sort((a,b)=>String(b.received_at||"").localeCompare(String(a.received_at||"")));
+          return sorted.length?<div className="max-h-[55dvh] space-y-2 overflow-y-auto overscroll-contain">
+            {sorted.map(m=><article key={m.message_id} className="rounded-lg border border-white/15 bg-black/10 px-3 py-2">
+              <div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-xs">{m.subject||"Untitled email"}</strong><span className="text-[11px] text-slate-300">{m.received_at?.slice(0,10)}</span></div>
+              <p className="mt-1 text-[11px] text-slate-300">{m.sender} · {m.category||"Review"}</p>
+              <p className="mt-1 text-[11px] text-amber-200">Source correspondence only — requires verification</p>
+              {m.outlook_url&&<a href={m.outlook_url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-xs underline">Open original email</a>}
+            </article>)}
+          </div>:<p className="text-xs text-slate-400">No reviewed correspondence attached. Open Sarah's historical search, link this property, and select relevant emails to attach.</p>;
+        })()}
       </Panel>
     </div> : null}
     {tab === "documents" ? <PMPropertyPaperworkDock embeddedPropertyId={propertyId} /> : null}
