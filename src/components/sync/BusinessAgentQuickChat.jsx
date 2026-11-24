@@ -83,7 +83,7 @@ export default function BusinessAgentQuickChat({agentId,user,onClose}){
     setInput("");setError("");
     setMessages(m=>[...m,{by:"user",text:question}]);setWorking(true);
     try{
-      const result=await sendSyncAiMessage({workspace:propertyAgent?"pm":"business",message:propertyAgent?`You are ${agent.name}, property-management advisor. Provide only advice and clearly mark records not verified; do not claim to read tenant records or emails. Request: ${question}`:agentMessage(agent,question,ops?.summary)});
+      const result=propertyAgent?await sendSyncAiMessage({workspace:"pm",message:`You are ${agent.name}, property-management advisor. Provide only advice and clearly mark records not verified; do not claim to read tenant records or emails. Request: ${question}`}):await sendSyncAiMessage({workspace:"business",message:agentMessage(agent,question,ops?.summary)});
       setMessages(m=>[...m,{by:"agent",text:result?.message||"No response was returned."}]);
     }catch(e){setError(getSyncAiErrorMessage(e)||"Assistant is unavailable. No paid operation or external action was performed.");}
     finally{setWorking(false);}
