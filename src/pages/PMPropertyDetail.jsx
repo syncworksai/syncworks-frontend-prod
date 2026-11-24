@@ -61,6 +61,8 @@ export default function PMPropertyDetail() {
   const [inquiryCount, setInquiryCount] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [notice, setNotice] = useState("");
+  const [correspondenceReports,setCorrespondenceReports]=useState([]);
+  const [reportsError,setReportsError]=useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -72,6 +74,14 @@ export default function PMPropertyDetail() {
     return()=>{live=false};
   },[workspace?.id,propertyId]);
 
+  useEffect(()=>{
+    if(!propertyId||!["messages","reports"].includes(tab))return;
+    let active=true;
+    api.get("https://syncworks-backend-prod.onrender.com/api/v1/sync-ai/assist/pilot/pm-properties/"+propertyId+"/correspondence-reports/")
+      .then(r=>{if(active){setCorrespondenceReports(r.data.reports||[]);setReportsError("")}})
+      .catch(e=>{if(active){setReportsError(e?.response?.status===403?"Correspondence reports not available for this account.":"Unable to load correspondence reports.");}})
+    return()=>{active=false};
+  },[propertyId,tab]);
   async function load() {
     setLoading(true);
     setError("");
@@ -252,7 +262,22 @@ export default function PMPropertyDetail() {
     {tab === "ledger" ? <Panel title="Tenant Ledger" action={<div className="flex flex-wrap gap-2"><Button tone="cyan" onClick={() => nav(`/pm/payments?property=${propertyId}&add=1`)}>+ Add Entry</Button><Button onClick={() => nav(`/pm/payments?property=${propertyId}`)}>Open Full Ledger</Button><Button tone="amber" onClick={() => nav(`/pm/lease-builder?tenant=${tenants[0]?.id||""}`)}>Lease Builder</Button></div>}>{propertyLedger.length ? <div className="space-y-2">{propertyLedger.slice(0, 20).map((item) => <div key={item.id} className="flex items-center justify-between rounded-2xl border border-slate-800 bg-black/25 p-4"><div><div className="font-black text-white">{item.category || item.entry_type}</div><div className="mt-1 text-xs text-slate-500">{item.memo || item.reference || "Ledger entry"}</div></div><div className="font-black text-white">{money(item.amount)}</div></div>)}</div> : <Empty text="No ledger entries for the property’s tenant records." />}</Panel> : null}
     {tab === "maintenance" ? <Panel title="Maintenance & Work Orders" subtitle="Property-scoped work remains here even when the property is vacant." action={<Button tone="cyan" onClick={() => nav(`/pm/work-orders?property=${propertyId}&create=1`)}>Create Work Order</Button>}>{workOrders.length ? <div className="grid gap-3 md:grid-cols-2">{workOrders.map((item) => <article key={item.id} className="rounded-2xl border border-slate-800 bg-black/25 p-4"><div className="flex items-start justify-between gap-3"><div className="font-black text-white">{item.title}</div><Badge tone={item.priority === "URGENT" ? "rose" : "amber"}>{item.status}</Badge></div><p className="mt-2 text-sm text-slate-400">{item.description || "No description."}</p></article>)}</div> : <Empty text="No maintenance or work orders for this property." />}</Panel> : null}
     {tab === "projects" ? <Panel title="Property Projects" action={<Button tone="purple" onClick={() => nav(`/pm/projects?property=${propertyId}&create=1`)}>Create Project</Button>}>{projects.length ? <div className="space-y-3">{projects.map((item) => <article key={item.id} className="rounded-2xl border border-slate-800 bg-black/25 p-4"><div className="flex items-center justify-between"><div className="font-black text-white">{item.title}</div><Badge>{String(item.status).replaceAll("_", " ")}</Badge></div><div className="mt-2 text-xs text-slate-500">Progress {item.progress_percent || 0}% · Target {item.target_date || "not set"}</div></article>)}</div> : <Empty text="No projects are connected to this property." />}</Panel> : null}
-    {tab === "messages" ? <Panel title="Property Messages" subtitle="Open the PM inbox already filtered to this property."><div className="flex flex-wrap gap-3"><Button tone="cyan" onClick={() => nav(`/pm/settings?view=messages&property=${propertyId}`)}>Open Property Messages</Button><Button onClick={() => nav(`/pm/settings?view=messages&property=${propertyId}&compose=1`)}>New Message</Button></div></Panel> : null}
+    {tab === "messages" ? <div className="space-y-3">
+      <Panel title="Property Messages" subtitle="Correspondence and reviewed evidence for this property.">
+        <div className="flex flex-wrap gap-2">
+          <Button tone="cyan" onClick={() => nav(`/pm/settings?view=messages&property=${propertyId}`)}>Open Property Messages</Button>
+          <Button onClick={() => nav("/sync/assist/email")}>Search Outlook with Sarah</Button>
+        </div>
+      </Panel>
+      <Panel title="Sarah · Reviewed Correspondence" subtitle="Only emails manually attached to this property; no ledger or payment changes.">
+        {reportsError&&<p className="text-xs text-amber-200">{reportsError}</p>}
+        {!correspondenceReports.length?<p className="text-xs text-slate-400">No reviewed correspondence reports attached yet.</p>:<div className="space-y-2">{correspondenceReports.map(r=><article key={r.report_id} className="rounded-lg border border-white/15 p-3">
+          <strong className="text-xs">{r.email_count} reviewed email references · {r.created_at?.slice(0,10)}</strong>
+          <p className="mt-1 text-xs text-amber-200">Not verified payment or inspection proof; reconcile before action.</p>
+          <div className="mt-2 space-y-1">{(r.references||[]).map(m=><div key={m.message_id} className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 py-1 text-xs"><span>{m.subject} · {m.category}</span>{m.outlook_url&&<a href={m.outlook_url} target="_blank" rel="noopener noreferrer" className="underline">Open source</a>}</div>)}</div>
+        </article>)}</div>}
+      </Panel>
+    </div> : null}
     {tab === "documents" ? <PMPropertyPaperworkDock embeddedPropertyId={propertyId} /> : null}
     {tab === "reports" ? <Panel title="Owner & Investor Reporting" subtitle="Property health, lifecycle, work history, projects, costs, and supporting documents."><div className="grid gap-3 sm:grid-cols-2"><Button onClick={() => nav(`/pm/settings?view=messages&property=${propertyId}`)}>Owner Communications</Button><Button onClick={() => setTab("documents")}>Operating Statements & Documents</Button><Button onClick={() => nav(`/pm/settings?view=make-ready&property=${propertyId}`)}>Make-Ready Report</Button><Button onClick={() => setTab("overview")}>Lifecycle & Checklists</Button></div></Panel> : null}
 
