@@ -480,3 +480,35 @@
  .sw-sync-command-center .sw-sync-team-manage{padding:6px;min-height:34px;font-size:0}
  .sw-sync-command-center .sw-sync-team-manage svg{width:17px;height:17px}
 }
+
+/* Command side rail: desktop tools take up a dedicated strip, not a bottom row. */
+@media(min-width:1024px){
+ .sw-sync-command-center .sw-sync-top-actions{display:none!important}
+ .sw-sync-command-center .sw-sync-workspace{padding-left:clamp(134px,10vw,170px)!important;padding-right:clamp(16px,2vw,38px)!important}
+ .sw-sync-command-center .sw-sync-utility-controls{
+   position:absolute!important;left:14px;top:12px;bottom:84px;
+   width:clamp(104px,9vw,142px);height:auto;max-height:none;
+   display:flex!important;flex-direction:column;justify-content:flex-start;
+   gap:9px!important;padding:14px 8px;border-radius:15px;
+   border:1px solid rgba(var(--assist-accent),.22);
+   background:var(--assist-glass-strong);
+   backdrop-filter:blur(20px);
+ }
+ .sw-sync-command-center .sw-sync-utility-controls>button{
+   width:100%;display:flex;align-items:center;justify-content:flex-start!important;
+   gap:9px!important;min-height:45px!important;padding:9px 11px!important;
+   font-size:11px!important;font-weight:750!important;
+   border:1px solid rgba(var(--assist-accent),.18)!important;
+   background:var(--assist-glass)!important;color:var(--assist-ink)!important;
+   border-radius:10px!important;text-align:left!important;
+ }
+ .sw-sync-command-center .sw-sync-utility-controls>button:hover,
+ .sw-sync-command-center .sw-sync-utility-controls>button:focus-visible{
+   border-color:rgba(var(--assist-accent),.58)!important;
+   background:rgba(var(--assist-accent),.12)!important;
+ }
+ .sw-sync-command-center .sw-sync-team-dock{left:clamp(134px,10vw,170px)!important}
+}
+@media(max-width:1023px){
+ .sw-sync-command-center .sw-sync-desktop-link{display:none!important}
+}
