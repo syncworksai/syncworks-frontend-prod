@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState} from "react";
-import {AlertTriangle,ArrowRight,ClipboardCheck,FileClock,FileSearch,Inbox,MessageSquare,WalletCards,Wrench,X} from "lucide-react";
+import {AlertTriangle,ArrowRight,ClipboardCheck,FileClock,FileSearch,Inbox,MessageSquare,WalletCards,Wrench,X,Sparkles} from "lucide-react";
 import {addVictoriaTask} from "../../api/syncWorkspaceRecords";
 
 const dedupe=reports=>{
@@ -50,12 +50,12 @@ export default function SarahPropertyActionDesk({property,reports=[],workOrders=
  }
  return <section className="sarah-pm-console" aria-label="Sarah property command center">
   <div className="sarah-pm-bar">
-   <div className="sarah-pm-heading"><span>PROPERTY OPERATIONS / SARAH</span><strong>Correspondence & decisions</strong><p>Review-only · no automatic rent changes, notices or outbound emails</p></div>
+   <div className="sarah-pm-heading"><span><Sparkles size={13}/> PROPERTY OPERATIONS / SARAH</span><strong>Briefings</strong><p>Property intelligence, correspondence and actionable priorities</p></div>
    <div className="sarah-pm-controls">
-    <button type="button" onClick={onFindMail}><FileSearch size={15}/> Find emails</button>
+    <button type="button" className="sarah-action-primary" onClick={onFindMail}><FileSearch size={15}/> Find emails</button>
     <button type="button" onClick={()=>setDrawer("timeline")}><MessageSquare size={15}/> Timeline <b>{refs.length}</b></button>
     <button type="button" onClick={()=>setDrawer("reports")}><Inbox size={15}/> Reports <b>{reports.length}</b></button>
-    <button type="button" onClick={onVictoria}>Victoria <ArrowRight size={14}/></button>
+    <button type="button" className="sarah-action-victoria" onClick={onVictoria}>Victoria <ArrowRight size={14}/></button>
    </div>
   </div>
   {reportsError&&<p role="alert" className="sarah-pm-error">{reportsError}</p>}
@@ -65,10 +65,10 @@ export default function SarahPropertyActionDesk({property,reports=[],workOrders=
    <span><b>{pending.length}</b> open work order(s)</span>
    <span className="sarah-pm-review-state">Verification required</span>
   </div>
-  <div className="sarah-pm-tiles">{categories.map(c=><button key={c.id} type="button" onClick={()=>setDrawer(c.id)} className="sarah-pm-tile">
-    <div><c.icon size={20}/><b>{c.count}</b></div><strong>{c.title}</strong><small>{c.id==="work"?"Open work orders":"Linked email matches"}</small><span>Review details <ArrowRight size={14}/></span>
+  <div className="sarah-pm-tiles">{categories.map(c=><button key={c.id} type="button" onClick={()=>setDrawer(c.id)} className={`sarah-pm-tile sarah-pm-tile-${c.id}`}>
+    <div><c.icon size={20}/><b>{c.count}</b></div><strong>{c.title}</strong><small>{c.id==="work"?"Open work orders":"Linked email matches"}</small><span>Open briefing <ArrowRight size={14}/></span>
    </button>)}</div>
-  <div className="sarah-pm-foot"><span><AlertTriangle size={14}/> Zero matches means no evidence linked yet, not that the issue is resolved.</span><button type="button" onClick={onFindMail}>Link property correspondence <ArrowRight size={14}/></button></div>
+  <div className="sarah-pm-foot"><span><AlertTriangle size={14}/> Zero matches means no evidence linked yet, not that the issue is resolved.</span><button type="button" className="sarah-action-primary" onClick={onFindMail}>Link correspondence <ArrowRight size={14}/></button></div>
   {message&&<p role="status" className="sarah-pm-task-status">{message}</p>}
   {drawer&&<div className="sarah-pm-drawer-overlay" onClick={()=>setDrawer(null)}>
    <aside className="sarah-pm-drawer" role="dialog" aria-modal="true" aria-label={active?.fullTitle|| (drawer==="timeline"?"Property correspondence timeline":"Reviewed correspondence reports")} onClick={e=>e.stopPropagation()}>
