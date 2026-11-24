@@ -6,3 +6,21 @@
 .sarah-pm-drawer-overlay{position:fixed;inset:0;z-index:1250;display:flex;justify-content:flex-end;background:rgba(0,0,0,.65);backdrop-filter:blur(4px)}.sarah-pm-drawer{height:100dvh;max-height:100dvh;min-height:0;width:min(520px,100vw);display:flex;flex-direction:column;background:var(--pm-scene-glass-strong,#101a24);background-color:#101922;border-left:1px solid var(--sarah-line);box-shadow:-20px 0 80px rgba(0,0,0,.35)}.sarah-pm-drawer-head{padding:18px;border-bottom:1px solid var(--sarah-line);display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.sarah-pm-drawer-head small{font-size:10px;letter-spacing:.12em;color:var(--sarah-accent);font-weight:800}.sarah-pm-drawer-head h3{font-size:19px;font-weight:800;margin-top:6px}.sarah-pm-drawer-head button{width:36px;padding:6px}.sarah-pm-drawer-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:17px}.sarah-pm-drawer-description{font-size:13px;line-height:1.6;color:#dce5e9}.sarah-pm-verification{display:flex;gap:8px;font-size:11px;line-height:1.5;color:#e8d5a7;margin:12px 0}.sarah-pm-verification svg{flex-shrink:0}.sarah-source-list{display:flex;flex-direction:column;gap:10px}.sarah-source{display:flex;flex-direction:column;gap:7px;border:1px solid var(--sarah-line);border-radius:10px;background:rgba(0,0,0,.2);padding:13px}.sarah-source strong{font-size:12px}.sarah-source span,.sarah-source small,.sarah-source p{font-size:11px;color:#bacbd4;overflow-wrap:anywhere}.sarah-source details{font-size:11px}.sarah-source summary{cursor:pointer}.sarah-source a{display:inline-flex;align-items:center;gap:5px;color:var(--sarah-accent);font-size:11px;text-decoration:underline}.sarah-empty{padding:18px;border:1px dashed var(--sarah-line);border-radius:10px;color:#c2cbd2;font-size:12px;line-height:1.6}.sarah-pm-drawer-actions{display:flex;gap:8px;padding:14px 17px;border-top:1px solid var(--sarah-line);background:rgba(0,0,0,.15)}.sarah-pm-drawer-actions button{flex:1;min-height:41px}.sarah-pm-drawer-actions button:disabled{opacity:.5}
 @media(max-width:1050px){.sarah-pm-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.sarah-pm-console{overflow-y:auto;overscroll-behavior:contain}.sarah-pm-tile{min-height:125px}}
 @media(max-width:600px){.sarah-pm-console{padding:10px;gap:8px}.sarah-pm-controls{width:100%}.sarah-pm-controls button{flex:1;padding:7px}.sarah-pm-summary{gap:8px;font-size:10px}.sarah-pm-review-state{margin-left:0}.sarah-pm-tiles{gap:7px}.sarah-pm-tile{min-height:102px;padding:10px;gap:5px}.sarah-pm-tile>div b{font-size:19px}.sarah-pm-tile strong{font-size:11px}.sarah-pm-tile small{font-size:9px}.sarah-pm-foot button{width:100%}.sarah-pm-drawer{width:100%;height:calc(100dvh - env(safe-area-inset-top,0px));margin-top:env(safe-area-inset-top,0px)}}
+
+/* Sarah's tab owns the available content viewport; secondary evidence scrolls in drawers only. */
+@media(min-width:1024px){
+ main.sarah-property-main{
+  height:calc(100dvh - 240px)!important;
+  min-height:420px;
+  display:flex;flex-direction:column;
+  overflow:hidden!important;
+  padding-bottom:10px!important;
+ }
+ main.sarah-property-main>nav#pm-property-sections{flex:0 0 auto;position:relative;top:auto!important}
+ main.sarah-property-main>.sarah-property-screen{flex:1;min-height:0}
+ main.sarah-property-main .sarah-pm-console{height:100%}
+}
+@media(max-width:1023px){
+ main.sarah-property-main{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))!important}
+ .sarah-property-screen{min-height:0}
+}
