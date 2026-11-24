@@ -9,7 +9,17 @@ export default function SyncAssistMultiMailboxes(){
  const [state,setState]=useState(null),[view,setView]=useState("accounts"),[active,setActive]=useState(null),[messages,setMessages]=useState([]),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
  const [form,setForm]=useState({label:"Property Management",category:"PROPERTY",priority:"HIGH"});
  const [editing,setEditing]=useState(null);
- const load=useCallback(async()=>{setError("");try{const r=await api.get(BASE);setState(r.data)}catch(e){setError(e?.response?.data?.detail||"Unable to load mailbox connections.")}},[]);
+ const mailboxError=(e,action)=>{
+ const status=e?.response?.status;
+ const detail=e?.response?.data?.detail;
+ if(status===401)return "This SyncWorks login is not recognized by the Ohio backend. The API authentication and OAuth service must use the same account database.";
+ if(status===403)return detail||"Ohio rejected this account's mailbox permissions.";
+ if(status===404)return "The Ohio API mailbox route was not found. Verify the current backend deployment.";
+ if(status>=500)return detail||"Ohio encountered a server error ("+status+").";
+ if(!e?.response)return "The browser could not reach Ohio securely (network or CORS). Check the browser console and the Ohio CORS configuration.";
+ return detail||action+" failed (HTTP "+status+").";
+ };
+ const load=useCallback(async()=>{setError("");try{const r=await api.get(BASE);setState(r.data)}catch(e){setState(null);setError(mailboxError(e,"Loading mailboxes"))}},[]);
  useEffect(()=>{load()},[load]);
  useEffect(()=>{
  const params=new URLSearchParams(window.location.search);
@@ -21,7 +31,7 @@ export default function SyncAssistMultiMailboxes(){
  const rest=params.toString();
  window.history.replaceState(null,"",window.location.pathname+(rest?"?"+rest:"")+window.location.hash);
  },[]);
- const connect=async()=>{setBusy(true);setError("");try{const r=await api.post(BASE+"connect/",form);const url=r.data.authorization_url;if(!url?.startsWith("https://login.microsoftonline.com/"))throw Error("Unexpected authorization destination.");window.location.assign(url)}catch(e){setError(e?.response?.data?.detail||e.message||"Connection unavailable.")}finally{setBusy(false)}};
+ const connect=async()=>{setBusy(true);setError("");try{const r=await api.post(BASE+"connect/",form);const url=r.data.authorization_url;if(!url?.startsWith("https://login.microsoftonline.com/"))throw Error("Unexpected authorization destination.");window.location.assign(url)}catch(e){setError(mailboxError(e,"Connecting Outlook"))}finally{setBusy(false)}};
  const openInbox=async account=>{setBusy(true);setError("");setActive(account);setMessages([]);setView("inbox");try{const r=await api.get(BASE+encodeURIComponent(account.account_id)+"/inbox/");setMessages(r.data.messages||[])}catch(e){setError(e?.response?.data?.detail||"Unable to open this inbox.")}finally{setBusy(false)}};
  const save=async()=>{setBusy(true);setError("");try{const r=await api.patch(BASE,{account_id:editing.account_id,...form});setState(v=>({...v,accounts:r.data.accounts}));setNotice("Mailbox settings saved.");setEditing(null)}catch(e){setError(e?.response?.data?.detail||"Could not save mailbox settings.")}finally{setBusy(false)}};
  const disconnect=async account=>{if(!window.confirm("Disconnect "+account.email+" from SyncWorks?"))return;setBusy(true);setError("");try{const r=await api.delete(BASE,{data:{account_id:account.account_id}});setState(v=>({...v,accounts:r.data.accounts}));setNotice("Mailbox disconnected from SyncWorks.");setActive(null);setView("accounts")}catch(e){setError(e?.response?.data?.detail||"Could not disconnect.")}finally{setBusy(false)}};
