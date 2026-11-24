@@ -96,8 +96,15 @@ export default function SyncAssistDaily() {
         {!propertyBrief&&!propertyBriefError&&<p className="text-xs text-slate-300">Loading property correspondence summary…</p>}
         {propertyBrief&&<div className="space-y-2">
           <div className="grid grid-cols-2 gap-2"><div className="rounded-lg border border-white/15 p-2"><strong>{propertyBrief.portfolio_property_count}</strong><span className="ml-2 text-xs">Properties</span></div><div className="rounded-lg border border-white/15 p-2"><strong>{Object.values(propertyBrief.reviewed_correspondence_by_category||{}).reduce((a,b)=>a+b,0)}</strong><span className="ml-2 text-xs">Reviewed email references</span></div></div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            {[
+              ["Open projects",propertyBrief.operations_totals?.open_projects],
+              ["Overdue projects",propertyBrief.operations_totals?.overdue_projects],
+              ["Lease dates ≤60d",propertyBrief.operations_totals?.recorded_leases_ending_within_60_days],
+            ].map(([label,n])=><div key={label} className="rounded-lg border border-white/15 p-2"><strong className="block text-sm">{n??"—"}</strong><span className="text-[10px] text-slate-400">{label}</span></div>)}
+          </div>
           <p className="text-xs text-amber-200">{propertyBrief.coverage_note}</p>
-          <div className="max-h-[45vh] space-y-2 overflow-auto overscroll-contain">{(propertyBrief.properties||[]).map(p=><button key={p.id} type="button" onClick={()=>navigate(p.detail_url)} className="flex w-full items-center justify-between gap-2 rounded-lg border border-white/15 p-2 text-left text-xs"><span><strong className="block">{p.name}</strong><span className="text-slate-300">{p.correspondence_count} reviewed email references · {p.status}</span></span><ExternalLink size={14}/></button>)}</div>
+          <div className="max-h-[45vh] space-y-2 overflow-auto overscroll-contain">{(propertyBrief.properties||[]).map(p=><button key={p.id} type="button" onClick={()=>navigate(p.detail_url)} className="flex w-full items-center justify-between gap-2 rounded-lg border border-white/15 p-2 text-left text-xs"><span><strong className="block">{p.name}</strong><span className="text-slate-300">{p.correspondence_count} email references · {p.operations?.overdue_projects||0} overdue projects · {p.operations?.recorded_leases_ending_within_60_days||0} upcoming lease ends</span></span><ExternalLink size={14}/></button>)}</div>
           <p className="text-xs text-slate-400">Sarah's reviewed correspondence is advisory. Victoria should escalate unresolved inspections, rent discrepancies, legal deadlines or emergency work orders only after the relevant records are verified.</p>
         </div>}
       </section>
