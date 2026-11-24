@@ -2,6 +2,7 @@ import React,{useCallback,useEffect,useMemo,useState} from "react";
 import api from "../api/client";
 import {AlertTriangle,CheckCircle2,Cloud,Download,FileSpreadsheet,Play,Plus,RefreshCw,ShieldCheck,SlidersHorizontal,TerminalSquare,XCircle} from "lucide-react";
 import "./FreelanceStudioConsole.css";
+import FreelanceReviewPreview from "./FreelanceReviewPreview";
 
 const ROOT="/sync-ai/freelance/pilot/synthetic-jobs/";
 const ACCESS="/sync-ai/freelance/pilot/access/";
@@ -16,6 +17,7 @@ function saveDownload(name,content){
 
 export default function FreelanceExecutionControl({demo}){
  const [tab,setTab]=useState("jobs");
+ const [inspect,setInspect]=useState(null);
  const [jobs,setJobs]=useState([]),[selected,setSelected]=useState(null);
  const [loading,setLoading]=useState(true),[connected,setConnected]=useState(false);
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
@@ -91,7 +93,7 @@ export default function FreelanceExecutionControl({demo}){
        <aside className="sw-studio-job-list" aria-label="Synthetic job records">
          <div className="sw-studio-mini-heading"><strong>Recorded tests</strong><span>{pending} queued · {needsReview} reviews</span></div>
          <div className="sw-studio-list-items">
-           {jobs.length===0?<p className="sw-studio-muted">No synthetic jobs. Use New test to create one.</p>:jobs.map(j=><button type="button" key={j.id} className={"sw-studio-job-item "+(selected===j.id?"selected":"")} onClick={()=>setSelected(j.id)}>
+           {jobs.length===0?<p className="sw-studio-muted">No synthetic jobs. Use New test to create one.</p>:jobs.map(j=><button type="button" key={j.id} className={"sw-studio-job-item "+(selected===j.id?"selected":"")} onClick={()=>{setSelected(j.id);setInspect(null)}}>
              <span className="sw-studio-job-item-top"><strong>{j.row_count} rows</strong><span className={"sw-studio-state state-"+j.state.toLowerCase()}>{label(j.state)}</span></span>
              <span className="sw-studio-muted">{new Date(j.created_at).toLocaleString()} · {j.attempts} attempts</span>
            </button>)}
@@ -99,13 +101,13 @@ export default function FreelanceExecutionControl({demo}){
          <button type="button" className="sw-studio-bottom-action" onClick={()=>setTab("new")}><Plus size={14}/> New synthetic test</button>
        </aside>
        <section className="sw-studio-detail" aria-label="Selected job details">
-         {job?<><div className="sw-studio-detail-head"><div><small>SELECTED TEST</small><h3>{job.row_count} simulated records</h3><p>Seed {job.seed??42} · Attempt {job.attempts} · No client files</p></div><span className={"sw-studio-state state-"+job.state.toLowerCase()}>{label(job.state)}</span></div>
+         {job&&inspect===job.id&&["REVIEW","APPROVED"].includes(job.state)?<FreelanceReviewPreview key={job.id} job={job} onApproved={async()=>{setInspect(null);await refresh();setNotice("Approved after viewing rows and automated checks. No client delivery.");}} onClose={()=>setInspect(null)}/>:job?<><div className="sw-studio-detail-head"><div><small>SELECTED TEST</small><h3>{job.row_count} simulated records</h3><p>Seed {job.seed??42} · Attempt {job.attempts} · No client files</p></div><span className={"sw-studio-state state-"+job.state.toLowerCase()}>{label(job.state)}</span></div>
            {(job.state==="REVIEW"||job.state==="APPROVED")&&<div className="sw-studio-report">{[["Source rows",job.result?.source_rows],["Cleaned",job.result?.cleaned_rows],["Duplicates",job.result?.duplicates_removed],["Flagged",job.result?.flagged_count]].map(([name,value])=><div key={name}><small>{name}</small><strong>{value??"—"}</strong></div>)}</div>}
            {job.error_code&&<p className="sw-studio-error-line">{job.error_code}</p>}
            <div className="sw-studio-workflow"><span className={job.state!=="QUEUED"?"done":""}>1. Queue</span><span className={["REVIEW","APPROVED"].includes(job.state)?"done":""}>2. Execute</span><span className={job.state==="APPROVED"?"done":""}>3. Review</span><span>4. Download</span></div>
            {job.state==="QUEUED"&&<div className="sw-studio-task-action"><label><input type="checkbox" checked={!!runConsents[job.id]} onChange={e=>setRunConsents(v=>({...v,[job.id]:e.target.checked}))}/> I authorize running this one synthetic test now.</label><button className="sw-studio-primary" type="button" disabled={busy||!connected||!runConsents[job.id]} onClick={run}><Play size={15}/> Run this test</button><small>One-time founder action · background worker disabled</small></div>}
-           {job.state==="REVIEW"&&<div className="sw-studio-task-action"><label><input type="checkbox" checked={!!reviewConsents[job.id]} onChange={e=>setReviewConsents(v=>({...v,[job.id]:e.target.checked}))}/> I reviewed the synthetic report and approve private download.</label><button className="sw-studio-primary" type="button" disabled={busy||!reviewConsents[job.id]} onClick={()=>decide("approve")}><ShieldCheck size={15}/> Approve result</button></div>}
-           {job.state==="APPROVED"&&<div className="sw-studio-task-action"><p className="sw-studio-muted">Approved for private download. No client delivery is connected.</p><button className="sw-studio-primary" type="button" disabled={busy} onClick={download}><Download size={15}/> Download cleaned CSV</button></div>}
+           {job.state==="REVIEW"&&<div className="sw-studio-task-action"><p className="sw-studio-muted">See the actual cleaned rows and six automatic QA checks before approving.</p><button className="sw-studio-primary" type="button" onClick={()=>setInspect(job.id)}><FileSpreadsheet size={15}/> Inspect rows & approve</button></div>}
+           {job.state==="APPROVED"&&<div className="sw-studio-task-action"><p className="sw-studio-muted">Approved for private download. No client delivery is connected.</p><button className="sw-studio-secondary" type="button" onClick={()=>setInspect(job.id)}><FileSpreadsheet size={15}/> Inspect cleaned rows</button><button className="sw-studio-primary" type="button" disabled={busy} onClick={download}><Download size={15}/> Download cleaned CSV</button></div>}
            {job.state==="RUNNING"&&<p className="sw-studio-muted">The server is processing this job. Refresh its status to check the result.</p>}
            {job.state==="FAILED"&&<p className="sw-studio-muted">The worker failed. Inspect the error and cancel if appropriate.</p>}
            {job.state==="CANCELLED"&&<p className="sw-studio-muted">This test was cancelled. Create a fresh job to try again.</p>}
