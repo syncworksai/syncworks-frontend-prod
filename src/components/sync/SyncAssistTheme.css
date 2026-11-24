@@ -378,3 +378,31 @@
  .sw-assist-themed.sw-sync-home section:has(>div>div>h1){padding:9px!important}
  .sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3>button{min-height:54px!important}
 }
+
+/* Keep command tray and actions visible above the fixed shell dock. */
+.sw-assist-themed.sw-sync-home>div.relative.mx-auto{overflow-y:auto!important;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(var(--assist-accent),.4) transparent;padding-bottom:60px!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1){padding:9px 12px!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1) h1{font-size:19px!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3.grid-cols-3{margin-top:5px!important;gap:6px!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3.grid-cols-3>button{
+ min-height:52px!important;padding:6px 9px!important;
+ display:flex;align-items:center;gap:8px;text-align:left;
+}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3.grid-cols-3>button>svg{flex:0 0 auto;margin:0!important;width:15px!important;height:15px!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3.grid-cols-3>button>div.hidden{display:none!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3.grid-cols-3>button>div.font-black{margin:0!important;font-size:12px!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3.grid-cols-2{margin-top:6px!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3.grid-cols-2>button{min-height:36px!important;padding:5px 9px!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3.grid-cols-2>button svg{height:15px;width:15px}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3.grid-cols-2>button span.mt-1{display:none!important}
+.sw-assist-themed.sw-sync-home .sw-sync-command-tray{
+ margin-top:7px!important;padding:5px 7px!important;border-color:rgba(var(--assist-accent),.32)!important;
+ border-radius:10px!important;background:var(--assist-glass)!important
+}
+.sw-assist-themed.sw-sync-home .sw-sync-command-tray textarea{height:32px!important;min-height:32px!important;max-height:56px!important;padding:5px 7px!important;font-size:12px!important}
+.sw-assist-themed.sw-sync-home .sw-sync-command-tray>div.mt-1{margin-top:2px!important}
+.sw-assist-themed.sw-sync-home .sw-sync-command-tray button{min-height:34px!important;font-size:11px!important;padding:4px 11px!important}
+@media(max-width:767px){
+ .sw-assist-themed.sw-sync-home>div.relative.mx-auto{padding-bottom:70px!important}
+ .sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3.grid-cols-3>button{min-height:47px!important;padding:5px!important}
+}
