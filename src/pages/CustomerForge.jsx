@@ -11,6 +11,7 @@ import { useAuth } from "../auth/AuthContext";
 import { forgeChapters } from "./forgeChapters";
 import { forgeGreatBookStudies } from "./forgeGreatBookStudies";
 import ForgeBookLibrary from "./ForgeBookLibrary";
+import {forgeBookCatalog} from "./forgeBookCatalog";
 import ForgeKnowledgeAcademy from "./ForgeKnowledgeAcademy";
 import {academyLessons} from "./forgeAcademyData";
 import {forgeAudiobookEpisodes} from "./forgeAudiobookEpisodes";
@@ -398,7 +399,7 @@ export default function CustomerForge(){
         <div className="forge3-stage">
           {(mode==="read"||mode==="listen")&&<>
             <div className="forge3-stage-intro"><div><span className="forge3-overline">{mode==="listen"?"THE DAILY AUDIOBOOK":"TODAY'S READING"} · ORIGINAL FORGE LESSON</span><h2>{chapter.title}</h2><p>{chapter.lens} · {chapter.length}</p></div><span className="forge3-book-icon"><BookOpen size={33}/></span></div>
-            <div className="forge3-chapter-select"><label htmlFor="forge3-lesson">Chapter</label><select id="forge3-lesson" value={chapterId} onChange={e=>{stopAudio();setChapterId(e.target.value);}}>{chapters.map(c=><option key={c.id} value={c.id}>{c.title}</option>)}</select><button type="button" onClick={()=>{stopAudio();setChapterId(todayChapter.id);}} className="forge3-softbtn">Today's pick</button><button type="button" className="forge3-softbtn" onClick={()=>{setLibraryCategory(null);setLibraryOpen(true);}}><BookOpen size={15}/> Library · 100 titles</button><button type="button" className="forge3-softbtn forge3-academy-launch" onClick={()=>setAcademyOpen(true)}><Brain size={15}/> Knowledge Academy</button></div>
+            <div className="forge3-chapter-select"><label htmlFor="forge3-lesson">Chapter</label><select id="forge3-lesson" value={chapterId} onChange={e=>{stopAudio();setChapterId(e.target.value);}}>{chapters.map(c=><option key={c.id} value={c.id}>{c.title}</option>)}</select><button type="button" onClick={()=>{stopAudio();setChapterId(todayChapter.id);}} className="forge3-softbtn">Today's pick</button><button type="button" className="forge3-softbtn" onClick={()=>{setLibraryCategory(null);setLibraryOpen(true);}}><BookOpen size={15}/> Library · {forgeBookCatalog.length} titles</button><button type="button" className="forge3-softbtn forge3-academy-launch" onClick={()=>setAcademyOpen(true)}><Brain size={15}/> Knowledge Academy</button></div>
             {mode==="read"?<div className="forge3-reading-home">
               <div className="forge3-reading-symbol" aria-hidden="true"><BookOpen size={52}/></div>
               <span className="forge3-overline">TODAY'S CHAPTER · PERSONAL DEVELOPMENT</span>
