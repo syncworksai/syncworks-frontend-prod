@@ -714,7 +714,9 @@ export default function SyncAssistant() {
                 onClick={
                   listening ? stopListening : () => startListening({ greeting: false })
                 }
-                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-black lg:min-h-11 lg:rounded-xl lg:px-3 lg:text-xs ${
+                aria-label={listening?"Stop microphone":"Start microphone"}
+                title={listening?"Stop microphone":"Speak to SYNC"}
+                className={`sw-sync-mic-action inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-xs font-black lg:min-h-11 lg:rounded-xl lg:px-3 lg:text-xs ${
                   listening
                     ? "border-rose-300/35 bg-rose-500/15 text-rose-100"
                     : "border-cyan-300/35 bg-cyan-500/15 text-cyan-100"
@@ -725,21 +727,23 @@ export default function SyncAssistant() {
                 ) : (
                   <Mic className="h-5 w-5" />
                 )}
-                {listening ? "Stop listening" : "Speak"}
+                <span className="sr-only">{listening ? "Stop listening" : "Speak"}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => sendMessage()}
                 disabled={sending || !aiReady}
-                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 px-5 text-sm font-black text-white disabled:opacity-45"
+                aria-label={sending?"SYNC processing":"Send message"}
+                title="Send to SYNC"
+                className="sw-sync-send-action inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-black text-white disabled:opacity-45"
               >
                 {sending ? (
                   <LoaderCircle className="h-5 w-5 animate-spin" />
                 ) : (
                   <Send className="h-5 w-5" />
                 )}
-                {sending ? "SYNC is thinking..." : "Send to SYNC"}
+                <span className="sr-only">{sending ? "SYNC is thinking..." : "Send to SYNC"}</span>
               </button>
             </div>
           </div>
@@ -941,10 +945,10 @@ export default function SyncAssistant() {
             <button
               key={assistant.id}
               type="button"
-              aria-label={`Open ${assistant.name} — ${assistant.role} work dashboard`}
+              aria-label={`Open ${assistant.name} — ${assistant.role} chat`}
               aria-pressed={avatarOpen && avatarId === assistant.id}
               title={`${assistant.name} — ${assistant.role}`}
-              onClick={() => { if (pilotAccess) navigate("/sync/assist/employee/" + encodeURIComponent(assistant.id)); else { chooseAvatar(assistant.id); setAvatarOpen(true); } }}
+              onClick={() => { if (pilotAccess) { if (assistant.role === "Chief of Staff") window.dispatchEvent(new CustomEvent("syncworks:victoria-open")); else window.dispatchEvent(new CustomEvent("syncworks:business-agent-open",{detail:{agentId:assistant.id}})); setTeamDockOpen(false); } else { chooseAvatar(assistant.id); setAvatarOpen(true); } }}
               className="group relative flex w-[67px] flex-col items-center gap-1 sm:w-[80px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200"
             >
               <span className={`relative block h-12 w-12 rounded-full border-2 bg-[#061323] shadow-[0_5px_20px_rgba(0,0,0,.55)] transition-transform group-hover:-translate-y-1 sm:h-14 sm:w-14 ${avatarId === assistant.id ? "border-cyan-300 shadow-[0_0_21px_rgba(34,211,238,.55)]" : "border-cyan-300/45 shadow-[0_0_16px_rgba(34,211,238,.2)]"}`}>
