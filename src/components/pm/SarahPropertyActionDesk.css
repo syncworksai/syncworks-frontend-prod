@@ -1,0 +1,21 @@
+.sarah-pm-action-desk{--sarah-border:var(--pm-scene-line,rgba(185,202,213,.24));--sarah-surface:var(--pm-scene-glass,rgba(17,24,31,.68));color:#eef5f8;border:1px solid var(--sarah-border);border-radius:14px;background:var(--sarah-surface);padding:12px}
+.sarah-pm-action-header{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:11px}
+.sarah-pm-action-header p{font-size:10px;font-weight:850;letter-spacing:.12em;color:#afc6d4}
+.sarah-pm-action-header h3{font-size:15px;font-weight:900;margin:4px 0}
+.sarah-pm-action-header span{font-size:11px;color:#bcc9d1}
+.sarah-pm-action-header button,.sarah-pm-action-buttons button{display:inline-flex;justify-content:center;align-items:center;gap:6px;border:1px solid var(--sarah-border);border-radius:9px;padding:7px 10px;font-size:11px;font-weight:750;background:rgba(8,14,21,.37);color:#f4f7fa}
+.sarah-pm-action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.sarah-pm-action-card{min-width:0;display:flex;flex-direction:column;gap:7px;padding:11px;background:rgba(7,13,19,.31);border:1px solid var(--sarah-border);border-radius:11px}
+.sarah-pm-action-title{display:flex;align-items:center;gap:6px;min-width:0}
+.sarah-pm-action-title>strong{font-size:12px;flex:1;line-height:1.2}
+.sarah-pm-action-title>span{font-size:16px;font-weight:900}
+.sarah-pm-action-card>p,.sarah-pm-action-desc{font-size:10px;line-height:1.5;color:#bdcbd5}
+.sarah-pm-action-desc{flex:1}
+.sarah-pm-action-buttons{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto}
+.sarah-pm-action-buttons button{padding:6px 8px;flex:1;white-space:nowrap}
+.sarah-pm-action-buttons button:hover,.sarah-pm-action-header button:hover{border-color:var(--pm-scene-accent,#d2e1e9)}
+.sarah-pm-action-buttons button:disabled{opacity:.5}
+.sarah-pm-action-note{display:flex;align-items:flex-start;gap:7px;font-size:10px;line-height:1.5;color:#dbcfae;margin-top:9px}
+.sarah-pm-action-note svg{flex-shrink:0;margin-top:1px}
+@media(max-width:1199px){.sarah-pm-action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:570px){.sarah-pm-action-grid{grid-template-columns:1fr}.sarah-pm-action-card{gap:5px}.sarah-pm-action-title>strong{font-size:13px}}
