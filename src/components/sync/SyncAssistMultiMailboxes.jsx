@@ -13,6 +13,7 @@ export default function SyncAssistMultiMailboxes(){
  const [sarahReport,setSarahReport]=useState(null);
  const [routingReport,setRoutingReport]=useState(null);
  const [routingFilter,setRoutingFilter]=useState("ALL");
+ const [jobPrefs,setJobPrefs]=useState(null);
  const [selectedFinding,setSelectedFinding]=useState(null);
  const mailboxError=(e,action)=>{
  const status=e?.response?.status;
@@ -43,8 +44,17 @@ export default function SyncAssistMultiMailboxes(){
   setBusy(true);setError("");setRoutingReport(null);
   try{
    const r=await api.get(BASE+encodeURIComponent(active.account_id)+"/route-review/");
-   setRoutingReport(r.data);setRoutingFilter("ALL");setView("routing");
+   setRoutingReport(r.data);setJobPrefs(r.data.job_preferences||null);setRoutingFilter("ALL");setView("routing");
   }catch(e){setError(mailboxError(e,"Mailbox routing review"));}finally{setBusy(false);}
+ };
+ const saveJobPrefs=async()=>{
+  if(!active||!jobPrefs)return;
+  setBusy(true);setError("");
+  try{
+    await api.patch(BASE+encodeURIComponent(active.account_id)+"/route-review/",jobPrefs);
+    setNotice("Job preferences saved. Outlook filing remains disabled.");
+    await runRouting();
+  }catch(e){setError(mailboxError(e,"Saving job preferences"));}finally{setBusy(false);}
  };
  const runSarah=async()=>{
    if(!active||active.category!=="PROPERTY")return;
@@ -67,6 +77,15 @@ export default function SyncAssistMultiMailboxes(){
    <button type="button" onClick={runRouting} disabled={busy} className="rounded-lg border border-white/20 px-2 py-1.5 text-xs">Rescan</button>
   </div>
   <p className="text-xs text-slate-300">{routingReport.brief?.summary} No Outlook messages have been moved or archived.</p>
+  {jobPrefs&&<div className="mt-2 rounded-lg border border-white/15 bg-black/10 p-3">
+   <div className="flex items-center justify-between gap-3"><div><strong className="text-xs">Job opportunities</strong><p className="text-[11px] text-slate-300">When paused, recruitment emails are proposed for Personal filing. Existing application and interview updates stay protected.</p></div><label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={!!jobPrefs.job_search_active} onChange={e=>setJobPrefs(v=>({...v,job_search_active:e.target.checked}))}/> Actively looking</label></div>
+   {jobPrefs.job_search_active&&<div className="mt-2 flex flex-wrap items-center gap-3">
+    <label className="text-xs"><input type="checkbox" checked={!!jobPrefs.remote_only} onChange={e=>setJobPrefs(v=>({...v,remote_only:e.target.checked}))}/> Remote only</label>
+    <label className="text-xs"><input type="checkbox" checked={!!jobPrefs.part_time_only} onChange={e=>setJobPrefs(v=>({...v,part_time_only:e.target.checked}))}/> Part-time/contract only</label>
+    <label className="text-xs">Keywords (comma-separated)<input className="ml-2 rounded-md border border-white/20 bg-black/20 px-2 py-1" value={(jobPrefs.keywords||[]).join(", ")} onChange={e=>setJobPrefs(v=>({...v,keywords:e.target.value.split(",").slice(0,12).map(x=>x.trim())}))} placeholder="design, virtual assistant"/></label>
+   </div>}
+   <div className="mt-2 flex items-center justify-between gap-2"><p className="text-[11px] text-amber-100">No automatic archiving or deletion is enabled.</p><button type="button" disabled={busy} onClick={saveJobPrefs} className="rounded-lg border border-cyan-300/40 px-3 py-1.5 text-xs">Save job rules</button></div>
+  </div>}
   <div className="mt-2 flex flex-wrap gap-2">
    {["ALL","REVIEW","FINANCE","PROPERTY","MARKETS","BUSINESS","SUPPORT","GROWTH","PERSONAL"].map(category=><button key={category} type="button" onClick={()=>setRoutingFilter(category)} aria-pressed={routingFilter===category} className={"rounded-lg border px-3 py-2 text-xs "+(routingFilter===category?"border-cyan-300/60 bg-cyan-400/20":"border-white/20")}>{category} · {category==="ALL"?routingReport.total:routingReport.counts?.[category]||0}</button>)}
   </div>
