@@ -1,0 +1,31 @@
+/* Shared PM shell now follows the selected Customer office theme. */
+[data-pm-command-shell]{
+ --pm-ui-border:var(--pm-scene-line,rgba(168,199,222,.25));
+ --pm-ui-surface:var(--pm-scene-glass,rgba(7,13,23,.78));
+ --pm-ui-accent:var(--pm-scene-accent,#d8e4ee);
+ --pm-ui-ink:var(--pm-scene-ink,#f1f6fa);
+}
+[data-pm-command-shell] .pm-theme-sidebar,
+[data-pm-command-shell] .pm-theme-topbar{background:rgba(11,16,23,.94);border-color:var(--pm-ui-border)}
+[data-pm-command-shell] .pm-theme-nav-active,
+[data-pm-command-shell] .pm-theme-workspace-card,
+[data-pm-command-shell] .pm-theme-top-action{
+ border-color:var(--pm-ui-border)!important;
+ background:var(--pm-ui-surface)!important;
+ color:var(--pm-ui-ink)!important;
+ box-shadow:none!important;
+}
+[data-pm-command-shell] .pm-theme-nav-active{border-left:2px solid var(--pm-ui-accent)!important}
+[data-pm-command-shell] .pm-theme-portfolio-header{border-color:var(--pm-ui-border);background:var(--pm-ui-surface)}
+[data-pm-command-shell] .pm-theme-top-action:hover{border-color:var(--pm-ui-accent)!important}
+body[data-sw-office-theme="classic"] [data-pm-command-shell] .pm-theme-sidebar,
+body[data-sw-office-theme="classic"] [data-pm-command-shell] .pm-theme-topbar{background:rgba(24,19,14,.93)}
+body[data-sw-office-theme="modern"] [data-pm-command-shell] .pm-theme-sidebar,
+body[data-sw-office-theme="modern"] [data-pm-command-shell] .pm-theme-topbar{background:rgba(15,19,24,.94)}
+body[data-sw-office-theme="light"] [data-pm-command-shell] .pm-theme-sidebar,
+body[data-sw-office-theme="light"] [data-pm-command-shell] .pm-theme-topbar{background:rgba(16,31,41,.91)}
+/* On large screens dedicate more width to the actual PM content and less to chrome. */
+@media(min-width:1440px){
+ [data-pm-command-shell] .pm-command-content{max-width:1820px!important}
+ [data-pm-command-shell] .pm-theme-portfolio-header>div{max-width:1820px!important}
+}
