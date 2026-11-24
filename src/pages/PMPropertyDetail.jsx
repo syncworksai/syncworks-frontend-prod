@@ -13,7 +13,7 @@ import { ROXANA_RENT_REVIEW_DATE, isRoxanaPilotProperty } from "../components/pm
 const list = (data) => Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
 const money = (value) => Number(value || 0).toLocaleString("en-US", { style: "currency", currency: "USD" });
 const tabs = ["overview", "review", "tenantpreview", "units", "tenants", "ledger", "maintenance", "projects", "messages", "correspondence", "documents", "reports"];
-const tabLabels = {overview:"Overview",review:"Tenant Review",tenantpreview:"Resident Preview",units:"Units",tenants:"Tenants",ledger:"Advanced Ledger",maintenance:"Work",projects:"Projects",messages:"Inbox",correspondence:"Sarah Briefings",documents:"Files",reports:"Owners"};
+const tabLabels = {overview:"Overview",review:"Tenant Review",tenantpreview:"Resident Preview",units:"Units",tenants:"Tenants",ledger:"Advanced Ledger",maintenance:"Work",projects:"Projects",messages:"Inbox",correspondence:"Briefings",documents:"Files",reports:"Owners"};
 
 function Panel({ title, subtitle, action, children }) {
   return <section className="rounded-xl border border-cyan-500/15 bg-[#07111f]"><div className="flex flex-wrap items-start justify-between gap-2 border-b border-cyan-500/10 px-3 py-3"><div><h2 className="text-sm font-black text-white">{title}</h2>{subtitle ? <p className="mt-1 text-[11px] text-slate-500">{subtitle}</p> : null}</div>{action}</div><div className="p-3">{children}</div></section>;
@@ -231,7 +231,7 @@ export default function PMPropertyDetail() {
       </select>
     </section>}
 
-    <nav id="pm-property-sections" aria-label="Property 360 sections" className="sticky top-[max(4rem,env(safe-area-inset-top))] z-20 flex scroll-mt-24 gap-1.5 overflow-x-auto rounded-xl border border-cyan-500/15 bg-[#07111f]/95 p-1.5 backdrop-blur">{tabs.filter(item => item !== "tenantpreview" || isRoxanaPilotProperty(property)).map((item) => <button key={item} type="button" onClick={() => { setTab(item); nav(`/pm/properties/${propertyId}?tab=${item}`); }} className={`min-h-9 shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-black ${tab === item ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>{tabLabels[item]}</button>)}</nav>
+    <nav id="pm-property-sections" aria-label="Property 360 sections" className={`sticky top-[max(4rem,env(safe-area-inset-top))] z-20 flex scroll-mt-24 gap-1.5 overflow-x-auto rounded-xl border border-cyan-500/15 bg-[#07111f]/95 p-1.5 backdrop-blur ${tab === "correspondence" ? "sarah-property-tabs" : ""}`}>{tabs.filter(item => item !== "tenantpreview" || isRoxanaPilotProperty(property)).map((item) => <button key={item} type="button" onClick={() => { setTab(item); nav(`/pm/properties/${propertyId}?tab=${item}`); }} className={`min-h-9 shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-black ${tab === item ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:bg-white/5 hover:text-white"} ${item === "correspondence" ? "sarah-property-briefings-tab" : ""} ${item === tab ? "sarah-tab-selected" : ""}`}>{tabLabels[item]}</button>)}</nav>
 
     {tab === "overview" ? <div className="space-y-3">
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-400/25 bg-cyan-500/5 p-3">
