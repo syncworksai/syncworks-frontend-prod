@@ -134,7 +134,7 @@ export default function SyncAssistEmail() {
       {brief&&<button type="button" onClick={()=>setMobilePanel("brief")} aria-pressed={mobilePanel==="brief"}>Brief</button>}
     </nav>
     <section className="sw-mail-connection sw-assist-panel mt-3 rounded-2xl border p-4">
-      <div className="mb-3 flex items-center justify-between gap-2"><h2 className="text-sm font-bold">Mail accounts and permissions</h2><span className="text-[11px] text-slate-300">{status?.configured?"Primary OAuth configured":"Microsoft OAuth setup required"}</span></div>
+      <div className="mb-3 flex items-center justify-between gap-2"><h2 className="text-sm font-bold">Mail accounts and permissions</h2><span className="text-[11px] text-slate-300">Microsoft mailbox connections</span></div>
       <SyncAssistMultiMailboxes/>
       <div className="mt-3 rounded-xl border border-white/15 bg-black/10 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2"><div><strong className="text-xs">Primary Outlook account</strong><p className="text-[11px] text-slate-300">jacoblord7@outlook.com · Email drafts and approvals</p></div><span className="text-[10px] text-cyan-200">{status?.connected?"Connected":status?.configured?"Ready to connect":"Setup required"}</span></div>
