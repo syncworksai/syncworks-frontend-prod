@@ -64,3 +64,19 @@
  .sw-daily-page .sw-daily-hero{padding:10px!important}
  .sw-daily-page .sw-daily-layout{gap:7px}
 }
+
+/* Sara-to-Victoria briefing: centered, compact overlay within anchored screen. */
+.sw-daily-page .sw-daily-property-brief{
+ display:none!important;position:fixed!important;z-index:220;
+ top:calc(155px + 10px);bottom:20px;left:max(12px,calc((100vw - 800px)/2));
+ right:max(12px,calc((100vw - 800px)/2));margin:0!important;min-height:0;
+ overflow-y:auto;overscroll-behavior:contain;padding:14px!important;
+ border:1px solid rgba(var(--assist-accent),.42)!important;border-radius:16px;
+ background:var(--assist-glass-strong)!important;
+ box-shadow:0 0 0 100vmax rgba(0,4,12,.67),0 12px 55px rgba(0,0,0,.5);
+ backdrop-filter:blur(24px)
+}
+.sw-daily-page[data-drawer="property-brief"] .sw-daily-property-brief{display:block!important}
+@media(max-width:767px){
+.sw-daily-page .sw-daily-property-brief{top:155px;bottom:65px;left:8px;right:8px}
+}
