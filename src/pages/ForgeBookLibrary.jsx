@@ -2,9 +2,10 @@ import React,{useEffect,useMemo,useState} from "react";
 import {BookOpen,Search,X,CheckCircle2,Clock3} from "lucide-react";
 import {forgeBookCatalog,forgeBookCategories} from "./forgeBookCatalog";
 import "./ForgeBookLibrary.css";
-export default function ForgeBookLibrary({open,onClose,onSelect}){
+export default function ForgeBookLibrary({open,onClose,onSelect,initialCategory}){
  const [search,setSearch]=useState("");
  const [category,setCategory]=useState("All subjects");
+ useEffect(()=>{if(open&&initialCategory)setCategory(initialCategory);},[open,initialCategory]);
  const list=useMemo(()=>forgeBookCatalog.filter(b=>
    (category==="All subjects"||b.subjects.includes(category))&&
    (b.title+" "+b.author+" "+b.category).toLowerCase().includes(search.toLowerCase())
