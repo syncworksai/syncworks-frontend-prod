@@ -461,7 +461,7 @@ export default function SyncAssistant() {
   }, [mobilePanel]);
 
   return (
-    <div data-assist-theme={appearance.theme} data-assist-motion={appearance.motion?"on":"off"} className="sw-assist-themed flex h-[calc(100dvh-155px)] min-h-[350px] flex-col overflow-hidden text-slate-100">
+    <div data-assist-theme={appearance.theme} data-assist-motion={appearance.motion?"on":"off"} className="sw-assist-themed sw-sync-home flex h-[calc(100dvh-155px)] min-h-[350px] flex-col overflow-hidden text-slate-100">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{backgroundImage:officeBackground?"var(--assist-room-shade), var(--assist-room-image)":"none",backgroundSize:"cover",backgroundPosition:"center",opacity:officeBackground?1:0}} />
 
       <header className="hidden lg:block border-b border-slate-800/90 bg-slate-950/88 px-4 py-3 backdrop-blur-xl">
