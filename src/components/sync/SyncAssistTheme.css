@@ -427,3 +427,56 @@
  .sw-assist-themed.sw-sync-home .sw-sync-command-tray .sw-sync-mic-action,
  .sw-assist-themed.sw-sync-home .sw-sync-command-tray .sw-sync-send-action{width:36px!important;height:36px!important;min-height:36px!important}
 }
+
+/* Desktop SYNC command center: full workstation, not a floating card. */
+@media(min-width:1024px){
+ .sw-assist-themed.sw-sync-command-center{
+   height:calc(100dvh - 88px)!important;
+   min-height:0!important;
+   background-color:rgba(8,12,18,.88)!important;
+ }
+ .sw-sync-command-center>header{flex:0 0 auto;z-index:2;background:rgba(8,13,19,.68)!important;border-bottom:1px solid rgba(var(--assist-accent),.22)!important}
+ .sw-sync-command-center .sw-sync-workspace{
+   width:100%!important;max-width:none!important;flex:1!important;
+   padding:12px clamp(16px,2vw,44px) 82px!important;
+   display:flex;flex-direction:column;gap:10px!important;
+ }
+ .sw-sync-command-center .sw-sync-main-console{
+   flex:1 1 auto;min-height:0;display:flex;flex-direction:column;
+   border-radius:12px!important;border-color:rgba(var(--assist-accent),.24)!important;
+   background:linear-gradient(110deg,rgba(8,14,22,.54),rgba(9,15,22,.35))!important;
+   box-shadow:none!important;padding:clamp(18px,2vw,32px)!important;
+ }
+ .sw-sync-command-center .sw-sync-main-console>div:first-child{flex:0 0 auto}
+ .sw-sync-command-center .sw-sync-main-console .sw-sync-command-tray{margin-top:auto!important}
+ .sw-sync-command-center .sw-sync-utility-controls{flex:0 0 auto}
+ .sw-sync-command-center .sw-sync-utility-controls>button{
+   min-height:40px!important;background:var(--assist-glass)!important;
+   color:var(--assist-ink)!important;border-color:rgba(var(--assist-accent),.22)!important
+ }
+ .sw-sync-command-center .sw-sync-team-dock{
+   position:absolute!important;bottom:16px!important;left:clamp(18px,2vw,44px)!important;right:auto!important;
+   display:flex;align-items:center;gap:8px;max-width:calc(100vw - 175px)!important;
+ }
+ .sw-sync-command-center .sw-sync-team-dock>div{left:0!important;right:auto!important;justify-content:flex-start!important;max-width:min(720px,calc(100vw - 200px))!important}
+ .sw-sync-command-center .sw-sync-main-console .grid.grid-cols-3>button{
+   border-color:rgba(var(--assist-accent),.28)!important;background:rgba(8,15,22,.48)!important;
+   border-radius:10px!important;
+ }
+ .sw-sync-command-center .sw-sync-main-console .grid.grid-cols-3>button svg{color:var(--assist-ink)!important}
+ .sw-sync-command-center .sw-sync-main-console .grid.grid-cols-2>button{
+   background:var(--assist-glass)!important;border:1px solid rgba(var(--assist-accent),.28)!important;
+   border-radius:10px!important;color:var(--assist-ink)!important;
+ }
+}
+.sw-sync-command-center .sw-sync-team-manage{
+ display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(var(--assist-accent),.34);
+ padding:8px 11px;min-height:36px;border-radius:10px;background:var(--assist-glass-strong);
+ font-size:11px;font-weight:750;color:var(--assist-ink);
+}
+.sw-sync-command-center .sw-sync-team-dock>button:first-child{background:var(--assist-glass-strong)!important;color:var(--assist-ink)!important;border-color:rgba(var(--assist-accent),.3)!important}
+@media(max-width:1023px){
+ .sw-sync-command-center .sw-sync-team-dock{right:68px!important;bottom:calc(82px + env(safe-area-inset-bottom,0px))!important;display:flex;align-items:center;gap:5px}
+ .sw-sync-command-center .sw-sync-team-manage{padding:6px;min-height:34px;font-size:0}
+ .sw-sync-command-center .sw-sync-team-manage svg{width:17px;height:17px}
+}
