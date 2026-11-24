@@ -334,3 +334,47 @@
   outline: 2px solid rgba(var(--assist-accent),.8);
   outline-offset: 2px;
 }
+
+
+/* SYNC Command Center — compact, theme-linked one-screen executive layout. */
+.sw-assist-themed.sw-sync-home{height:calc(100dvh - 155px)!important;min-height:340px!important;overflow:hidden!important}
+.sw-assist-themed.sw-sync-home>header{
+ flex:0 0 auto;padding:7px 14px!important;
+ background:var(--assist-glass-strong)!important;border-color:rgba(var(--assist-accent),.26)!important;
+}
+.sw-assist-themed.sw-sync-home>header button{height:34px!important;width:auto;min-width:34px;border-radius:10px!important;padding:0 10px!important;font-size:11px!important}
+.sw-assist-themed.sw-sync-home>header button[aria-label="SYNC history"],
+.sw-assist-themed.sw-sync-home>header button[aria-label="Toggle speech"]{width:34px!important;padding:0!important}
+.sw-assist-themed.sw-sync-home>div.relative.mx-auto{max-width:1150px!important;padding:8px 12px 48px!important;min-height:0!important}
+.sw-assist-themed.sw-sync-home>div.relative.mx-auto>div:first-child{margin-bottom:6px!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1){
+ padding:12px 14px!important;border-radius:14px!important;
+ background:var(--assist-glass-strong)!important;border-color:rgba(var(--assist-accent),.34)!important;
+ box-shadow:0 10px 26px rgba(0,0,0,.16)!important;
+}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1) h1{font-size:20px!important;line-height:1.15!important;margin-top:3px!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-2{margin-top:2px!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3{margin-top:7px!important;gap:7px!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3>button{
+ padding:8px!important;min-height:65px!important;border-radius:11px!important;
+ background:var(--assist-glass)!important;border-color:rgba(var(--assist-accent),.25)!important;
+}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3>button:hover{border-color:rgba(var(--assist-accent),.65)!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3>button .text-lg,
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3>button .lg\\:text-base{font-size:12px!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3>button .lg\\:mt-3{margin-top:2px!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.lg\\:mt-5{margin-top:8px!important;gap:7px!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.lg\\:mt-5>button{
+ min-height:39px!important;padding:5px 12px!important;border-radius:10px!important;
+ border:1px solid rgba(var(--assist-accent),.4)!important;background:var(--assist-glass)!important;
+}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.lg\\:mt-5>button:not(:disabled){background:rgba(var(--assist-accent),.18)!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.lg\\:mt-5>button span.block{font-size:12px!important}
+.sw-assist-themed.sw-sync-home section:has(>div>div>h1) textarea{font-size:12px!important}
+.sw-assist-themed.sw-sync-home button:focus-visible{outline:2px solid rgba(var(--assist-accent),.8)!important;outline-offset:2px}
+@media(max-width:767px){
+ .sw-assist-themed.sw-sync-home{min-height:310px!important}
+ .sw-assist-themed.sw-sync-home>div.relative.mx-auto{padding:6px 9px 62px!important}
+ .sw-assist-themed.sw-sync-home section:has(>div>div>h1){padding:9px!important}
+ .sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3>button{min-height:54px!important}
+}
