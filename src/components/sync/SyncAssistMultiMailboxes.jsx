@@ -12,6 +12,7 @@ export default function SyncAssistMultiMailboxes(){
  const [editing,setEditing]=useState(null);
  const [sarahReport,setSarahReport]=useState(null);
  const [routingReport,setRoutingReport]=useState(null);
+ const [routingFilter,setRoutingFilter]=useState("ALL");
  const [selectedFinding,setSelectedFinding]=useState(null);
  const mailboxError=(e,action)=>{
  const status=e?.response?.status;
@@ -42,7 +43,7 @@ export default function SyncAssistMultiMailboxes(){
   setBusy(true);setError("");setRoutingReport(null);
   try{
    const r=await api.get(BASE+encodeURIComponent(active.account_id)+"/route-review/");
-   setRoutingReport(r.data);setView("routing");
+   setRoutingReport(r.data);setRoutingFilter("ALL");setView("routing");
   }catch(e){setError(mailboxError(e,"Mailbox routing review"));}finally{setBusy(false);}
  };
  const runSarah=async()=>{
@@ -67,10 +68,10 @@ export default function SyncAssistMultiMailboxes(){
   </div>
   <p className="text-xs text-slate-300">{routingReport.brief?.summary} No Outlook messages have been moved or archived.</p>
   <div className="mt-2 flex flex-wrap gap-2">
-   {Object.entries(routingReport.counts||{}).map(([category,count])=><span key={category} className="rounded-lg border border-white/20 px-3 py-2 text-xs">{category} · {count}</span>)}
+   {["ALL","REVIEW","FINANCE","PROPERTY","MARKETS","BUSINESS","SUPPORT","GROWTH","PERSONAL"].map(category=><button key={category} type="button" onClick={()=>setRoutingFilter(category)} aria-pressed={routingFilter===category} className={"rounded-lg border px-3 py-2 text-xs "+(routingFilter===category?"border-cyan-300/60 bg-cyan-400/20":"border-white/20")}>{category} · {category==="ALL"?routingReport.total:routingReport.counts?.[category]||0}</button>)}
   </div>
   <div className="mt-3 max-h-80 space-y-2 overflow-auto overscroll-contain">
-   {(routingReport.messages||[]).map(m=><article key={m.message_id} className="rounded-lg border border-white/15 bg-black/10 p-3">
+   {(routingReport.messages||[]).filter(m=>routingFilter==="ALL"||m.category===routingFilter).map(m=><article key={m.message_id} className="rounded-lg border border-white/15 bg-black/10 p-3">
     <div className="flex flex-wrap justify-between gap-2"><strong className="text-xs">{m.subject}</strong><span className="text-[11px] text-cyan-200">{m.assistant} · {m.priority}</span></div>
     <p className="mt-1 text-[11px] text-slate-300">{m.from} · {m.received_at?.slice(0,10)}</p>
     <p className="mt-2 text-xs">{m.preview}</p>
