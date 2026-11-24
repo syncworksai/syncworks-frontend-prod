@@ -1,6 +1,7 @@
 // Original adult continuing-education lessons. Source URLs are further reading,
 // not copyrighted book text. No live market signals or personalized advice.
 export const academyTracks = [
+  {id:"entrepreneur",title:"Entrepreneurship & Business Systems",icon:"briefcase",description:"Validate offers, build repeatable systems, delegate, and scale sustainably."},
   {id:"trading",title:"Day Trading & Market Structure",icon:"chart",description:"Market mechanics, risk, probability, execution and journals."},
   {id:"finance",title:"Finance & Wealth",icon:"wallet",description:"Cash flow, interest, investing, debt, taxes and financial judgment."},
   {id:"mortgages",title:"Mortgages & Real Estate",icon:"house",description:"Loan structure, closing documents, rental economics and leverage."},
@@ -11,6 +12,39 @@ export const academyTracks = [
   {id:"communication",title:"Vocabulary & Communication",icon:"book",description:"Precision, persuasion, rhetoric and confident everyday speech."}
 ];
 export const academyLessons = [
+  {
+    id:"entrepreneur-customer-proof",track:"entrepreneur",order:1,
+    title:"Entrepreneurship: Find Proof Before You Build",minutes:12,
+    objectives:["Distinguish a business idea from demonstrated customer demand","Design a low-cost validation experiment","Explain what evidence would change a product decision"],
+    sections:[
+      {heading:"The attractive idea",text:"A business idea can feel persuasive long before anyone has agreed to pay for it. Founders often imagine the complete product, the brand, and the success that follows. That vision can provide motivation, but it cannot replace evidence. Ask a harder question: whose specific problem are we solving, what are they doing about it today, and what concrete improvement would make them change? A platform that serves everyone may appear ambitious while lacking one group of customers who need it urgently."},
+      {heading:"Talk to people about their actual behavior",text:"Instead of asking whether someone likes your idea, ask when the problem last occurred, what they tried, what it cost in time or money, and what prevented a better outcome. Polite compliments are not the same as purchasing intent. Stronger evidence includes repeated use, paid pilots, referrals, or customers voluntarily investing effort in a trial. Be careful not to reinterpret every objection as hidden enthusiasm. The purpose of customer discovery is to learn, including when the answer is uncomfortable."},
+      {heading:"A small experiment with a stopping rule",text:"Choose one narrow promise and one type of customer. Design the smallest ethical test that demonstrates whether the promise matters. For a service platform, this might involve manually coordinating a small number of legitimate requests before automating every step. Define the measure before running the test: how many qualified customers asked for the service, completed it, and would use it again? Decide what result would justify another investment and what result would make you rethink the offer. A test without a potential disconfirming outcome is merely marketing."},
+      {heading:"Turn evidence into a strategy",text:"A founder must eventually choose where not to compete. A niche with a persistent problem may be more defensible than a large market approached without a distinctive advantage. Map the customer journey: how someone learns about the service, requests help, receives it, and pays. Identify where the experience breaks. Before adding a feature, explain whether it will remove a major obstacle or only make the product seem impressive. Sustainable businesses are built by connecting clear promises to reliable delivery."}
+    ],
+    terms:[["Customer discovery","Learning how people experience and solve a problem before building a solution."],["Value proposition","A clear statement of the benefit a customer receives."],["Validation","Evidence that a proposed solution addresses an actual need."]],
+    question:{prompt:"Which is stronger evidence of demand for a service?",options:["Ten friends say the idea is exciting","Three customers complete a paid pilot and request the service again","A founder feels certain the market is enormous"],correct:1,why:"Repeated real customer behavior generally gives more meaningful evidence than compliments or conviction."},
+    practice:"Write one customer segment, one repeated problem, a measurable test, and what result would change your mind.",
+    source:{label:"U.S. Small Business Administration — Market research",url:"https://www.sba.gov/business-guide/plan-your-business/market-research-competitive-analysis"},
+    caution:"Original educational lesson. Suggested books are complementary reading, not sources reproduced here."
+  },
+  {
+    id:"entrepreneur-operating-system",track:"entrepreneur",order:2,
+    title:"From Solo Founder to Repeatable Company",minutes:14,
+    objectives:["Identify recurring operational bottlenecks","Create explicit ownership and handoffs","Design a weekly management rhythm"],
+    sections:[
+      {heading:"Why more effort eventually stops working",text:"A founder often begins as salesperson, dispatcher, technician, support agent and accountant. At the earliest stage this creates speed because one person knows every detail. As demand increases, the same arrangement becomes fragile. Questions, customer updates, approvals and payment issues accumulate around one overwhelmed decision-maker. Working longer hours can hide the bottleneck temporarily but does not remove it. The first challenge of scale is often to make important work observable and repeatable."},
+      {heading:"Describe the work before automating it",text:"Draw the journey from a customer request to the final outcome. Name the owner of each stage, required information, service standard and escalation condition. If a task cannot be clearly explained to another person, adding software may simply make confusion happen faster. For a service business, define intake, qualification, assignment, delivery, completion, invoicing and collection. Then examine failures at each handoff. An operating system begins with shared understanding, not a fashionable dashboard."},
+      {heading:"Delegate authority with boundaries",text:"Delegation requires more than handing out tasks. Define the outcome, the decisions a team member or assistant can make without permission, the resources available and when a human must approve an exception. If every change requires the owner, the owner is still the bottleneck. If nobody is accountable, the system becomes risky. A practical rule is to automate reversible routine steps with clear limits and require explicit review for high-impact, sensitive or irreversible decisions."},
+      {heading:"Build a short weekly operating review",text:"Choose a few measures that reflect customer value and financial durability: qualified requests, successful completions, response time, repeat customers, unpaid invoices and cash available for obligations. Compare trends rather than treating one week as destiny. Review what broke, who owns the fix and whether last week's commitment was completed. A meeting becomes useful when it ends with a decision and responsible person, not merely an inspiring speech. The aim is a company that improves without requiring constant heroic intervention."},
+      {heading:"Protect the person behind the business",text:"A company that grows while destroying its founder's health or relationships has not automatically created the freedom originally envisioned. A resilient operating rhythm includes realistic hours, honest financial records, enough recovery, and people who can challenge the owner's assumptions. Be ambitious about outcomes, not about unnecessary exhaustion. A stronger founder learns to create a business that can deliver value when they are not watching every button."}
+    ],
+    terms:[["Bottleneck","A step that constrains the capacity of an overall process."],["Standard operating procedure","A documented and repeatable way of performing a defined activity."],["Escalation rule","A condition requiring review by someone with additional authority."]],
+    question:{prompt:"Which is the strongest first step before automating a chaotic business process?",options:["Buy more software immediately","Define the workflow, owners, exceptions and measurable outcome","Ask everyone to work longer hours"],correct:1,why:"Clear processes and accountability make automation safer and more useful."},
+    practice:"Map one business process in five stages. Give each stage an owner, quality standard, and escalation trigger.",
+    source:{label:"U.S. Small Business Administration — Manage your business",url:"https://www.sba.gov/business-guide/manage-your-business"},
+    caution:"Original educational study; not a substitute for professional business or legal advice."
+  },
   {
     id:"trade-expectancy",track:"trading",order:1,title:"Why a Good Trade Can Lose",minutes:18,
     objectives:["Separate process quality from trade outcome","Calculate expectancy in R units","Explain position risk before an entry"],

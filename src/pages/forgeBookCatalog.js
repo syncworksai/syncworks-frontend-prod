@@ -2,6 +2,17 @@
 // Full studies are written, sourced, reviewed and published individually.
 // Modern copyrighted books receive original critical overviews, not reproductions.
 const groups = {
+  "Entrepreneurship": [
+    ["The Millionaire Next Door","Thomas J. Stanley and William D. Danko"],
+    ["The 4-Hour Workweek","Timothy Ferriss"],
+    ["Atomic Habits","James Clear"],
+    ["Good to Great","Jim Collins"],
+    ["Zero to One","Peter Thiel and Blake Masters"],
+    ["The Obstacle Is the Way","Ryan Holiday"],
+    ["Ready, Fire, Aim","Michael Masterson"],
+    ["Traction: Get a Grip on Your Business","Gino Wickman"],
+    ["Awaken the Giant Within","Tony Robbins"]
+  ],
   "Philosophy & Stoicism": [
     ["Meditations","Marcus Aurelius"],["Discourses","Epictetus"],["Letters from a Stoic","Seneca"],
     ["The Republic","Plato"],["The Apology of Socrates","Plato"],["Nicomachean Ethics","Aristotle"],
@@ -77,11 +88,20 @@ const groups = {
   ]
 };
 const stableId=(title)=>title.toLowerCase().normalize("NFKD").replace(/[^a-z0-9 ]/g,"").trim().replace(/ +/g,"-");
-export const forgeBookCatalog=Object.entries(groups).flatMap(([category,books])=>
-  books.map(([title,author])=>({
-    id:stableId(title),title,author,category,
-    studyId:title==="The Art of War"?"art-of-war-deep-study":null,
-    status:title==="The Art of War"?"available":"planned"
-  }))
+// An item may be highlighted in multiple subject areas but should appear as
+// a single catalog record. Entrepreneurship takes priority for pictured picks.
+const indexed=new Map();
+Object.entries(groups).forEach(([category,books])=>
+  books.forEach(([title,author])=>{
+    const id=stableId(title);
+    const prior=indexed.get(id);
+    if(prior){prior.subjects.push(category);return;}
+    indexed.set(id,{
+      id,title,author,category,subjects:[category],
+      studyId:title==="The Art of War"?"art-of-war-deep-study":null,
+      status:title==="The Art of War"?"available":"planned",
+    });
+  })
 );
+export const forgeBookCatalog=[...indexed.values()];
 export const forgeBookCategories=Object.keys(groups);

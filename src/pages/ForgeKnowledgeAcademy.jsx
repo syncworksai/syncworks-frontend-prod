@@ -11,7 +11,7 @@ function loadProgress(email){
   return v&&typeof v==="object"&&!Array.isArray(v)?v:{};
  }catch{return {};}
 }
-export default function ForgeKnowledgeAcademy({open,email,onClose,onOpenLesson,onPlayTrack}){
+export default function ForgeKnowledgeAcademy({open,email,onClose,onOpenLesson,onPlayTrack,onOpenEntrepreneurBooks}){
  const [track,setTrack]=useState("all");
  const [query,setQuery]=useState("");
  const [selected,setSelected]=useState(null);
@@ -63,6 +63,7 @@ export default function ForgeKnowledgeAcademy({open,email,onClose,onOpenLesson,o
       <select value={track} onChange={e=>setTrack(e.target.value)} aria-label="Choose subject"><option value="all">All learning tracks</option>{academyTracks.map(t=><option key={t.id} value={t.id}>{t.title}</option>)}</select>
      </div>
      <div className="forge-academy-list" tabIndex={0}>
+       {track==="entrepreneur"&&<button type="button" className="forge-academy-play-track" onClick={onOpenEntrepreneurBooks}><BookOpen size={17}/> Explore 9 recommended entrepreneurship books</button>}
        {track!=="all"&&<button type="button" className="forge-academy-play-track" onClick={()=>onPlayTrack(track)}><Headphones size={17}/> Listen to this entire track continuously</button>}
        {track==="all"&&<div className="forge-academy-featured"><strong>Expanded audiobook studies</strong><p>Original long-form narration for driving, exercise and uninterrupted study. Choose a subject to listen to consecutive lessons.</p></div>}
        {track==="all"&&!query&&<div className="forge-academy-intro">
