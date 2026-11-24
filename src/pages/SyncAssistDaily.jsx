@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import "./SyncAssistDailyMobile.css";
 import { useAuth } from "../auth/AuthContext";
+import { useWorkspaceAppearance } from "../components/customer/CustomerWorkspace";
+import "../components/sync/SyncAssistTheme.css";
 
 const ENDPOINT = "/sync-ai/assist/pilot/daily/";
 const FILTERS = ["ALL", "PROPERTY", "BUSINESS", "GROWTH", "PERSONAL"];
@@ -12,6 +14,7 @@ const PRIORITIES = ["HIGH", "MEDIUM", "LOW"];
 export default function SyncAssistDaily() {
   const navigate = useNavigate();
   const {user} = useAuth();
+  const [appearance] = useWorkspaceAppearance();
   const authorized = String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com";
   const [data,setData] = useState(null);
   const [loading,setLoading] = useState(false);
@@ -44,13 +47,13 @@ export default function SyncAssistDaily() {
     finally {setLoading(false);}
   }
   const visible = useMemo(()=>(data?.items || []).filter(i=>filter==="ALL"||i.category===filter).filter(i=>showAll || i.status==="OPEN").slice(0,showAll?250:10),[data,filter,showAll]);
-  return <main className="sw-daily-page min-h-dvh bg-[#020617] px-4 pb-32 pt-28 text-white" data-drawer={activeDrawer||"none"}>
-    <div className="sw-daily-layout mx-auto max-w-3xl">
+  return <main className="sw-assist-themed sw-daily-page h-[calc(100dvh-155px)] min-h-[350px] overflow-hidden px-3 py-3 text-white" data-assist-theme={appearance.theme} data-assist-motion={appearance.motion?"on":"off"} data-drawer={activeDrawer||"none"}>
+    <div className="sw-daily-layout mx-auto flex h-full min-h-0 max-w-5xl flex-col gap-3 overflow-hidden">
       <header className="mb-4 flex items-center justify-between gap-2">
         <button type="button" onClick={()=>navigate("/sync/assist")} className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-700 px-3 text-sm"><ArrowLeft size={17}/> SYNC Assist</button>
         <div className="text-right"><div className="text-xs font-black uppercase tracking-[.18em] text-cyan-300">Daily Briefing</div><div className="text-xs text-slate-400">{data?.date || "Your command center"}</div></div>
       </header>
-      <section className="sw-daily-hero rounded-3xl border border-cyan-400/30 bg-gradient-to-br from-[#06263a] to-[#180e35] p-5">
+      <section className="sw-daily-hero sw-assist-panel shrink-0 rounded-3xl border p-4">
         <h1 className="text-2xl font-black">Good to see you. Here's today.</h1>
         <p className="mt-2 text-sm text-slate-300">A focused list from your SyncWorks businesses, properties and personal tasks.</p>
         <div className="mt-5 grid grid-cols-3 gap-2">
@@ -76,8 +79,8 @@ export default function SyncAssistDaily() {
         <button type="submit" disabled={loading || !form.title.trim()} className="min-h-11 w-full rounded-xl bg-cyan-600 px-3 font-black disabled:opacity-40">Save to today's list</button>
       </form>}
 
-      <button type="button" onClick={()=>navigate("/sync/assist/chief")} className="sw-daily-link mt-4 flex min-h-14 w-full items-center justify-between rounded-2xl border border-purple-400/30 bg-gradient-to-r from-purple-500/15 to-cyan-500/15 p-4 text-left font-black text-cyan-100"><span>Chief of Staff briefing<span className="block text-xs font-normal text-slate-400">Priorities · Unresolved issues · Business & property snapshot</span></span><span aria-hidden="true">→</span></button>
-      <button type="button" onClick={()=>navigate("/sync/assist/email")} className="sw-daily-link mt-4 flex min-h-14 w-full items-center justify-between rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/15 to-violet-600/15 p-4 text-left font-black text-cyan-100"><span>SYNC Mail Desk<span className="block text-xs font-normal text-slate-400">Connect Outlook · Read inbox · Draft · Send with approval</span></span><span aria-hidden="true">→</span></button>
+      <button type="button" onClick={()=>navigate("/sync/assist/chief")} className="sw-daily-link sw-assist-panel flex min-h-14 w-full items-center justify-between rounded-2xl border border-purple-400/30 bg-gradient-to-r from-purple-500/15 to-cyan-500/15 p-4 text-left font-black text-cyan-100"><span>Chief of Staff briefing<span className="block text-xs font-normal text-slate-400">Priorities · Unresolved issues · Business & property snapshot</span></span><span aria-hidden="true">→</span></button>
+      <button type="button" onClick={()=>navigate("/sync/assist/email")} className="sw-daily-link sw-assist-panel flex min-h-14 w-full items-center justify-between rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/15 to-violet-600/15 p-4 text-left font-black text-cyan-100"><span>SYNC Mail Desk<span className="block text-xs font-normal text-slate-400">Connect Outlook · Read inbox · Draft · Send with approval</span></span><span aria-hidden="true">→</span></button>
       <div className="sw-daily-actions"><button type="button" onClick={()=>setActiveDrawer("tasks")}><ListTodo size={17}/> View priorities</button><button type="button" onClick={()=>setActiveDrawer("connections")}><Settings2 size={17}/> Connections</button></div>
       <section className="sw-daily-connections mt-4 rounded-2xl border border-amber-400/20 bg-slate-900/50 p-3">
         <div className="sw-daily-drawer-heading"><strong>Connections</strong><button type="button" aria-label="Close connections" onClick={()=>setActiveDrawer(null)}><X size={19}/></button></div>
