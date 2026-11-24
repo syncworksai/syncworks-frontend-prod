@@ -52,3 +52,22 @@ body[data-sw-office-theme="classic"] .sw-agent-drawer{
  .sw-agent-header img{width:56px;height:56px;border-radius:14px}
  .sw-agent-drawer{height:calc(100dvh - env(safe-area-inset-top,0px));width:100%}
 }
+
+/* Portrait-led agent header: larger on wide screens only. */
+@media(min-width:960px){
+ .sw-agent-header img{width:106px!important;height:106px!important;border-radius:18px!important;border-color:rgba(225,231,235,.36)}
+ .sw-agent-header strong{font-size:25px!important}
+ .sw-agent-header small{font-size:13px!important}
+ .sw-agent-drawer{width:min(660px,48vw)!important}
+}
+@media(max-width:767px){
+ .sw-agent-header img{width:54px!important;height:54px!important;border-radius:12px!important}
+}
+body[data-sw-office-theme="modern"] .sw-agent-snapshot>div,
+body[data-sw-office-theme="modern"] .sw-agent-shortcuts button{
+ background:rgba(40,45,52,.45);border-color:rgba(200,215,225,.24)
+}
+body[data-sw-office-theme="classic"] .sw-agent-snapshot>div,
+body[data-sw-office-theme="classic"] .sw-agent-shortcuts button{
+ background:rgba(67,51,35,.43);border-color:rgba(238,192,129,.34)
+}
