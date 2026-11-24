@@ -692,7 +692,7 @@ export default function SyncAssistant() {
             </button>
           </div>
 
-          <div className="mt-3 rounded-xl border border-slate-700 bg-slate-950/85 p-2 lg:mt-2 lg:rounded-2xl lg:p-2">
+          <div className="sw-sync-command-tray mt-2 rounded-xl border border-slate-700 p-2">
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
@@ -702,7 +702,7 @@ export default function SyncAssistant() {
                   sendMessage();
                 }
               }}
-              rows={2}
+              rows={1}
               maxLength={6000}
               placeholder={`Tell ${workspace === "business" ? "Business" : "Personal"} SYNC what you need...`}
               className="w-full resize-none bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-slate-600 lg:text-base"
