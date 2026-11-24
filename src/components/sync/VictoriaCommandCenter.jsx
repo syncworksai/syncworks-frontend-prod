@@ -1,6 +1,8 @@
 import React,{useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {ArrowRight,CalendarDays,CheckCircle2,Clock3,CloudSun,Dumbbell,ExternalLink,LoaderCircle,MessageCircle,RefreshCw,Sun,Sunset,WalletCards,X} from "lucide-react";
 import {useNavigate} from "react-router-dom";
+import {useAuth} from "../../auth/AuthContext";
+import {AVATARS,getAvatarPhotoForUser,getAvatarFallbackPhotoForUser} from "./JarvisAvatar";
 import {getSyncAssistantDailyState} from "../../api/jarvisProduct";
 import {synthesizeSyncSpeech,SYNC_VOICE_ROLES} from "../../api/syncAi";
 import {addVictoriaTask} from "../../api/syncWorkspaceRecords";
@@ -19,6 +21,8 @@ function EvidenceRow({title,detail,action,onClick}){return <div className="victo
 
 export default function VictoriaCommandCenter({open,onClose}){
  const navigate=useNavigate();
+ const {user}=useAuth();
+ const portrait=AVATARS.find(a=>a.role==="Chief of Staff")||AVATARS[0];
  const [state,setState]=useState(null),[loading,setLoading]=useState(false),[error,setError]=useState("");
  const [horizon,setHorizon]=useState("day");
  const [checkIn,setCheckIn]=useState("morning");
@@ -80,7 +84,7 @@ export default function VictoriaCommandCenter({open,onClose}){
  return <div className="victoria-command-overlay" onMouseDown={e=>{if(e.currentTarget===e.target)onClose();}}>
   <section role="dialog" aria-modal="true" aria-label="Victoria daily command center" className="victoria-command-panel">
    <header className="victoria-command-header">
-    <div><p className="victoria-eyebrow">SYNC ASSIST · PRIVATE COMMAND</p><h2>Victoria <span>Chief of Staff</span></h2><p>Your day, businesses, and priorities in one place</p></div>
+    <div className="victoria-identity"><img className="victoria-portrait" src={getAvatarPhotoForUser(portrait,user)} alt="Victoria — Chief of Staff" onError={e=>{const fallback=getAvatarFallbackPhotoForUser(portrait,user);if(fallback&&!e.currentTarget.src.endsWith(fallback))e.currentTarget.src=fallback;}}/><div><p className="victoria-eyebrow">SYNC ASSIST · PRIVATE COMMAND</p><h2>Victoria <span>Chief of Staff</span></h2><p>Your day, businesses, and priorities in one place</p></div></div>
     <button type="button" onClick={onClose} aria-label="Close Victoria command center"><X size={21}/></button>
    </header>
    <div className="victoria-command-scroll">
