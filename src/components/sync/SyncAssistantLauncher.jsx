@@ -61,7 +61,7 @@ export default function SyncAssistantLauncher() {
   const eligibleVictoriaRoute = /^\/(?:customer|sbo|pm|platform|calendar|tickets|tenant|investor|sync|employee|inbox)(?:\/|$)/.test(location.pathname);
   // /sync already renders its own team dock; do not overlay Victoria on it.
   // Keep Victoria on specialist routes including Mail Desk and daily workday.
-  const showChief = pilotFounder && eligibleVictoriaRoute && !excludedVictoria && location.pathname !== "/sync";
+  const showChief = pilotFounder && eligibleVictoriaRoute && !excludedVictoria;
   // All SBO subpages share one persistent AI dock. The SBO landing already
   // has its header and mobile portrait row, so do not render duplicates there.
   const businessWorkspaceRoute=/^\/(?:sbo\/|pm(?:\/|$)|employee(?:\/|$)|team\/invites(?:\/|$)|ceo(?:\/|$))/.test(location.pathname);
