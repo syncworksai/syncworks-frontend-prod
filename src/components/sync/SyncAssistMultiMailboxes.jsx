@@ -141,7 +141,7 @@ export default function SyncAssistMultiMailboxes(){
     <div className="flex shrink-0 items-center justify-between gap-2">
      <button type="button" onClick={()=>setView("inbox")} className="rounded-lg border border-white/20 px-3 py-2 text-xs">‹ Inbox</button>
      <strong className="truncate text-sm">Sarah · Property Search</strong>
-     <button type="button" onClick={()=>setPropertyDrawerOpen(true)} className="shrink-0 rounded-lg border border-white/20 px-3 py-2 text-xs">+ Add property</button>
+     <button type="button" onClick={()=>setPropertyDrawerOpen(true)} className="shrink-0 rounded-lg border border-white/20 px-3 py-2 text-xs">+ New search</button>
     </div>
     <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 rounded-xl border border-cyan-300/25 bg-black/15 p-2 sm:grid-cols-[minmax(0,1fr)_150px_auto]">
       <label className="min-w-0 text-[11px]">Property
@@ -164,6 +164,11 @@ export default function SyncAssistMultiMailboxes(){
        </select>
       </label>
     </div>
+    {propertyProfiles.find(p=>p.profile_id===selectedProperty&&!p.pm_property_id)&&pmProperties.length>0&&
+     <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-lg border border-amber-400/30 px-2 py-1.5 text-xs">
+      <span>Link this saved search to the existing PM property before attaching records.</span>
+      <button type="button" onClick={()=>{setFormPmProperty("");setLinkDrawerOpen(true)}} className="rounded-md border border-amber-400/50 px-2 py-1 font-bold">Link PM property</button>
+     </div>}
     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-xl border border-white/15 bg-black/10 p-3">
       {!historyReport?<div className="flex h-full min-h-32 flex-col items-center justify-center gap-2 text-center">
        <strong className="text-sm">{propertyProfiles.length?"Select a property and press Search emails":"No property search saved yet"}</strong>
@@ -174,14 +179,19 @@ export default function SyncAssistMultiMailboxes(){
         <strong className="text-xs">{historyReport.findings?.length||0} matches · {historyReport.scanned} messages scanned</strong>
         <span className="text-[11px] text-slate-300">{historyReport.property?.name}{historyReport.partial?" · Partial results":""}</span>
        </div>
-       <p className="text-[11px] text-amber-100">Email previews are not verified payment records or inspection confirmations. Search coverage is limited.</p>
+       <p className="text-[11px] text-amber-100">Keyword matches are candidates, not verified property records. Select only genuine property correspondence for review. Email previews do not verify money or inspections.</p>
+       {propertyProfiles.find(p=>p.profile_id===selectedProperty)?.pm_property_id&&<div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/20 p-2">
+        <span className="text-xs">{selectedEvidenceIds.length} selected (max 20)</span>
+        <button type="button" disabled={busy||!selectedEvidenceIds.length} onClick={saveReviewedEvidence} className="rounded-lg border border-cyan-300/60 px-3 py-2 text-xs font-bold disabled:opacity-50">Attach reviewed report</button>
+       </div>}
+       {reportSaved&&<a className="text-xs underline" href={"/pm/properties/"+reportSaved.pm_property_id+"?tab=messages"}>Open PM property correspondence</a>}
        <div className="flex flex-wrap gap-2">{Object.entries(historyReport.counts||{}).map(([k,n])=><span key={k} className="rounded-lg border border-white/20 px-2 py-1 text-xs">{k}: {n}</span>)}</div>
        {(historyReport.findings||[]).length===0&&<p className="text-xs text-slate-300">No matching messages within this scanned sample. Older correspondence may still exist.</p>}
        {(historyReport.findings||[]).map(m=><article key={m.message_id} className="rounded-lg border border-white/20 bg-black/10 p-3">
-        <div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-xs">{m.subject}</strong><span className="text-[11px]">{m.category} · {m.received_at?.slice(0,10)}</span></div>
+        <div className="flex flex-wrap items-center justify-between gap-2"><label className="flex min-w-0 items-center gap-2"><input type="checkbox" aria-label={"Include "+m.subject+" in reviewed report"} checked={selectedEvidenceIds.includes(m.message_id)} disabled={!propertyProfiles.find(p=>p.profile_id===selectedProperty)?.pm_property_id||(!selectedEvidenceIds.includes(m.message_id)&&selectedEvidenceIds.length>=20)} onChange={e=>setSelectedEvidenceIds(prev=>e.target.checked?[...prev,m.message_id]:prev.filter(id=>id!==m.message_id))}/><strong className="text-xs">{m.subject}</strong></label><span className="text-[11px]">{m.category} · {m.received_at?.slice(0,10)}</span></div>
         <p className="mt-1 text-[11px] text-slate-300">{m.sender}</p>
         <p className="mt-2 text-xs">{m.preview}</p>
-        <p className="mt-1 text-[11px] text-cyan-200">Matched: {m.matched_terms?.join(", ")}{m.has_attachments?" · Attachment present (not read)":""}</p>
+        <p className="mt-1 text-[11px] text-cyan-200">{m.confidence==="STRONG"?"Property-specific match":"Manual verification needed"} · Matched: {m.matched_terms?.join(", ")}{m.has_attachments?" · Attachment present (not read)":""}</p>
         {m.outlook_url&&<a href={m.outlook_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs underline">Open original in Outlook</a>}
        </article>)}
       </div>}
