@@ -50,7 +50,7 @@ export default function SyncAssistDaily() {
   return <main className="sw-assist-themed sw-daily-page h-[calc(100dvh-155px)] min-h-[350px] overflow-hidden px-3 py-3 text-white" data-assist-theme={appearance.theme} data-assist-motion={appearance.motion?"on":"off"} data-drawer={activeDrawer||"none"}>
     <div className="sw-daily-layout mx-auto flex h-full min-h-0 max-w-5xl flex-col gap-3 overflow-hidden">
       <header className="mb-4 flex items-center justify-between gap-2">
-        <button type="button" onClick={()=>navigate("/sync/assist")} className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-700 px-3 text-sm"><ArrowLeft size={17}/> SYNC Assist</button>
+        <button type="button" onClick={()=>navigate("/customer")} className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-700 px-3 text-sm"><ArrowLeft size={17}/> Home</button>
         <div className="text-right"><div className="text-xs font-black uppercase tracking-[.18em] text-cyan-300">Daily Briefing</div><div className="text-xs text-slate-400">{data?.date || "Your command center"}</div></div>
       </header>
       <section className="sw-daily-hero sw-assist-panel shrink-0 rounded-3xl border p-4">
