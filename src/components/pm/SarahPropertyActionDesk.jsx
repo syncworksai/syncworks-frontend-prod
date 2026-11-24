@@ -31,7 +31,11 @@ export default function SarahPropertyActionDesk({property,reports=[],workOrders=
   const title=`Sarah: ${label} — ${row.title} follow-up`.slice(0,180);
   setSaving(row.id);setMessage("");
   try{
-   await addVictoriaTask(title,{priority:row.id==="inspection"?"HIGH":"NORMAL"});
+   await addVictoriaTask(title,{
+    priority:row.id==="inspection"?"HIGH":"NORMAL",
+    description:`Review ${row.title.toLowerCase()} for property ${label}. ${row.detail} Property: /pm/properties/${property?.id}?tab=correspondence. ${row.count} ${row.kind}; evidence is unverified. Do not represent email references as payment or inspection proof.`,
+    metadata:{origin:"SARAH_PM",source_type:"PM_PROPERTY",property_id:String(property?.id||""),review_category:row.id,source_message_ids:row.source.slice(0,20).map(item=>String(item.message_id))}
+   });
    setMessage(`Created Victoria review task: ${title}`);
   }catch(e){setMessage(e?.response?.data?.detail||e.message||"Could not create the review task.");}
   finally{setSaving("")}
