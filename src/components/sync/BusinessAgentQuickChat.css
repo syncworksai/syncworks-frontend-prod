@@ -31,3 +31,24 @@
 @keyframes sw-agent-drawer-enter{from{transform:translateX(24px);opacity:.45}to{transform:translateX(0);opacity:1}}
 @media(max-width:767px){.sw-agent-drawer{width:100%}.sw-agent-header{padding-top:calc(12px + env(safe-area-inset-top))}.sw-agent-scroll{padding:13px}}
 @media(prefers-reduced-motion:reduce){.sw-agent-drawer{animation:none}}
+
+/* Match the Chief of Staff portrait card while preserving specialist identities. */
+@media(min-width:960px){
+ .sw-agent-drawer{width:min(600px,46vw);border-radius:18px 0 0 18px}
+ .sw-agent-header{padding:18px 22px}
+ .sw-agent-header img{width:70px;height:70px;border-radius:16px}
+ .sw-agent-header strong{font-size:22px}
+ .sw-agent-scroll{padding:16px 22px}
+}
+body[data-sw-office-theme="modern"] .sw-agent-drawer{
+ background:linear-gradient(155deg,rgba(22,27,32,.98),rgba(11,15,20,.98));
+ border-color:rgba(193,210,220,.34)
+}
+body[data-sw-office-theme="classic"] .sw-agent-drawer{
+ background:linear-gradient(155deg,rgba(33,27,20,.98),rgba(15,13,12,.98));
+ border-color:rgba(224,190,135,.4)
+}
+@media(max-width:767px){
+ .sw-agent-header img{width:56px;height:56px;border-radius:14px}
+ .sw-agent-drawer{height:calc(100dvh - env(safe-area-inset-top,0px));width:100%}
+}
