@@ -133,3 +133,44 @@
  .sw-assist-themed.sw-mail-page .sw-mail-history-mode{gap:7px;}
  .sw-assist-themed.sw-mail-page .sw-mail-history-mode>div:nth-child(2){padding:7px;}
 }
+
+/* Mail Desk layout: fixed toolbar and content, no overlapping legacy panels. */
+.sw-assist-themed.sw-mail-page .sw-mail-connection{
+ display:flex!important;
+ flex-direction:column!important;
+ min-height:0!important;
+ overflow:hidden!important;
+}
+.sw-assist-themed.sw-mail-page .sw-mail-connection>.sw-mail-multi{
+ flex:1 1 auto!important;
+ min-height:0!important;
+ overflow-y:auto;
+ overscroll-behavior:contain;
+}
+.sw-assist-themed.sw-mail-page .sw-mail-connection>.sw-mail-multi.sw-mail-history-active{
+ overflow:hidden!important;
+}
+.sw-assist-themed.sw-mail-page .sw-mail-mobile-tabs .sw-mail-settings-trigger{
+ margin-left:auto;
+ border-color:rgba(var(--assist-accent),.5)!important;
+}
+.sw-assist-themed.sw-mail-page .sw-mail-settings-dialog{
+ background:var(--assist-glass,rgba(12,20,36,.97))!important;
+ background-color:rgba(12,20,36,.97)!important;
+ border-color:rgba(var(--assist-accent),.45)!important;
+ color:var(--assist-ink,#fff);
+ backdrop-filter:blur(22px);
+}
+.sw-assist-themed.sw-mail-page .sw-mail-settings-dialog button:focus-visible{
+ outline:2px solid rgba(var(--assist-accent),.9);
+ outline-offset:2px;
+}
+@media(max-width:767px){
+ .sw-assist-themed.sw-mail-page .sw-mail-connection{
+  padding:9px!important;
+ }
+ .sw-assist-themed.sw-mail-page .sw-mail-settings-dialog{
+  max-height:85dvh;
+  overflow:hidden;
+ }
+}
