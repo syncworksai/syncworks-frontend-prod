@@ -11,6 +11,11 @@ export default function SyncAssistMultiMailboxes(){
  const [form,setForm]=useState({label:"Property Management",category:"PROPERTY",priority:"HIGH"});
  const [editing,setEditing]=useState(null);
  const [sarahReport,setSarahReport]=useState(null);
+ const [propertyProfiles,setPropertyProfiles]=useState([]);
+ const [propertyForm,setPropertyForm]=useState({name:"",terms:"housing authority, section 8, rent, inspection",contacts:""});
+ const [selectedProperty,setSelectedProperty]=useState("");
+ const [historyDays,setHistoryDays]=useState(365);
+ const [historyReport,setHistoryReport]=useState(null);
  const [routingReport,setRoutingReport]=useState(null);
  const [routingFilter,setRoutingFilter]=useState("ALL");
  const [jobPrefs,setJobPrefs]=useState(null);
@@ -56,6 +61,37 @@ export default function SyncAssistMultiMailboxes(){
     await runRouting();
   }catch(e){setError(mailboxError(e,"Saving job preferences"));}finally{setBusy(false);}
  };
+ const openHistory=async()=>{
+  if(!active)return;
+  setBusy(true);setError("");setHistoryReport(null);setView("history");
+  try{
+   const r=await api.get(BASE+encodeURIComponent(active.account_id)+"/property-profiles/");
+   setPropertyProfiles(r.data.profiles||[]);
+   setSelectedProperty(prev=>r.data.profiles?.some(p=>p.profile_id===prev)?prev:(r.data.profiles?.[0]?.profile_id||""));
+  }catch(e){setError(mailboxError(e,"Loading property searches"));}finally{setBusy(false);}
+ };
+ const saveProperty=async()=>{
+  if(!active)return;
+  setBusy(true);setError("");
+  try{
+   const payload={name:propertyForm.name.trim(),
+    terms:propertyForm.terms.split(",").map(v=>v.trim()).filter(Boolean),
+    contacts:propertyForm.contacts.split(",").map(v=>v.trim()).filter(Boolean)};
+   const r=await api.post(BASE+encodeURIComponent(active.account_id)+"/property-profiles/",payload);
+   setPropertyProfiles(prev=>[...prev,r.data.profile]);
+   setSelectedProperty(r.data.profile.profile_id);
+   setNotice("Property search profile saved. No Outlook messages modified.");
+  }catch(e){setError(mailboxError(e,"Saving property search profile"));}finally{setBusy(false);}
+ };
+ const searchHistory=async()=>{
+  if(!active||!selectedProperty)return;
+  setBusy(true);setError("");setHistoryReport(null);
+  try{
+   const r=await api.post(BASE+encodeURIComponent(active.account_id)+"/property-history/",{
+    profile_id:selectedProperty,days:historyDays});
+   setHistoryReport(r.data);
+  }catch(e){setError(mailboxError(e,"Historical property search"));}finally{setBusy(false);}
+ };
  const runSarah=async()=>{
    if(!active||active.category!=="PROPERTY")return;
    setBusy(true);setError("");setSarahReport(null);setSelectedFinding(null);
@@ -70,7 +106,39 @@ export default function SyncAssistMultiMailboxes(){
    <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="text-sm font-bold">Connected mailboxes <span className="text-xs font-normal text-slate-300">({accounts.length})</span></h3><p className="text-[11px] text-slate-300">Additional inboxes: $9.99/month each</p></div><button onClick={load} disabled={busy} type="button" aria-label="Refresh mailboxes" className="rounded-lg border border-white/20 p-2"><RefreshCw size={15}/></button></div>
    {error&&<p role="alert" className="rounded-lg border border-rose-400/40 bg-rose-950/40 p-2 text-xs text-rose-100">{error}</p>}
    {notice&&<p role="status" className="rounded-lg border border-emerald-400/30 p-2 text-xs text-emerald-200">{notice}</p>}
-   {view==="routing"&&routingReport?<div className="min-h-0">
+   {view==="history"?<div className="min-h-0 space-y-3">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+     <button type="button" onClick={()=>setView("inbox")} className="rounded-lg border border-white/20 px-2 py-1.5 text-xs">‹ Inbox</button>
+     <strong className="text-sm">Sarah · Property historical search</strong>
+    </div>
+    <p className="text-xs text-slate-300">Create reusable searches for any managed property using its own keywords and verified contact addresses. Search includes messages outside the Inbox, up to 300 recent messages per run.</p>
+    <div className="rounded-lg border border-white/15 bg-black/10 p-3">
+     <strong className="text-xs">Add property search profile</strong>
+     <div className="mt-2 grid gap-2 md:grid-cols-2">
+      <label className="text-xs">Property name<input className="mt-1 w-full rounded-lg border border-white/20 bg-black/20 p-2" value={propertyForm.name} placeholder="Rental property or portfolio name" onChange={e=>setPropertyForm(v=>({...v,name:e.target.value}))}/></label>
+      <label className="text-xs">Known sender email addresses (optional)<input className="mt-1 w-full rounded-lg border border-white/20 bg-black/20 p-2" value={propertyForm.contacts} placeholder="housing@example.org, manager@example.org" onChange={e=>setPropertyForm(v=>({...v,contacts:e.target.value}))}/></label>
+     </div>
+     <label className="mt-2 block text-xs">Keywords (comma-separated, property-specific)<input className="mt-1 w-full rounded-lg border border-white/20 bg-black/20 p-2" value={propertyForm.terms} onChange={e=>setPropertyForm(v=>({...v,terms:e.target.value}))}/></label>
+     <button type="button" disabled={busy} onClick={saveProperty} className="mt-2 rounded-lg border border-cyan-300/40 px-3 py-2 text-xs">Save property search</button>
+    </div>
+    <div className="flex flex-wrap items-end gap-2">
+     <label className="text-xs">Property<select value={selectedProperty} onChange={e=>setSelectedProperty(e.target.value)} className="mt-1 block max-w-64 rounded-lg border border-white/20 bg-slate-900 p-2">{!propertyProfiles.length&&<option value="">Create a property first</option>}{propertyProfiles.map(p=><option key={p.profile_id} value={p.profile_id}>{p.name}</option>)}</select></label>
+     <label className="text-xs">Time period<select value={historyDays} onChange={e=>setHistoryDays(Number(e.target.value))} className="mt-1 block rounded-lg border border-white/20 bg-slate-900 p-2">{[30,90,180,365,730].map(d=><option key={d} value={d}>Past {d} days</option>)}</select></label>
+     <button type="button" disabled={busy||!selectedProperty} onClick={searchHistory} className="rounded-lg border border-cyan-300/50 bg-cyan-400/10 px-3 py-2 text-xs">{busy?"Searching…":"Search property history"}</button>
+    </div>
+    {historyReport&&<div className="space-y-2">
+     <p className="text-xs text-slate-200"><strong>{historyReport.findings?.length||0} matching messages</strong> from {historyReport.scanned} scanned · {historyReport.property?.name} {historyReport.partial?"· Partial results: more messages may exist":""}</p>
+     <p className="text-xs text-amber-100">A matching email is not proof an inspection is scheduled or a payment is owed. Reconcile money against actual property records.</p>
+     <div className="flex flex-wrap gap-2">{Object.entries(historyReport.counts||{}).map(([k,n])=><span key={k} className="rounded-lg border border-white/20 px-2 py-1 text-xs">{k}: {n}</span>)}</div>
+     <div className="max-h-72 space-y-2 overflow-auto overscroll-contain">{(historyReport.findings||[]).map(m=><article key={m.message_id} className="rounded-lg border border-white/20 bg-black/10 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-xs">{m.subject}</strong><span className="text-[11px]">{m.category} · {m.received_at?.slice(0,10)}</span></div>
+      <p className="mt-1 text-[11px] text-slate-300">{m.sender}</p>
+      <p className="mt-2 text-xs">{m.preview}</p>
+      <p className="mt-1 text-[11px] text-cyan-200">Matched: {m.matched_terms?.join(", ")}{m.has_attachments?" · Attachment present (not read)":""}</p>
+      {m.outlook_url&&<a href={m.outlook_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs underline">Open original in Outlook</a>}
+     </article>)}</div>
+    </div>}
+   </div>:view==="routing"&&routingReport?<div className="min-h-0">
   <div className="mb-2 flex items-center justify-between gap-2">
    <button type="button" onClick={()=>setView("inbox")} className="rounded-lg border border-white/20 px-2 py-1.5 text-xs">‹ Inbox</button>
    <strong className="text-sm">Victoria · Inbox routing review</strong>
@@ -127,7 +195,7 @@ export default function SyncAssistMultiMailboxes(){
     </div>}
   </article>)}
   </div>
- </div>:view==="inbox"?<div className="min-h-0"><div className="mb-2 flex items-center gap-2"><button type="button" onClick={()=>setView("accounts")} className="rounded-lg border border-white/20 p-2" aria-label="Back to accounts"><ChevronLeft size={16}/></button><strong className="truncate text-xs">{active?.label} · {active?.email}</strong><button disabled={busy} onClick={()=>active&&openInbox(active)} className="ml-auto rounded-lg border border-white/20 p-2"><RefreshCw size={15}/></button></div><div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-white/15 bg-black/10 p-2"><div><strong className="text-xs">Victoria · Mail routing</strong><p className="text-[11px] text-slate-300">Classify by bot, prepare an inbox briefing, and review proposed filing</p></div><button type="button" disabled={busy} onClick={runRouting} className="rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold">Review routing</button></div>{active?.category==="PROPERTY"&&<div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-cyan-300/20 bg-cyan-300/5 p-2"><div><strong className="text-xs">Sarah · Property Assistant</strong><p className="text-[11px] text-slate-300">Review inspections, assistance payments and missing documents</p></div><button type="button" disabled={busy} onClick={runSarah} className="rounded-lg border border-cyan-300/40 bg-cyan-400/10 px-3 py-2 text-xs font-semibold">{busy?"Analyzing…":"Analyze inbox"}</button></div>}
+ </div>:view==="inbox"?<div className="min-h-0"><div className="mb-2 flex items-center gap-2"><button type="button" onClick={()=>setView("accounts")} className="rounded-lg border border-white/20 p-2" aria-label="Back to accounts"><ChevronLeft size={16}/></button><strong className="truncate text-xs">{active?.label} · {active?.email}</strong><button disabled={busy} onClick={()=>active&&openInbox(active)} className="ml-auto rounded-lg border border-white/20 p-2"><RefreshCw size={15}/></button></div><div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-white/15 bg-black/10 p-2"><div><strong className="text-xs">Victoria · Mail routing</strong><p className="text-[11px] text-slate-300">Classify by bot, prepare an inbox briefing, and review proposed filing</p></div><button type="button" disabled={busy} onClick={runRouting} className="rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold">Review routing</button></div>{active?.category==="PROPERTY"&&<div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-white/15 bg-black/10 p-2"><div><strong className="text-xs">Property history</strong><p className="text-[11px] text-slate-300">Find older inspections, payments and correspondence across Outlook folders</p></div><button type="button" disabled={busy} onClick={openHistory} className="rounded-lg border border-white/20 px-3 py-2 text-xs">Historical search</button></div>}{active?.category==="PROPERTY"&&<div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-cyan-300/20 bg-cyan-300/5 p-2"><div><strong className="text-xs">Sarah · Property Assistant</strong><p className="text-[11px] text-slate-300">Review inspections, assistance payments and missing documents</p></div><button type="button" disabled={busy} onClick={runSarah} className="rounded-lg border border-cyan-300/40 bg-cyan-400/10 px-3 py-2 text-xs font-semibold">{busy?"Analyzing…":"Analyze inbox"}</button></div>}
  <div className="max-h-64 space-y-2 overflow-y-auto overscroll-contain">{messages.length?messages.map(m=><article key={m.id} className="rounded-lg border border-white/10 bg-black/15 p-2.5"><div className="flex justify-between gap-2"><strong className="text-xs">{m.subject}</strong><span className="shrink-0 text-[10px] text-slate-400">{m.received_at?.slice(0,10)}</span></div><p className="mt-1 text-[11px] text-slate-300">{m.from}</p><p className="mt-1 text-xs text-slate-200">{m.preview}</p></article>):<p className="p-3 text-xs text-slate-300">{busy?"Loading inbox…":"No messages in the returned sample."}</p>}</div><p className="mt-2 text-[11px] text-amber-100">Read-only mailbox preview. Drafting and sending from additional accounts are not enabled.</p></div>:<>
     {accounts.length>0&&<div className="grid gap-2 sm:grid-cols-2">{accounts.map(a=><div key={a.account_id} className="rounded-xl border border-white/15 bg-black/10 p-3"><div className="flex items-center justify-between gap-2"><strong className="truncate text-xs">{a.label}</strong><span className="text-[10px] text-emerald-200">Connected</span></div><p className="mt-1 truncate text-[11px] text-slate-300">{a.email}</p><p className="mt-1 text-[10px] text-slate-400">{a.category} · {a.priority}</p><div className="mt-2 flex gap-2"><button type="button" onClick={()=>openInbox(a)} className="flex items-center gap-1 rounded-lg border border-white/20 px-2 py-1.5 text-[11px]"><Inbox size={13}/> Inbox + Sarah</button><button type="button" onClick={()=>{setEditing(a);setForm({label:a.label,category:a.category,priority:a.priority});setView("edit")}} className="rounded-lg border border-white/20 px-2 py-1.5 text-[11px]">Label</button><button type="button" onClick={()=>disconnect(a)} aria-label={"Disconnect "+a.email} className="ml-auto rounded-lg border border-rose-400/20 p-1.5 text-rose-200"><Trash2 size={14}/></button></div></div>)}</div>}
     {state?.configured?<form onSubmit={e=>{e.preventDefault();editing?save():connect()}} className="mt-2 grid gap-2 rounded-xl border border-white/15 bg-black/10 p-3"><strong className="text-xs">{editing?"Edit mailbox settings":"Connect another Outlook mailbox"}</strong><div className="grid gap-2 sm:grid-cols-3"><label className="text-[11px]">Mailbox label<input required maxLength={50} value={form.label} onChange={e=>setForm(v=>({...v,label:e.target.value}))} className="mt-1 w-full rounded-lg border border-white/20 bg-black/30 p-2 text-sm"/></label><label className="text-[11px]">Purpose<select value={form.category} onChange={e=>setForm(v=>({...v,category:e.target.value}))} className="mt-1 w-full rounded-lg border border-white/20 bg-slate-900 p-2 text-sm">{TYPES.map(x=><option key={x} value={x}>{x}</option>)}</select></label><label className="text-[11px]">Importance<select value={form.priority} onChange={e=>setForm(v=>({...v,priority:e.target.value}))} className="mt-1 w-full rounded-lg border border-white/20 bg-slate-900 p-2 text-sm">{LEVELS.map(x=><option key={x} value={x}>{x}</option>)}</select></label></div><div className="flex items-center gap-2"><button disabled={busy} type="submit" className="flex items-center gap-1 rounded-lg border border-cyan-300/40 bg-cyan-400/15 px-3 py-2 text-xs font-semibold">{editing?<ShieldCheck size={14}/>:<MailPlus size={14}/>} {editing?"Save label":"Connect Outlook account"}</button>{editing&&<button type="button" onClick={()=>setEditing(null)} className="rounded-lg border border-white/20 px-3 py-2 text-xs">Cancel</button>}</div></form>:<div className="mt-2 rounded-lg border border-amber-300/30 bg-amber-400/5 p-3 text-xs text-amber-100"><strong>Microsoft administrator setup is required.</strong><p className="mt-1">Render must be configured with Microsoft client ID, client secret, token encryption key, and the exact multi-mailbox OAuth callback. User sign-in will only be enabled after these settings are valid.</p></div>}
