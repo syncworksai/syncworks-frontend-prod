@@ -86,16 +86,30 @@ export default function PMPropertyDetail() {
   },[propertyId,tab]);
   async function load() {
     setLoading(true);
+    let failedStage="workspace";
     setError("");
     setSummaryLoading(true);
     setSummaryError("");
     setSummary(null);
     try {
       const ws = (await api.get("/pm-hub/workspaces/current/")).data;
+      if (!ws?.id) throw new Error("The server did not return an active property-management workspace.");
       setWorkspace(ws);
       const headers = { "X-PM-Workspace-ID": String(ws.id) };
-      const propertyRes = await api.get(`/pm-hub/properties/${propertyId}/`, { headers });
-      setProperty(propertyRes.data);
+      failedStage="property";
+      let selectedProperty;
+      try {
+        selectedProperty=(await api.get(`/pm-hub/properties/${propertyId}/`, { headers })).data;
+      } catch (detailError) {
+        // Some installations authorize portfolio listings before individual detail routes.
+        // Recover only a missing detail route; do not hide authorization or server errors.
+        if(Number(detailError?.response?.status)!==404)throw detailError;
+        const portfolio=await api.get("/pm-hub/properties/",{headers});
+        selectedProperty=list(portfolio.data).find(item=>String(item.id)===String(propertyId));
+        if(!selectedProperty)throw detailError;
+      }
+      setProperty(selectedProperty);
+      failedStage="related records";
       const requests = await Promise.allSettled([
         api.get("/pm-hub/units/", { headers, params: { property_id: propertyId } }),
         api.get("/pm-hub/tenants/", { headers }),
@@ -120,7 +134,11 @@ export default function PMPropertyDetail() {
       const tenantIds = new Set(propertyTenants.map((item) => Number(item.id)));
       setCases(values[6].filter((item) => Number(item.property) === Number(propertyId) || tenantIds.has(Number(item.tenant))));
     } catch (caught) {
-      setError(caught?.response?.data?.detail || "Could not load this property.");
+      const status=Number(caught?.response?.status||0);
+      const detail=typeof caught?.response?.data?.detail==="string"?caught.response.data.detail:"";
+      const reason=status===401?"Your session is not authorized. Sign in again and retry.":status===403?"Access to this property or workspace was denied.":status===404?"The selected property is missing from the current workspace. Open All Properties and reselect it.":status>=500?"The property server returned an error. Your saved property records have not been changed.":!status?"The property server could not be reached. Please retry after checking your connection.":"The property request did not succeed.";
+      setError(`${reason} (during ${failedStage}${status?`, HTTP ${status}`:""})${detail?`: ${detail}`:""}`);
+      setProperty(null);
     } finally {
       setLoading(false);
       setSummaryLoading(false);
@@ -197,7 +215,7 @@ export default function PMPropertyDetail() {
   }
 
   if (loading) return <main className="px-4 py-10 sm:px-6"><div className="rounded-[28px] border border-cyan-500/15 bg-[#07111f] p-10 text-center text-sm text-slate-500">Loading property command center...</div></main>;
-  if (error || !property) return <main className="space-y-4 px-4 py-6 sm:px-6"><div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 text-rose-100">{error || "Property not found."}</div><Button onClick={() => nav("/pm/properties")}>Back to Properties</Button></main>;
+  if (error || !property) return <main className="space-y-4 px-4 py-6 sm:px-6"><div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 text-rose-100">{error || "Property not found."}</div><div className="flex flex-wrap gap-2"><Button onClick={load}>Retry loading</Button><Button onClick={() => nav("/pm/properties")}>Back to Properties</Button></div></main>;
 
   return <main className={`min-w-0 space-y-3 overflow-x-hidden px-3 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 ${tab === "correspondence" ? "sarah-property-main" : ""}`}>
     {notice ? <div className="rounded-2xl border border-cyan-400/25 bg-cyan-500/10 p-4 text-sm text-cyan-100">{notice}</div> : null}
