@@ -1,5 +1,9 @@
 import api, { getActiveBusinessId } from "./client";
 
+// Keep SYNC status, commands and voice on the same authenticated Ohio service
+// used by the working multi-mailbox integration. Do not silently retry writes.
+const SYNC_OHIO = "https://syncworks-backend-prod.onrender.com/api/v1";
+
 function normalizeWorkspace(workspace) {
   const value = String(workspace || "personal").toLowerCase();
   return ["personal", "business", "pm"].includes(value) ? value : "personal";
@@ -48,7 +52,7 @@ function browserCoordinates() {
 }
 
 export async function getSyncAiStatus() {
-  const response = await api.get("/sync-ai/status/");
+  const response = await api.get(SYNC_OHIO + "/sync-ai/status/");
   return response?.data || {};
 }
 export async function getSyncDailyState() { const response = await api.get("/sync-ai/assistant/daily-state/"); return response?.data || {}; }
@@ -72,7 +76,7 @@ export async function sendSyncAiMessage({ message, workspace = "personal" }) {
     }
   }
 
-  const response = await api.post("/sync-ai/chat/", { workspace: normalizedWorkspace, message: cleanMessage });
+  const response = await api.post(SYNC_OHIO + "/sync-ai/chat/", { workspace: normalizedWorkspace, message: cleanMessage });
   return response?.data || {};
 }
 
@@ -109,7 +113,7 @@ export async function executeSyncTicketReply({ ticketId, body, workspace = "pers
   const normalizedWorkspace = normalizeWorkspace(workspace); requireBusiness(normalizedWorkspace);
   const response = await api.post("/sync-ai/actions/ticket-reply/execute/", { workspace: normalizedWorkspace, ticket_id: Number(ticketId), body: String(body || "").trim(), confirmed: confirmed === true }); return response?.data || {};
 }
-export async function getSyncVoiceStatus() { const response = await api.get("/sync-ai/voice/status/"); return response?.data || {}; }
+export async function getSyncVoiceStatus() { const response = await api.get(SYNC_OHIO + "/sync-ai/voice/status/"); return response?.data || {}; }
 // Server-authorized ElevenLabs roles; keys and provider voice IDs stay in backend.
 export const SYNC_VOICE_ROLES = Object.freeze({
   sync: "sync",
@@ -119,7 +123,7 @@ export const SYNC_VOICE_ROLES = Object.freeze({
 });
 export async function synthesizeSyncSpeech(text, role = SYNC_VOICE_ROLES.sync) {
   if (!Object.values(SYNC_VOICE_ROLES).includes(role)) throw new Error("Unsupported voice role");
-  const response = await api.post("/sync-ai/voice/synthesize/", {
+  const response = await api.post(SYNC_OHIO + "/sync-ai/voice/synthesize/", {
     text: String(text || "").trim(),
     role,
   }, { responseType: "blob" });
