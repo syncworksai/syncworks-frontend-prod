@@ -32,3 +32,35 @@
  .sw-daily-link{min-height:49px!important}
 }
 @media(prefers-reduced-motion:reduce){.sw-daily-page .sw-daily-form,.sw-daily-page .sw-daily-connections,.sw-daily-page .sw-daily-tasks{animation:none!important}}
+
+/* Desktop and mobile: fixed Daily Briefing shell, internal drawers only. */
+.sw-assist-themed.sw-daily-page {
+ height:calc(100dvh - 155px)!important;
+ min-height:350px!important;
+ overflow:hidden!important;
+ overscroll-behavior:none;
+ padding:10px 16px!important;
+}
+.sw-daily-page .sw-daily-layout {height:100%;min-height:0;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.sw-daily-page .sw-daily-layout>header{flex:none;margin:0!important}
+.sw-daily-page .sw-daily-hero{flex:none;background:var(--assist-glass-strong)!important;backdrop-filter:blur(20px);padding:14px!important}
+.sw-daily-page .sw-daily-hero>.mt-5{margin-top:10px}
+.sw-daily-page .sw-daily-link{flex:none;margin:0!important;background:var(--assist-glass)!important;border-color:rgba(var(--assist-accent),.32)!important}
+.sw-daily-page .sw-daily-actions{display:flex;flex:none;gap:8px}
+.sw-daily-page .sw-daily-actions button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:38px;flex:1;border:1px solid rgba(var(--assist-accent),.34);border-radius:11px;background:var(--assist-glass);font-size:12px;font-weight:700}
+.sw-daily-page .sw-daily-form,
+.sw-daily-page .sw-daily-connections,
+.sw-daily-page .sw-daily-tasks{display:none!important;position:fixed!important;z-index:220;top:calc(155px + 10px);bottom:20px;left:max(12px,calc((100vw - 800px)/2));right:max(12px,calc((100vw - 800px)/2));margin:0!important;min-height:0;max-height:none;overflow-y:auto;overscroll-behavior:contain;padding:18px!important;border:1px solid rgba(var(--assist-accent),.42)!important;border-radius:19px;background:var(--assist-glass-strong)!important;box-shadow:0 0 0 100vmax rgba(0,4,12,.67),0 12px 55px rgba(0,0,0,.5);backdrop-filter:blur(22px)}
+.sw-daily-page[data-drawer="tasks"] .sw-daily-tasks,
+.sw-daily-page[data-drawer="connections"] .sw-daily-connections,
+.sw-daily-page[data-drawer="add"] .sw-daily-form{display:block!important}
+.sw-daily-page .sw-daily-drawer-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sw-daily-page .sw-daily-drawer-heading button{display:grid;place-items:center;width:38px;height:38px;border:1px solid rgba(var(--assist-accent),.3);border-radius:10px}
+.sw-daily-page .sw-daily-diagnostics,
+.sw-daily-page .sw-daily-monitoring{display:none!important}
+@media(max-width:767px){
+ .sw-assist-themed.sw-daily-page{height:calc(100dvh - 155px)!important;min-height:300px!important;padding:8px 10px!important}
+ .sw-daily-page .sw-daily-form,.sw-daily-page .sw-daily-connections,.sw-daily-page .sw-daily-tasks{top:155px;bottom:65px;left:8px;right:8px;padding:13px!important}
+ .sw-daily-page .sw-daily-hero{padding:10px!important}
+ .sw-daily-page .sw-daily-layout{gap:7px}
+}
