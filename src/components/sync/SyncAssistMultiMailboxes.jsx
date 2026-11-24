@@ -102,6 +102,27 @@ export default function SyncAssistMultiMailboxes(){
    setHistoryReport(r.data);
   }catch(e){setError(mailboxError(e,"Historical property search"));}finally{setBusy(false);}
  };
+ const linkSavedProperty=async()=>{
+  if(!active||!selectedProperty||!formPmProperty)return;
+  setBusy(true);setError("");
+  try{
+   const r=await api.patch(BASE+encodeURIComponent(active.account_id)+"/property-profiles/",{profile_id:selectedProperty,pm_property_id:Number(formPmProperty)});
+   setPropertyProfiles(prev=>prev.map(p=>p.profile_id===selectedProperty?r.data.profile:p));
+   setNotice("Search linked to an existing Property Management record.");
+   setLinkDrawerOpen(false);setHistoryReport(null);setSelectedEvidenceIds([]);
+  }catch(e){setError(mailboxError(e,"Linking Property Management property"));}finally{setBusy(false)}
+ };
+ const saveReviewedEvidence=async()=>{
+  const profile=propertyProfiles.find(p=>p.profile_id===selectedProperty);
+  if(!active||!profile?.pm_property_id||!selectedEvidenceIds.length)return;
+  setBusy(true);setError("");
+  try{
+   const r=await api.post("https://syncworks-backend-prod.onrender.com/api/v1/sync-ai/assist/pilot/pm-properties/"+profile.pm_property_id+"/correspondence-reports/",{
+    mailbox_id:active.account_id,profile_id:profile.profile_id,message_ids:selectedEvidenceIds});
+   setReportSaved(r.data.report);
+   setNotice("Reviewed correspondence attached to PM property. Outlook and ledger unchanged.");
+  }catch(e){setError(mailboxError(e,"Saving reviewed correspondence"));}finally{setBusy(false)}
+ };
  const runSarah=async()=>{
    if(!active||active.category!=="PROPERTY")return;
    setBusy(true);setError("");setSarahReport(null);setSelectedFinding(null);
