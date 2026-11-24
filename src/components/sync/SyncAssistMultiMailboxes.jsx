@@ -196,11 +196,25 @@ export default function SyncAssistMultiMailboxes(){
        </article>)}
       </div>}
     </div>
+    {linkDrawerOpen&&<div className="sw-property-overlay fixed inset-0 z-[100] flex items-center justify-center p-3" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setLinkDrawerOpen(false)}}>
+      <section role="dialog" aria-modal="true" aria-label="Link saved property" className="sw-property-dialog w-full max-w-md rounded-xl border p-3">
+        <div className="flex items-center justify-between gap-2"><strong className="text-sm">Link to Property Management</strong><button type="button" onClick={()=>setLinkDrawerOpen(false)}>✕</button></div>
+        <p className="my-2 text-xs">Choose the actual saved property. No messages are automatically attached.</p>
+        <select className="w-full rounded-lg border border-white/20 bg-slate-900 p-2 text-xs" value={formPmProperty} onChange={e=>setFormPmProperty(e.target.value)}><option value="">Select property</option>{pmProperties.map(p=><option key={p.id} value={p.id}>{p.name} — {p.address}</option>)}</select>
+        <button type="button" disabled={busy||!formPmProperty} onClick={linkSavedProperty} className="mt-3 rounded-lg border border-cyan-300/50 px-3 py-2 text-xs font-bold">Link selected property</button>
+      </section>
+    </div>}
     {propertyDrawerOpen&&<div className="sw-property-overlay fixed inset-0 z-[100] flex items-center justify-center p-3" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setPropertyDrawerOpen(false)}}>
       <section role="dialog" aria-modal="true" aria-label="Add property search" className="sw-property-dialog w-full max-w-md max-h-[min(82dvh,520px)] overflow-y-auto rounded-xl border p-3 shadow-2xl">
        <div className="mb-2 flex items-center justify-between gap-2"><strong className="text-sm">Add property search</strong><button type="button" onClick={()=>setPropertyDrawerOpen(false)} className="rounded-lg border border-white/20 px-3 py-1.5 text-xs">Close ✕</button></div>
        <p className="mb-2 text-[11px] text-slate-300">Reusable across housing authorities, property managers, and rentals. No messages are moved.</p>
        <div className="space-y-2">
+        {pmProperties.length>0&&<label className="block text-xs">Use an existing Property Management property
+          <select value={formPmProperty} onChange={e=>{setFormPmProperty(e.target.value);const p=pmProperties.find(v=>String(v.id)===e.target.value);if(p)setPropertyForm(v=>({...v,name:p.name,terms:Array.from(new Set([p.name,...p.address.split(",").map(t=>t.trim()).filter(t=>t.length>5),"section 8","housing authority","inspection","rent ledger","abatement"])).slice(0,15).join(", ")}))}} className="mt-1 w-full rounded-lg border border-white/20 bg-slate-900 px-2.5 py-2 text-xs">
+          <option value="">Manual search (not linked)</option>
+          {pmProperties.map(p=><option key={p.id} value={p.id}>{p.name} — {p.address}</option>)}
+          </select>
+        </label>}
         <label className="block text-xs">Property name<input autoFocus className="mt-1 w-full rounded-lg border border-white/20 bg-slate-900 px-2.5 py-2 text-xs" value={propertyForm.name} placeholder="Roxana Rd — Lord Holdings" onChange={e=>setPropertyForm(v=>({...v,name:e.target.value}))}/></label>
         <label className="block text-xs">Known sender addresses (optional)<input className="mt-1 w-full rounded-lg border border-white/20 bg-slate-900 px-2.5 py-2 text-xs" value={propertyForm.contacts} placeholder="agency@example.org, manager@example.org" onChange={e=>setPropertyForm(v=>({...v,contacts:e.target.value}))}/></label>
         <label className="block text-xs">Search keywords, separated by commas<textarea rows={2} className="mt-1 w-full rounded-lg border border-white/20 bg-slate-900 px-2.5 py-2 text-xs" value={propertyForm.terms} onChange={e=>setPropertyForm(v=>({...v,terms:e.target.value}))}/></label>
