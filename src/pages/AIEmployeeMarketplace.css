@@ -1,0 +1,37 @@
+/* Shared office theme behind AI team manager; no separate futurist-only shell. */
+.sw-ai-team-manager{
+ --sw-team-accent:#d7e4ef;--sw-team-border:rgba(197,213,229,.25);
+ --sw-team-surface:rgba(14,22,30,.82);
+ background-image:linear-gradient(110deg,rgba(6,11,18,.89),rgba(12,17,24,.83)),url("/office-themes/modern-dark.webp");
+ background-size:cover;background-position:center;
+}
+body[data-sw-office-theme="classic"] .sw-ai-team-manager{
+ --sw-team-accent:#f0c680;--sw-team-border:rgba(240,198,128,.31);
+ --sw-team-surface:rgba(35,27,20,.81);
+ background-image:linear-gradient(110deg,rgba(22,16,11,.89),rgba(29,21,14,.81)),url("/office-themes/classic-office.webp");
+}
+body[data-sw-office-theme="modern"] .sw-ai-team-manager{
+ --sw-team-accent:#d4e7f2;--sw-team-border:rgba(190,208,224,.28);
+ --sw-team-surface:rgba(13,20,27,.83);
+ background-image:linear-gradient(110deg,rgba(7,11,18,.9),rgba(13,18,25,.81)),url("/office-themes/modern-dark.webp");
+}
+body[data-sw-office-theme="future"] .sw-ai-team-manager,
+body[data-sw-office-theme="futuristic"] .sw-ai-team-manager{
+ --sw-team-accent:#61dcfa;--sw-team-border:rgba(97,220,250,.29);
+ --sw-team-surface:rgba(5,19,37,.81);
+ background-image:linear-gradient(110deg,rgba(3,13,31,.9),rgba(6,20,41,.83)),url("/office-themes/syncworks-future.webp");
+}
+body[data-sw-office-theme="light"] .sw-ai-team-manager{
+ --sw-team-accent:#b9ebfa;--sw-team-border:rgba(185,235,250,.28);
+ --sw-team-surface:rgba(18,38,51,.76);
+ background-image:linear-gradient(110deg,rgba(8,25,36,.86),rgba(17,37,47,.72)),url("/office-themes/clean-light.webp");
+}
+.sw-ai-team-manager>div>header,
+.sw-ai-team-manager>div>div>section{
+ background:var(--sw-team-surface)!important;border-color:var(--sw-team-border)!important;
+}
+.sw-ai-team-manager button[aria-pressed=true]{border-color:var(--sw-team-accent)!important;background:rgba(175,192,204,.15)!important}
+.sw-ai-team-manager .text-cyan-300,
+.sw-ai-team-manager .text-cyan-200,
+.sw-ai-team-manager .text-cyan-100{color:var(--sw-team-accent)!important}
+.sw-ai-team-manager button.bg-cyan-400\/20{background:rgba(165,185,205,.16)!important;color:var(--sw-team-accent)!important}
