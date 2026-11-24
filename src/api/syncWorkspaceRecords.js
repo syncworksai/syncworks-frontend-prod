@@ -9,10 +9,12 @@ function unscheduledPayload(title,description,metadata){
   const start=new Date(),end=new Date(start.getTime()+30*60000);
   return {title,description:description||"",source:"MANUAL",start_at:start.toISOString(),end_at:end.toISOString(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"America/Chicago",all_day:false,metadata:{task_unscheduled:true,fixed:false,...metadata}};
 }
-export async function addVictoriaTask(title,{projectId=null,priority="NORMAL"}={}){
+export async function addVictoriaTask(title,{projectId=null,priority="NORMAL",description="",metadata={}}={}){
   const value=String(title||"").trim();
   if(!value||value.length>180)throw new Error("Enter a task title under 180 characters.");
-  const response=await api.post("/personal-calendar/events/",unscheduledPayload(value,"",{entity_type:"TASK",task_status:"OPEN",task_priority:priority,origin:"VICTORIA",...(projectId?{project_id:String(projectId)}:{})}));
+  const notes=String(description||"").slice(0,2000);
+  const safeMetadata=metadata&&typeof metadata==="object"&&!Array.isArray(metadata)?metadata:{};
+  const response=await api.post("/personal-calendar/events/",unscheduledPayload(value,notes,{...safeMetadata,entity_type:"TASK",task_status:"OPEN",task_priority:priority,origin:safeMetadata.origin==="SARAH_PM"?"SARAH_PM":"VICTORIA",...(projectId?{project_id:String(projectId)}:{})}));
   if(!response.data?.id)throw new Error("Task was not confirmed by SyncWorks.");
   window.dispatchEvent(new Event("syncworks:tasks-changed"));
   return response.data;
