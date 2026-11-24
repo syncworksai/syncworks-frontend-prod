@@ -177,7 +177,7 @@ const SocialEventDetail = lazy(() => import("./pages/SocialEventDetail"));
 const SocialGroupDashboard = lazy(() => import("./pages/SocialGroupDashboard"));
 
 function RouteLoading() {
-  return <div className="flex min-h-dvh items-center justify-center bg-[#020617] text-slate-300"><div className="text-sm font-black">Loading SyncWorks…</div></div>;
+  return <div className="sw-route-loading" role="status" aria-live="polite"><span className="sw-route-loading-spinner" aria-hidden="true" /><strong>SYNCWORKS</strong><small>Opening your workspace…</small></div>
 }
 
 
