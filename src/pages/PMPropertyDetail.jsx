@@ -79,7 +79,7 @@ export default function PMPropertyDetail() {
   useEffect(()=>{
     if(!propertyId||!["messages","correspondence","reports"].includes(tab))return;
     let active=true;
-    api.get("https://syncworks-backend-prod.onrender.com/api/v1/sync-ai/assist/pilot/pm-properties/"+propertyId+"/correspondence-reports/")
+    api.get("/sync-ai/assist/pilot/pm-properties/"+propertyId+"/correspondence-reports/")
       .then(r=>{if(active){setCorrespondenceReports(r.data.reports||[]);setReportsError("")}})
       .catch(e=>{if(active){setReportsError(e?.response?.status===403?"Correspondence reports not available for this account.":"Unable to load correspondence reports.");}})
     return()=>{active=false};
