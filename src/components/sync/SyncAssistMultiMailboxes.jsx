@@ -16,6 +16,7 @@ export default function SyncAssistMultiMailboxes(){
  const [selectedProperty,setSelectedProperty]=useState("");
  const [historyDays,setHistoryDays]=useState(365);
  const [historyReport,setHistoryReport]=useState(null);
+ const [propertyDrawerOpen,setPropertyDrawerOpen]=useState(false);
  const [routingReport,setRoutingReport]=useState(null);
  const [routingFilter,setRoutingFilter]=useState("ALL");
  const [jobPrefs,setJobPrefs]=useState(null);
@@ -68,6 +69,7 @@ export default function SyncAssistMultiMailboxes(){
    const r=await api.get(BASE+encodeURIComponent(active.account_id)+"/property-profiles/");
    setPropertyProfiles(r.data.profiles||[]);
    setSelectedProperty(prev=>r.data.profiles?.some(p=>p.profile_id===prev)?prev:(r.data.profiles?.[0]?.profile_id||""));
+   setPropertyDrawerOpen(!(r.data.profiles||[]).length);
   }catch(e){setError(mailboxError(e,"Loading property searches"));}finally{setBusy(false);}
  };
  const saveProperty=async()=>{
@@ -81,6 +83,7 @@ export default function SyncAssistMultiMailboxes(){
    setPropertyProfiles(prev=>[...prev,r.data.profile]);
    setSelectedProperty(r.data.profile.profile_id);
    setNotice("Property search profile saved. No Outlook messages modified.");
+   setPropertyDrawerOpen(false);
   }catch(e){setError(mailboxError(e,"Saving property search profile"));}finally{setBusy(false);}
  };
  const searchHistory=async()=>{
@@ -102,41 +105,70 @@ export default function SyncAssistMultiMailboxes(){
  const save=async()=>{setBusy(true);setError("");try{const r=await api.patch(BASE,{account_id:editing.account_id,...form});setState(v=>({...v,accounts:r.data.accounts}));setNotice("Mailbox settings saved.");setEditing(null)}catch(e){setError(e?.response?.data?.detail||"Could not save mailbox settings.")}finally{setBusy(false)}};
  const disconnect=async account=>{if(!window.confirm("Disconnect "+account.email+" from SyncWorks?"))return;setBusy(true);setError("");try{const r=await api.delete(BASE,{data:{account_id:account.account_id}});setState(v=>({...v,accounts:r.data.accounts}));setNotice("Mailbox disconnected from SyncWorks.");setActive(null);setView("accounts")}catch(e){setError(e?.response?.data?.detail||"Could not disconnect.")}finally{setBusy(false)}};
  const accounts=state?.accounts||[];
- return <div className="sw-mail-multi flex min-h-0 flex-col gap-2">
-   <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="text-sm font-bold">Connected mailboxes <span className="text-xs font-normal text-slate-300">({accounts.length})</span></h3><p className="text-[11px] text-slate-300">Additional inboxes: $9.99/month each</p></div><button onClick={load} disabled={busy} type="button" aria-label="Refresh mailboxes" className="rounded-lg border border-white/20 p-2"><RefreshCw size={15}/></button></div>
+ return <div className={"sw-mail-multi flex h-full min-h-0 flex-col gap-2 "+(view==="history"?"sw-mail-history-active":"")}>
+   <div className={view==="history"?"hidden":"flex flex-wrap items-center justify-between gap-2"}><div><h3 className="text-sm font-bold">Connected mailboxes <span className="text-xs font-normal text-slate-300">({accounts.length})</span></h3><p className="text-[11px] text-slate-300">Additional inboxes: $9.99/month each</p></div><button onClick={load} disabled={busy} type="button" aria-label="Refresh mailboxes" className="rounded-lg border border-white/20 p-2"><RefreshCw size={15}/></button></div>
    {error&&<p role="alert" className="rounded-lg border border-rose-400/40 bg-rose-950/40 p-2 text-xs text-rose-100">{error}</p>}
    {notice&&<p role="status" className="rounded-lg border border-emerald-400/30 p-2 text-xs text-emerald-200">{notice}</p>}
-   {view==="history"?<div className="min-h-0 space-y-3">
-    <div className="flex flex-wrap items-center justify-between gap-2">
-     <button type="button" onClick={()=>setView("inbox")} className="rounded-lg border border-white/20 px-2 py-1.5 text-xs">‹ Inbox</button>
-     <strong className="text-sm">Sarah · Property historical search</strong>
+   {view==="history"?<div className="sw-mail-history-mode flex h-full min-h-0 flex-col gap-2 overflow-hidden">
+    <div className="flex shrink-0 items-center justify-between gap-2">
+     <button type="button" onClick={()=>setView("inbox")} className="rounded-lg border border-white/20 px-3 py-2 text-xs">‹ Inbox</button>
+     <strong className="truncate text-sm">Sarah · Property Search</strong>
+     <button type="button" onClick={()=>setPropertyDrawerOpen(true)} className="shrink-0 rounded-lg border border-white/20 px-3 py-2 text-xs">+ Add property</button>
     </div>
-    <p className="text-xs text-slate-300">Create reusable searches for any managed property using its own keywords and verified contact addresses. Search includes messages outside the Inbox, up to 300 recent messages per run.</p>
-    <div className="rounded-lg border border-white/15 bg-black/10 p-3">
-     <strong className="text-xs">Add property search profile</strong>
-     <div className="mt-2 grid gap-2 md:grid-cols-2">
-      <label className="text-xs">Property name<input className="mt-1 w-full rounded-lg border border-white/20 bg-black/20 p-2" value={propertyForm.name} placeholder="Rental property or portfolio name" onChange={e=>setPropertyForm(v=>({...v,name:e.target.value}))}/></label>
-      <label className="text-xs">Known sender email addresses (optional)<input className="mt-1 w-full rounded-lg border border-white/20 bg-black/20 p-2" value={propertyForm.contacts} placeholder="housing@example.org, manager@example.org" onChange={e=>setPropertyForm(v=>({...v,contacts:e.target.value}))}/></label>
-     </div>
-     <label className="mt-2 block text-xs">Keywords (comma-separated, property-specific)<input className="mt-1 w-full rounded-lg border border-white/20 bg-black/20 p-2" value={propertyForm.terms} onChange={e=>setPropertyForm(v=>({...v,terms:e.target.value}))}/></label>
-     <button type="button" disabled={busy} onClick={saveProperty} className="mt-2 rounded-lg border border-cyan-300/40 px-3 py-2 text-xs">Save property search</button>
+    <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 rounded-xl border border-cyan-300/25 bg-black/15 p-2 sm:grid-cols-[minmax(0,1fr)_150px_auto]">
+      <label className="min-w-0 text-[11px]">Property
+       <select value={selectedProperty} onChange={e=>setSelectedProperty(e.target.value)} className="mt-1 block h-10 w-full min-w-0 rounded-lg border border-white/20 bg-slate-900 px-2 text-xs">
+        {!propertyProfiles.length&&<option value="">Add a property to search</option>}
+        {propertyProfiles.map(p=><option key={p.profile_id} value={p.profile_id}>{p.name}</option>)}
+       </select>
+      </label>
+      <label className="hidden text-[11px] sm:block">Date range
+       <select value={historyDays} onChange={e=>setHistoryDays(Number(e.target.value))} className="mt-1 block h-10 w-full rounded-lg border border-white/20 bg-slate-900 px-2 text-xs">
+        {[30,90,180,365,730].map(d=><option key={d} value={d}>Past {d} days</option>)}
+       </select>
+      </label>
+      <button type="button" disabled={busy||!selectedProperty} onClick={searchHistory} className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-cyan-300/60 bg-cyan-500/25 px-4 text-xs font-bold text-cyan-50 shadow-sm disabled:opacity-40">
+       {busy?"Searching…":"⌕ Search emails"}
+      </button>
+      <label className="col-span-2 text-[11px] sm:hidden">Date range
+       <select value={historyDays} onChange={e=>setHistoryDays(Number(e.target.value))} className="mt-1 h-9 w-full rounded-lg border border-white/20 bg-slate-900 px-2 text-xs">
+        {[30,90,180,365,730].map(d=><option key={d} value={d}>Past {d} days</option>)}
+       </select>
+      </label>
     </div>
-    <div className="flex flex-wrap items-end gap-2">
-     <label className="text-xs">Property<select value={selectedProperty} onChange={e=>setSelectedProperty(e.target.value)} className="mt-1 block max-w-64 rounded-lg border border-white/20 bg-slate-900 p-2">{!propertyProfiles.length&&<option value="">Create a property first</option>}{propertyProfiles.map(p=><option key={p.profile_id} value={p.profile_id}>{p.name}</option>)}</select></label>
-     <label className="text-xs">Time period<select value={historyDays} onChange={e=>setHistoryDays(Number(e.target.value))} className="mt-1 block rounded-lg border border-white/20 bg-slate-900 p-2">{[30,90,180,365,730].map(d=><option key={d} value={d}>Past {d} days</option>)}</select></label>
-     <button type="button" disabled={busy||!selectedProperty} onClick={searchHistory} className="rounded-lg border border-cyan-300/50 bg-cyan-400/10 px-3 py-2 text-xs">{busy?"Searching…":"Search property history"}</button>
+    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-xl border border-white/15 bg-black/10 p-3">
+      {!historyReport?<div className="flex h-full min-h-32 flex-col items-center justify-center gap-2 text-center">
+       <strong className="text-sm">{propertyProfiles.length?"Select a property and press Search emails":"No property search saved yet"}</strong>
+       <p className="max-w-lg text-xs text-slate-300">Search historical Outlook correspondence across folders, using property-specific terms and contacts. Up to 300 recent messages are checked per search.</p>
+       {!propertyProfiles.length&&<button type="button" onClick={()=>setPropertyDrawerOpen(true)} className="rounded-lg border border-cyan-300/35 px-3 py-2 text-xs">Add your first property</button>}
+      </div>:<div className="space-y-2">
+       <div className="flex flex-wrap items-center justify-between gap-2">
+        <strong className="text-xs">{historyReport.findings?.length||0} matches · {historyReport.scanned} messages scanned</strong>
+        <span className="text-[11px] text-slate-300">{historyReport.property?.name}{historyReport.partial?" · Partial results":""}</span>
+       </div>
+       <p className="text-[11px] text-amber-100">Email previews are not verified payment records or inspection confirmations. Search coverage is limited.</p>
+       <div className="flex flex-wrap gap-2">{Object.entries(historyReport.counts||{}).map(([k,n])=><span key={k} className="rounded-lg border border-white/20 px-2 py-1 text-xs">{k}: {n}</span>)}</div>
+       {(historyReport.findings||[]).length===0&&<p className="text-xs text-slate-300">No matching messages within this scanned sample. Older correspondence may still exist.</p>}
+       {(historyReport.findings||[]).map(m=><article key={m.message_id} className="rounded-lg border border-white/20 bg-black/10 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-xs">{m.subject}</strong><span className="text-[11px]">{m.category} · {m.received_at?.slice(0,10)}</span></div>
+        <p className="mt-1 text-[11px] text-slate-300">{m.sender}</p>
+        <p className="mt-2 text-xs">{m.preview}</p>
+        <p className="mt-1 text-[11px] text-cyan-200">Matched: {m.matched_terms?.join(", ")}{m.has_attachments?" · Attachment present (not read)":""}</p>
+        {m.outlook_url&&<a href={m.outlook_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs underline">Open original in Outlook</a>}
+       </article>)}
+      </div>}
     </div>
-    {historyReport&&<div className="space-y-2">
-     <p className="text-xs text-slate-200"><strong>{historyReport.findings?.length||0} matching messages</strong> from {historyReport.scanned} scanned · {historyReport.property?.name} {historyReport.partial?"· Partial results: more messages may exist":""}</p>
-     <p className="text-xs text-amber-100">A matching email is not proof an inspection is scheduled or a payment is owed. Reconcile money against actual property records.</p>
-     <div className="flex flex-wrap gap-2">{Object.entries(historyReport.counts||{}).map(([k,n])=><span key={k} className="rounded-lg border border-white/20 px-2 py-1 text-xs">{k}: {n}</span>)}</div>
-     <div className="max-h-72 space-y-2 overflow-auto overscroll-contain">{(historyReport.findings||[]).map(m=><article key={m.message_id} className="rounded-lg border border-white/20 bg-black/10 p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-xs">{m.subject}</strong><span className="text-[11px]">{m.category} · {m.received_at?.slice(0,10)}</span></div>
-      <p className="mt-1 text-[11px] text-slate-300">{m.sender}</p>
-      <p className="mt-2 text-xs">{m.preview}</p>
-      <p className="mt-1 text-[11px] text-cyan-200">Matched: {m.matched_terms?.join(", ")}{m.has_attachments?" · Attachment present (not read)":""}</p>
-      {m.outlook_url&&<a href={m.outlook_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs underline">Open original in Outlook</a>}
-     </article>)}</div>
+    {propertyDrawerOpen&&<div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-3" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setPropertyDrawerOpen(false)}}>
+      <section role="dialog" aria-modal="true" aria-label="Add property search" className="w-full max-w-xl rounded-2xl border border-white/25 bg-slate-950 p-4 shadow-2xl">
+       <div className="mb-3 flex items-center justify-between gap-2"><strong className="text-sm">Add property search</strong><button type="button" onClick={()=>setPropertyDrawerOpen(false)} className="rounded-lg border border-white/20 px-3 py-1.5 text-xs">Close ✕</button></div>
+       <p className="mb-3 text-xs text-slate-300">Reusable across housing authorities, property managers, and rentals. No messages are moved.</p>
+       <div className="space-y-3">
+        <label className="block text-xs">Property name<input autoFocus className="mt-1 w-full rounded-lg border border-white/20 bg-slate-900 p-2.5 text-sm" value={propertyForm.name} placeholder="Roxana Rd — Lord Holdings" onChange={e=>setPropertyForm(v=>({...v,name:e.target.value}))}/></label>
+        <label className="block text-xs">Known sender addresses (optional)<input className="mt-1 w-full rounded-lg border border-white/20 bg-slate-900 p-2.5 text-sm" value={propertyForm.contacts} placeholder="agency@example.org, manager@example.org" onChange={e=>setPropertyForm(v=>({...v,contacts:e.target.value}))}/></label>
+        <label className="block text-xs">Search keywords, separated by commas<textarea rows={2} className="mt-1 w-full rounded-lg border border-white/20 bg-slate-900 p-2.5 text-sm" value={propertyForm.terms} onChange={e=>setPropertyForm(v=>({...v,terms:e.target.value}))}/></label>
+       </div>
+       <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={()=>setPropertyDrawerOpen(false)} className="rounded-lg border border-white/20 px-3 py-2 text-xs">Cancel</button><button type="button" disabled={busy||!propertyForm.name.trim()} onClick={saveProperty} className="rounded-lg border border-cyan-300/60 bg-cyan-500/20 px-4 py-2 text-xs font-bold">Save property</button></div>
+      </section>
     </div>}
    </div>:view==="routing"&&routingReport?<div className="min-h-0">
   <div className="mb-2 flex items-center justify-between gap-2">
