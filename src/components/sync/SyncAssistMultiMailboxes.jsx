@@ -23,6 +23,7 @@ export default function SyncAssistMultiMailboxes(){
  const [historyDays,setHistoryDays]=useState(365);
  const [historyReport,setHistoryReport]=useState(null);
  const [propertyDrawerOpen,setPropertyDrawerOpen]=useState(false);
+ const [editingPropertyProfile,setEditingPropertyProfile]=useState(false);
  const [routingReport,setRoutingReport]=useState(null);
  const [routingFilter,setRoutingFilter]=useState("ALL");
  const [jobPrefs,setJobPrefs]=useState(null);
@@ -102,12 +103,12 @@ export default function SyncAssistMultiMailboxes(){
    const payload={name:propertyForm.name.trim(),pm_property_id:formPmProperty||null,
     terms:propertyForm.terms.split(",").map(v=>v.trim()).filter(Boolean),
     contacts:propertyForm.contacts.split(",").map(v=>v.trim()).filter(Boolean)};
-   const r=await api.post(BASE+encodeURIComponent(active.account_id)+"/property-profiles/",payload);
-   setPropertyProfiles(prev=>[...prev,r.data.profile]);
+   const r=editingPropertyProfile ? await api.patch(BASE+encodeURIComponent(active.account_id)+"/property-profiles/",{profile_id:selectedProperty,terms:payload.terms,contacts:payload.contacts}) : await api.post(BASE+encodeURIComponent(active.account_id)+"/property-profiles/",payload);
+   setPropertyProfiles(prev=>editingPropertyProfile?prev.map(p=>p.profile_id===selectedProperty?r.data.profile:p):[...prev,r.data.profile]);
    setSelectedProperty(r.data.profile.profile_id);
    setSelectedEvidenceIds([]);setReportSaved(null);
    setNotice("Property search profile saved. No Outlook messages modified.");
-   setPropertyDrawerOpen(false);
+   setPropertyDrawerOpen(false);setEditingPropertyProfile(false);
   }catch(e){setError(mailboxError(e,"Saving property search profile"));}finally{setBusy(false);}
  };
  const searchHistory=async()=>{
@@ -159,8 +160,16 @@ export default function SyncAssistMultiMailboxes(){
      <button type="button" onClick={()=>setView("inbox")} className="rounded-lg border border-white/20 px-3 py-2 text-xs">‹ Inbox</button>
      <strong className="truncate text-sm">Sarah · Property Search</strong>
      <button type="button" disabled={busy||!pmProperties.length} onClick={linkAllProperties} className="shrink-0 rounded-lg border border-cyan-300/60 bg-cyan-400/15 px-3 py-2 text-xs font-bold disabled:opacity-40">Link All</button>
-     <button type="button" onClick={()=>setPropertyDrawerOpen(true)} className="shrink-0 rounded-lg border border-white/20 px-3 py-2 text-xs">+ New search</button>
+     <button type="button" onClick={()=>{setEditingPropertyProfile(false);setFormPmProperty("");setPropertyForm({name:"",terms:"housing authority, section 8, inspection, rent ledger",contacts:""});setPropertyDrawerOpen(true)}} className="shrink-0 rounded-lg border border-white/20 px-3 py-2 text-xs">+ New search</button>
     </div>
+    {selectedProperty&&<div className="flex shrink-0 items-center justify-end gap-2">
+      <button type="button" onClick={()=>{
+       const profile=propertyProfiles.find(p=>p.profile_id===selectedProperty);
+       if(!profile)return;
+       setPropertyForm({name:profile.name,terms:(profile.terms||[]).join(", "),contacts:(profile.contacts||[]).join(", ")});
+       setEditingPropertyProfile(true);setPropertyDrawerOpen(true);
+      }} className="rounded-lg border border-white/20 px-2 py-1 text-[11px]">Refine contacts & search terms</button>
+    </div>}
     {portfolioLinkStatus&&<p className="shrink-0 text-[11px] text-slate-300">{portfolioLinkStatus.linked} of {portfolioLinkStatus.total} saved properties linked · Existing manual profiles preserved · Emails remain unfiled</p>}
     <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 rounded-xl border border-cyan-300/25 bg-black/15 p-2 sm:grid-cols-[minmax(0,1fr)_150px_auto]">
       <label className="min-w-0 text-[11px]">Property
@@ -224,21 +233,21 @@ export default function SyncAssistMultiMailboxes(){
       </section>
     </div>}
     {propertyDrawerOpen&&<div className="sw-property-overlay fixed inset-0 z-[100] flex items-center justify-center p-3" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setPropertyDrawerOpen(false)}}>
-      <section role="dialog" aria-modal="true" aria-label="Add property search" className="sw-property-dialog w-full max-w-md max-h-[min(82dvh,520px)] overflow-y-auto rounded-xl border p-3 shadow-2xl">
-       <div className="mb-2 flex items-center justify-between gap-2"><strong className="text-sm">Add property search</strong><button type="button" onClick={()=>setPropertyDrawerOpen(false)} className="rounded-lg border border-white/20 px-3 py-1.5 text-xs">Close ✕</button></div>
+      <section role="dialog" aria-modal="true" aria-label={editingPropertyProfile?"Refine property search":"Add property search"} className="sw-property-dialog w-full max-w-md max-h-[min(82dvh,520px)] overflow-y-auto rounded-xl border p-3 shadow-2xl">
+       <div className="mb-2 flex items-center justify-between gap-2"><strong className="text-sm">{editingPropertyProfile?"Refine property search":"Add property search"}</strong><button type="button" onClick={()=>setPropertyDrawerOpen(false)} className="rounded-lg border border-white/20 px-3 py-1.5 text-xs">Close ✕</button></div>
        <p className="mb-2 text-[11px] text-slate-300">Reusable across housing authorities, property managers, and rentals. No messages are moved.</p>
        <div className="space-y-2">
-        {pmProperties.length>0&&<label className="block text-xs">Use an existing Property Management property
+        {!editingPropertyProfile&&pmProperties.length>0&&<label className="block text-xs">Use an existing Property Management property
           <select value={formPmProperty} onChange={e=>{setFormPmProperty(e.target.value);const p=pmProperties.find(v=>String(v.id)===e.target.value);if(p)setPropertyForm(v=>({...v,name:p.name,terms:Array.from(new Set([p.name,...p.address.split(",").map(t=>t.trim()).filter(t=>t.length>5),"section 8","housing authority","inspection","rent ledger","abatement"])).slice(0,15).join(", ")}))}} className="mt-1 w-full rounded-lg border border-white/20 bg-slate-900 px-2.5 py-2 text-xs">
           <option value="">Manual search (not linked)</option>
           {pmProperties.map(p=><option key={p.id} value={p.id}>{p.name} — {p.address}</option>)}
           </select>
         </label>}
-        <label className="block text-xs">Property name<input autoFocus className="mt-1 w-full rounded-lg border border-white/20 bg-slate-900 px-2.5 py-2 text-xs" value={propertyForm.name} placeholder="Roxana Rd — Lord Holdings" onChange={e=>setPropertyForm(v=>({...v,name:e.target.value}))}/></label>
+        <label className="block text-xs">Property name<input disabled={editingPropertyProfile} autoFocus className="mt-1 w-full rounded-lg border border-white/20 bg-slate-900 px-2.5 py-2 text-xs" value={propertyForm.name} placeholder="Roxana Rd — Lord Holdings" onChange={e=>setPropertyForm(v=>({...v,name:e.target.value}))}/></label>
         <label className="block text-xs">Known sender addresses (optional)<input className="mt-1 w-full rounded-lg border border-white/20 bg-slate-900 px-2.5 py-2 text-xs" value={propertyForm.contacts} placeholder="agency@example.org, manager@example.org" onChange={e=>setPropertyForm(v=>({...v,contacts:e.target.value}))}/></label>
         <label className="block text-xs">Search keywords, separated by commas<textarea rows={2} className="mt-1 w-full rounded-lg border border-white/20 bg-slate-900 px-2.5 py-2 text-xs" value={propertyForm.terms} onChange={e=>setPropertyForm(v=>({...v,terms:e.target.value}))}/></label>
        </div>
-       <div className="mt-3 flex justify-end gap-2"><button type="button" onClick={()=>setPropertyDrawerOpen(false)} className="rounded-lg border border-white/20 px-3 py-1.5 text-xs">Cancel</button><button type="button" disabled={busy||!propertyForm.name.trim()} onClick={saveProperty} className="rounded-lg border border-cyan-300/60 bg-cyan-500/20 px-3 py-1.5 text-xs font-bold">Save property</button></div>
+       <div className="mt-3 flex justify-end gap-2"><button type="button" onClick={()=>setPropertyDrawerOpen(false)} className="rounded-lg border border-white/20 px-3 py-1.5 text-xs">Cancel</button><button type="button" disabled={busy||!propertyForm.name.trim()} onClick={saveProperty} className="rounded-lg border border-cyan-300/60 bg-cyan-500/20 px-3 py-1.5 text-xs font-bold">{editingPropertyProfile?"Save search rules":"Save property"}</button></div>
       </section>
     </div>}
    </div>:view==="routing"&&routingReport?<div className="min-h-0">
