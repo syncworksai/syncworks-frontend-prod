@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Activity, CheckCircle2, Copy, RefreshCw, X } from "lucide-react";
 import api from "../../api/client";
 
+const SYNC_OHIO = "https://syncworks-backend-prod.onrender.com/api/v1";
 const PATHS = [
   { label: "App process", path: "/sync-ai/health/live/" },
   { label: "Database and schema", path: "/sync-ai/health/ready/" },
@@ -21,6 +22,7 @@ const explain = (record) => {
   if (record.result === "HTTP 502" || record.result === "HTTP 503") return "Backend or reverse proxy unavailable";
   if (record.result === "TIMEOUT") return "No response before timeout";
   if (record.result === "NETWORK / CORS / DNS") return "Browser could not complete the request; check Network tab";
+  if (record.result === "CONFIGURATION / UNREADY") return "AI is disabled or its provider credentials are not configured on Ohio";
   return "Endpoint did not return the expected response";
 };
 
@@ -30,7 +32,7 @@ export default function SyncConnectionDiagnostics({ onRecheck }) {
   const [records, setRecords] = useState([]);
   const [checkedAt, setCheckedAt] = useState("");
   const origin = (() => {
-    try { return new URL(api.defaults.baseURL).origin; }
+    try { return new URL(SYNC_OHIO).origin; }
     catch { return "unavailable"; }
   })();
   async function run() {
@@ -42,7 +44,7 @@ export default function SyncConnectionDiagnostics({ onRecheck }) {
     // and model configuration. Responses are never copied to the report.
     for (const test of PATHS) {
       try {
-        const response = await api.get(test.path, { timeout: 10000 });
+        const response = await api.get(SYNC_OHIO + test.path, { timeout: 10000 });
         const healthy = test.label === "Authenticated AI status"
           ? response?.data?.enabled === true && response?.data?.configured === true
           : response?.data?.status === (test.label === "App process" ? "ok" : "ready");
