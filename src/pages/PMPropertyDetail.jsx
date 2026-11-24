@@ -199,19 +199,19 @@ export default function PMPropertyDetail() {
   if (loading) return <main className="px-4 py-10 sm:px-6"><div className="rounded-[28px] border border-cyan-500/15 bg-[#07111f] p-10 text-center text-sm text-slate-500">Loading property command center...</div></main>;
   if (error || !property) return <main className="space-y-4 px-4 py-6 sm:px-6"><div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 text-rose-100">{error || "Property not found."}</div><Button onClick={() => nav("/pm/properties")}>Back to Properties</Button></main>;
 
-  return <main className="min-w-0 space-y-3 overflow-x-hidden px-3 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-3 sm:px-6">
+  return <main className={`min-w-0 space-y-3 overflow-x-hidden px-3 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 ${tab === "correspondence" ? "sarah-property-main" : ""}`}>
     {notice ? <div className="rounded-2xl border border-cyan-400/25 bg-cyan-500/10 p-4 text-sm text-cyan-100">{notice}</div> : null}
-    <PMProperty360Snapshot data={summary} loading={summaryLoading} error={summaryError} property={property}
+    {tab !== "correspondence" && <PMProperty360Snapshot data={summary} loading={summaryLoading} error={summaryError} property}
       reload={load} navigate={nav} openTab={(next) => { setTab(next); nav(`/pm/properties/${propertyId}?tab=${next}`); window.requestAnimationFrame(() => document.getElementById("pm-property-sections")?.scrollIntoView({ behavior: "smooth", block: "start" })); }}
-      onDetails={() => setDetailsOpen(true)} />
-    <section className="flex items-center justify-between gap-2 rounded-xl border border-slate-700/70 bg-[#07111f] px-3 py-2">
+      onDetails={() => setDetailsOpen(true)} />}
+    {tab !== "correspondence" && <section className="flex items-center justify-between gap-2 rounded-xl border border-slate-700/70 bg-[#07111f] px-3 py-2">
       <label htmlFor="pm-property-operational-status" className="text-[11px] text-slate-400">Operational status</label>
       <select id="pm-property-operational-status" value={property.status || "HEALTHY"} disabled={savingStatus}
         onChange={event => changeStatus(event.target.value)}
         className="min-h-9 rounded-lg border border-slate-600 bg-slate-950 px-2 text-[11px] font-bold text-white">
         <option value="HEALTHY">Healthy</option><option value="WATCH">Watch</option><option value="AT_RISK">At risk</option>
       </select>
-    </section>
+    </section>}
 
     <nav id="pm-property-sections" aria-label="Property 360 sections" className="sticky top-[max(4rem,env(safe-area-inset-top))] z-20 flex scroll-mt-24 gap-1.5 overflow-x-auto rounded-xl border border-cyan-500/15 bg-[#07111f]/95 p-1.5 backdrop-blur">{tabs.filter(item => item !== "tenantpreview" || isRoxanaPilotProperty(property)).map((item) => <button key={item} type="button" onClick={() => { setTab(item); nav(`/pm/properties/${propertyId}?tab=${item}`); }} className={`min-h-9 shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-black ${tab === item ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>{tabLabels[item]}</button>)}</nav>
 
@@ -281,7 +281,7 @@ export default function PMPropertyDetail() {
       </Panel>
     </div> : null}
     {tab === "correspondence" ? <div className="sarah-property-screen">
-      <SarahPropertyActionDesk property={property} reports={correspondenceReports} workOrders={workOrders} reportsError={reportsError} onOpenTab={setTab} onFindMail={()=>nav("/sync/assist/email")} onVictoria={()=>nav("/sync/assist/daily")}/>
+      <SarahPropertyActionDesk property={property} reports={correspondenceReports} workOrders={workOrders} reportsError={reportsError} onOpenTab={next=>{setTab(next);nav(`/pm/properties/${propertyId}?tab=${next}`)}} onFindMail={()=>nav("/sync/assist/email")} onVictoria={()=>nav("/sync/assist/daily")}/>
     </div> : null}
         {tab === "documents" ? <PMPropertyPaperworkDock embeddedPropertyId={propertyId} /> : null}
     {tab === "reports" ? <Panel title="Owner & Investor Reporting" subtitle="Property health, lifecycle, work history, projects, costs, and supporting documents."><div className="grid gap-3 sm:grid-cols-2"><Button onClick={() => nav(`/pm/settings?view=messages&property=${propertyId}`)}>Owner Communications</Button><Button onClick={() => setTab("documents")}>Operating Statements & Documents</Button><Button onClick={() => nav(`/pm/settings?view=make-ready&property=${propertyId}`)}>Make-Ready Report</Button><Button onClick={() => setTab("overview")}>Lifecycle & Checklists</Button></div></Panel> : null}
