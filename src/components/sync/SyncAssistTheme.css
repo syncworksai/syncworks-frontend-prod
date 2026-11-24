@@ -406,3 +406,24 @@
  .sw-assist-themed.sw-sync-home>div.relative.mx-auto{padding-bottom:70px!important}
  .sw-assist-themed.sw-sync-home section:has(>div>div>h1)>div.mt-3.grid-cols-3>button{min-height:47px!important;padding:5px!important}
 }
+
+/* Compact send / microphone controls, with theme-matched buttons. */
+.sw-assist-themed.sw-sync-home .sw-sync-command-tray{display:flex;flex-direction:row;align-items:center;gap:8px;padding:7px 9px!important;border-color:rgba(var(--assist-accent),.32)!important;background:var(--assist-glass-strong)!important}
+.sw-assist-themed.sw-sync-home .sw-sync-command-tray textarea{flex:1;min-width:0;min-height:38px!important;height:38px!important;max-height:80px!important;padding:8px 10px!important;align-self:center}
+.sw-assist-themed.sw-sync-home .sw-sync-command-tray>div.mt-1{display:flex!important;flex:none;flex-wrap:nowrap!important;margin:0!important;gap:7px!important}
+.sw-assist-themed.sw-sync-home .sw-sync-command-tray .sw-sync-mic-action,
+.sw-assist-themed.sw-sync-home .sw-sync-command-tray .sw-sync-send-action{width:42px!important;height:40px!important;min-height:40px!important;flex:none!important;padding:0!important;display:grid!important;place-items:center!important;border-radius:10px!important;background:var(--assist-glass)!important;border:1px solid rgba(var(--assist-accent),.48)!important;color:var(--assist-ink)!important;box-shadow:none!important}
+.sw-assist-themed.sw-sync-home .sw-sync-command-tray .sw-sync-send-action:not(:disabled){background:rgba(var(--assist-accent),.19)!important}
+.sw-assist-themed.sw-sync-home .sw-sync-command-tray .sw-sync-mic-action svg,
+.sw-assist-themed.sw-sync-home .sw-sync-command-tray .sw-sync-send-action svg{width:19px;height:19px}
+@media(min-width:1024px){
+ .sw-assist-themed.sw-sync-home>div.relative.mx-auto{max-width:min(95vw,1640px)!important;width:100%;padding-left:clamp(18px,3vw,50px)!important;padding-right:clamp(18px,3vw,50px)!important}
+ .sw-assist-themed.sw-sync-home>header>div{max-width:min(95vw,1640px)!important}
+ .sw-assist-themed.sw-sync-home section:has(>div>div>h1){max-width:none!important}
+}
+@media(max-width:767px){
+ .sw-assist-themed.sw-sync-home .sw-sync-command-tray{gap:4px;padding:4px!important}
+ .sw-assist-themed.sw-sync-home .sw-sync-command-tray textarea{min-height:34px!important;height:34px!important;padding:5px!important;font-size:12px!important}
+ .sw-assist-themed.sw-sync-home .sw-sync-command-tray .sw-sync-mic-action,
+ .sw-assist-themed.sw-sync-home .sw-sync-command-tray .sw-sync-send-action{width:36px!important;height:36px!important;min-height:36px!important}
+}
