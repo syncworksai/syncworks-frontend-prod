@@ -13,6 +13,7 @@ export default function SyncAssistMultiMailboxes(){
  const [sarahReport,setSarahReport]=useState(null);
  const [propertyProfiles,setPropertyProfiles]=useState([]);
  const [pmProperties,setPmProperties]=useState([]);
+ const [portfolioLinkStatus,setPortfolioLinkStatus]=useState(null);
  const [formPmProperty,setFormPmProperty]=useState("");
  const [selectedEvidenceIds,setSelectedEvidenceIds]=useState([]);
  const [reportSaved,setReportSaved]=useState(null);
@@ -74,9 +75,25 @@ export default function SyncAssistMultiMailboxes(){
    const r=await api.get(BASE+encodeURIComponent(active.account_id)+"/property-profiles/");
    setPropertyProfiles(r.data.profiles||[]);
    setPmProperties(r.data.pm_properties||[]);
+   const linked=(r.data.profiles||[]).filter(p=>p.pm_property_id).length;
+   setPortfolioLinkStatus({total:(r.data.pm_properties||[]).length,linked});
    setSelectedProperty(prev=>r.data.profiles?.some(p=>p.profile_id===prev)?prev:(r.data.profiles?.[0]?.profile_id||""));
    setPropertyDrawerOpen(!(r.data.profiles||[]).length && !(r.data.pm_properties||[]).length);
   }catch(e){setError(mailboxError(e,"Loading property searches"));}finally{setBusy(false);}
+ };
+ const linkAllProperties=async()=>{
+  if(!active)return;
+  setBusy(true);setError("");
+  try{
+   const r=await api.post(BASE+encodeURIComponent(active.account_id)+"/property-link-all/",{});
+   const reloaded=await api.get(BASE+encodeURIComponent(active.account_id)+"/property-profiles/");
+   setPropertyProfiles(reloaded.data.profiles||[]);
+   setPmProperties(reloaded.data.pm_properties||[]);
+   setPortfolioLinkStatus({total:(reloaded.data.pm_properties||[]).length,
+    linked:(reloaded.data.profiles||[]).filter(p=>p.pm_property_id).length});
+   setSelectedProperty(prev=>(reloaded.data.profiles||[]).some(p=>p.profile_id===prev)?prev:(reloaded.data.profiles?.[0]?.profile_id||""));
+   setNotice("Linked "+(r.data.created||[]).length+" properties. Existing links preserved. No emails attached or moved.");
+  }catch(e){setError(mailboxError(e,"Linking portfolio"))}finally{setBusy(false)}
  };
  const saveProperty=async()=>{
   if(!active)return;
@@ -141,8 +158,10 @@ export default function SyncAssistMultiMailboxes(){
     <div className="flex shrink-0 items-center justify-between gap-2">
      <button type="button" onClick={()=>setView("inbox")} className="rounded-lg border border-white/20 px-3 py-2 text-xs">‹ Inbox</button>
      <strong className="truncate text-sm">Sarah · Property Search</strong>
+     <button type="button" disabled={busy||!pmProperties.length} onClick={linkAllProperties} className="shrink-0 rounded-lg border border-cyan-300/60 bg-cyan-400/15 px-3 py-2 text-xs font-bold disabled:opacity-40">Link All</button>
      <button type="button" onClick={()=>setPropertyDrawerOpen(true)} className="shrink-0 rounded-lg border border-white/20 px-3 py-2 text-xs">+ New search</button>
     </div>
+    {portfolioLinkStatus&&<p className="shrink-0 text-[11px] text-slate-300">{portfolioLinkStatus.linked} of {portfolioLinkStatus.total} saved properties linked · Existing manual profiles preserved · Emails remain unfiled</p>}
     <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 rounded-xl border border-cyan-300/25 bg-black/15 p-2 sm:grid-cols-[minmax(0,1fr)_150px_auto]">
       <label className="min-w-0 text-[11px]">Property
        <select value={selectedProperty} onChange={e=>setSelectedProperty(e.target.value)} className="mt-1 block h-10 w-full min-w-0 rounded-lg border border-white/20 bg-slate-900 px-2 text-xs">
