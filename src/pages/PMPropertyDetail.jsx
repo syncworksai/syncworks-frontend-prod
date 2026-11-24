@@ -300,6 +300,10 @@ export default function PMPropertyDetail() {
               <div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-xs">{m.subject||"Untitled email"}</strong><span className="text-[11px] text-slate-300">{m.received_at?.slice(0,10)}</span></div>
               <p className="mt-1 text-[11px] text-slate-300">{m.sender} · {m.category||"Review"}</p>
               <p className="mt-1 text-[11px] text-amber-200">Source correspondence only — requires verification</p>
+              {!!m.attachments?.length&&<details className="mt-2 rounded-lg border border-white/10 px-2 py-1">
+                <summary className="cursor-pointer text-[11px]">{m.attachments.length} attachment reference(s) · metadata only</summary>
+                <div className="space-y-1 pt-1">{m.attachments.map((a,i)=><div key={i} className="text-[11px] text-slate-300">{a.name} · {a.content_type||"unknown type"} · Not downloaded or verified</div>)}</div>
+              </details>}
               {m.outlook_url&&<a href={m.outlook_url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-xs underline">Open original email</a>}
             </article>)}
           </div>:<p className="text-xs text-slate-400">No reviewed correspondence attached. Open Sarah's historical search, link this property, and select relevant emails to attach.</p>;
