@@ -12,6 +12,11 @@ export default function SyncAssistMultiMailboxes(){
  const [editing,setEditing]=useState(null);
  const [sarahReport,setSarahReport]=useState(null);
  const [propertyProfiles,setPropertyProfiles]=useState([]);
+ const [pmProperties,setPmProperties]=useState([]);
+ const [formPmProperty,setFormPmProperty]=useState("");
+ const [selectedEvidenceIds,setSelectedEvidenceIds]=useState([]);
+ const [reportSaved,setReportSaved]=useState(null);
+ const [linkDrawerOpen,setLinkDrawerOpen]=useState(false);
  const [propertyForm,setPropertyForm]=useState({name:"",terms:"housing authority, section 8, rent, inspection",contacts:""});
  const [selectedProperty,setSelectedProperty]=useState("");
  const [historyDays,setHistoryDays]=useState(365);
@@ -68,20 +73,22 @@ export default function SyncAssistMultiMailboxes(){
   try{
    const r=await api.get(BASE+encodeURIComponent(active.account_id)+"/property-profiles/");
    setPropertyProfiles(r.data.profiles||[]);
+   setPmProperties(r.data.pm_properties||[]);
    setSelectedProperty(prev=>r.data.profiles?.some(p=>p.profile_id===prev)?prev:(r.data.profiles?.[0]?.profile_id||""));
-   setPropertyDrawerOpen(!(r.data.profiles||[]).length);
+   setPropertyDrawerOpen(!(r.data.profiles||[]).length && !(r.data.pm_properties||[]).length);
   }catch(e){setError(mailboxError(e,"Loading property searches"));}finally{setBusy(false);}
  };
  const saveProperty=async()=>{
   if(!active)return;
   setBusy(true);setError("");
   try{
-   const payload={name:propertyForm.name.trim(),
+   const payload={name:propertyForm.name.trim(),pm_property_id:formPmProperty||null,
     terms:propertyForm.terms.split(",").map(v=>v.trim()).filter(Boolean),
     contacts:propertyForm.contacts.split(",").map(v=>v.trim()).filter(Boolean)};
    const r=await api.post(BASE+encodeURIComponent(active.account_id)+"/property-profiles/",payload);
    setPropertyProfiles(prev=>[...prev,r.data.profile]);
    setSelectedProperty(r.data.profile.profile_id);
+   setSelectedEvidenceIds([]);setReportSaved(null);
    setNotice("Property search profile saved. No Outlook messages modified.");
    setPropertyDrawerOpen(false);
   }catch(e){setError(mailboxError(e,"Saving property search profile"));}finally{setBusy(false);}
