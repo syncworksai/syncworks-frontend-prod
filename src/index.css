@@ -276,3 +276,18 @@ body {
 @media (prefers-reduced-motion:reduce) {
   .sw-autoglow .sw-modebar button {transition:none;}
 }
+
+/* Compact, theme-inheriting loading state. No fixed neon logo or unrelated purple splash. */
+.sw-route-loading{
+ --sw-loading-accent:var(--pm-scene-accent,var(--sw-theme-accent,#bdcfda));
+ --sw-loading-rgb:var(--pm-scene-accent-rgb,177,202,215);
+ min-height:100dvh;display:flex;align-items:center;justify-content:center;
+ flex-direction:column;gap:9px;color:#edf3f6;
+ background:radial-gradient(ellipse at center,rgba(var(--sw-loading-rgb),.06),transparent 57%),var(--sw-midnight,#05080f);
+}
+.sw-route-loading-spinner{width:44px;height:44px;border:2px solid rgba(var(--sw-loading-rgb),.19);
+ border-top-color:var(--sw-loading-accent);border-radius:50%;animation:sw-route-loading-spin 1.4s linear infinite}
+.sw-route-loading strong{font-size:16px;letter-spacing:.2em;font-weight:800}
+.sw-route-loading small{font-size:11px;color:#aebfc8}
+@keyframes sw-route-loading-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.sw-route-loading-spinner{animation:none}}
