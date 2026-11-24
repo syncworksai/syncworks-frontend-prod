@@ -214,12 +214,12 @@ export default function PMPropertyDetail() {
     }
   }
 
-  if (loading) return <main className="px-4 py-10 sm:px-6"><div className="rounded-[28px] border border-cyan-500/15 bg-[#07111f] p-10 text-center text-sm text-slate-500">Loading property command center...</div></main>;
+  if (loading) return <main className="pm-property-loading" role="status" aria-live="polite"><div className="pm-property-loading-indicator" aria-hidden="true"><span/></div><strong>Opening property</strong><p>Retrieving property records and linked activity…</p></main>;
   if (error || !property) return <main className="space-y-4 px-4 py-6 sm:px-6"><div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 text-rose-100">{error || "Property not found."}</div><div className="flex flex-wrap gap-2"><Button onClick={load}>Retry loading</Button><Button onClick={() => nav("/pm/properties")}>Back to Properties</Button></div></main>;
 
-  return <main className={`min-w-0 space-y-3 overflow-x-hidden px-3 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 ${tab === "correspondence" ? "sarah-property-main" : ""}`}>
+  return <main className={`min-w-0 space-y-3 overflow-x-hidden px-3 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 ${["correspondence","overview"].includes(tab) ? `sarah-property-main ${tab === "overview"?"pm-overview-main":""}` : ""}`}>
     {notice ? <div className="rounded-2xl border border-cyan-400/25 bg-cyan-500/10 p-4 text-sm text-cyan-100">{notice}</div> : null}
-    {tab !== "correspondence" && <PMProperty360Snapshot data={summary} loading={summaryLoading} error={summaryError} property={property}
+    {tab !== "correspondence" && <PMProperty360Snapshot data={summary} loading={summaryLoading} error={summaryError} property={property} compact={tab === "overview"}
       reload={load} navigate={nav} openTab={(next) => { setTab(next); nav(`/pm/properties/${propertyId}?tab=${next}`); window.requestAnimationFrame(() => document.getElementById("pm-property-sections")?.scrollIntoView({ behavior: "smooth", block: "start" })); }}
       onDetails={() => setDetailsOpen(true)} />}
     {tab !== "correspondence" && <section className="flex items-center justify-between gap-2 rounded-xl border border-slate-700/70 bg-[#07111f] px-3 py-2">
@@ -233,39 +233,14 @@ export default function PMPropertyDetail() {
 
     <nav id="pm-property-sections" aria-label="Property 360 sections" className={`sticky top-[max(4rem,env(safe-area-inset-top))] z-20 flex scroll-mt-24 gap-1.5 overflow-x-auto rounded-xl border border-cyan-500/15 bg-[#07111f]/95 p-1.5 backdrop-blur ${tab === "correspondence" ? "sarah-property-tabs" : ""}`}>{tabs.filter(item => item !== "tenantpreview" || isRoxanaPilotProperty(property)).map((item) => <button key={item} type="button" onClick={() => { setTab(item); nav(`/pm/properties/${propertyId}?tab=${item}`); }} className={`min-h-9 shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-black ${tab === item ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:bg-white/5 hover:text-white"} ${item === "correspondence" ? "sarah-property-briefings-tab" : ""} ${item === tab ? "sarah-tab-selected" : ""}`}>{tabLabels[item]}</button>)}</nav>
 
-    {tab === "overview" ? <div className="space-y-3">
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-400/25 bg-cyan-500/5 p-3">
-        <div><h2 className="text-sm font-black text-cyan-100">Leasing & Section 8 profile</h2>
-          <p className="mt-1 text-[11px] text-slate-400">
-            {inquiryCount===null ? "Inquiries not checked" : inquiryCount+" recorded inquiries"} · Voucher standards and proposed rent stay separate from approved HAP amounts.
-          </p></div>
-        <div className="flex flex-wrap gap-2">
-          <Button tone="slate" onClick={()=>nav("/pm/leads?property="+propertyId+"&create=1")}>+ Inquiry</Button>
-          <Button tone="cyan" onClick={()=>nav("/pm/onboarding?property="+propertyId)}>Onboarding / Pricing</Button>
-        </div>
-      </section>
-      <section className="rounded-xl border border-slate-700 bg-[#07111f] p-3">
-        <div className="flex items-center justify-between gap-2">
-          <div><h2 className="text-sm font-black text-white">Lifecycle & property details</h2>
-          <p className="mt-1 text-[11px] text-slate-400">Records, inspections and operational checklists</p></div>
-          <Button tone="cyan" onClick={() => setDetailsOpen(true)}>Edit profile</Button>
-        </div>
-        <p className="mt-3 rounded-lg border border-slate-800 bg-black/20 p-3 text-xs text-slate-400">{property.notes || "No internal property notes on file."}</p>
-      </section>
-      {isRoxanaPilotProperty(property) ? <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/25 bg-amber-500/5 p-3">
-        <div><h3 className="text-xs font-black text-amber-200">2027 rent eligibility review · {ROXANA_RENT_REVIEW_DATE}</h3>
-          <p className="mt-1 text-[11px] text-slate-300">Planning reminder only. Verify signed month-to-month terms, MHA approval, prior abatement and required notices before changing rent.</p></div>
-        <div className="flex flex-wrap gap-2"><Button onClick={() => nav("/pm/calendar?property=1&month=2027-01")}>PM Calendar</Button>
-          <Button tone="cyan" onClick={() => nav("/pm/rent-increases?property=1")}>Rent Increase Planner</Button></div>
-      </section> : null}
-      <details className="rounded-xl border border-cyan-500/20 bg-[#07111f] p-3">
-        <summary className="cursor-pointer text-sm font-black text-cyan-100">Move-in checklist · {moveInItems.filter(x=>x.done).length}/{moveInItems.length}</summary>
-        <div className="mt-3"><Checklist title="Move-in readiness" subtitle="Complete each item and verify supporting evidence." items={moveInItems} action={<Button onClick={() => setTab("documents")}>Documents</Button>} /></div>
-      </details>
-      <details className="rounded-xl border border-cyan-500/20 bg-[#07111f] p-3">
-        <summary className="cursor-pointer text-sm font-black text-cyan-100">Move-out & make-ready · {moveOutItems.filter(x=>x.done).length}/{moveOutItems.length}</summary>
-        <div className="mt-3"><Checklist title="Move-out readiness" subtitle="Preserve historical tenancy and deposits." items={moveOutItems} action={<Button tone="amber" onClick={() => nav(`/pm/settings?view=make-ready&property=${propertyId}`)}>Make ready</Button>} /></div>
-      </details>
+    {tab === "overview" ? <div className="pm-overview-actions">
+      <div><strong>Property operations</strong><span>Manage details in their dedicated tabs; this overview shows only the key snapshot.</span></div>
+      <div className="pm-overview-action-buttons">
+       <button type="button" onClick={()=>setDetailsOpen(true)}>Edit property</button>
+       <button type="button" onClick={()=>nav("/pm/onboarding?property="+propertyId)}>Leasing setup</button>
+       <button type="button" onClick={()=>nav("/pm/rent-increases?property="+propertyId)}>Rent planning</button>
+       <button type="button" onClick={()=>{setTab("correspondence");nav(`/pm/properties/${propertyId}?tab=correspondence`)}}>Briefings</button>
+      </div>
     </div> : null}
 
     {tab === "review" ? <PMTenantReview property={property} tenants={tenants} workspace={workspace} ledger={propertyLedger} navigate={nav} /> : null}
