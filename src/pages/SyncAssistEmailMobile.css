@@ -110,3 +110,26 @@
  .sw-assist-themed.sw-mail-page .sw-mail-hero {padding:9px 11px!important;}
  .sw-assist-themed.sw-mail-page .sw-mail-hero h1 {font-size:17px!important;}
 }
+
+/* Property historical search: fixed one-screen controls, internal results scroll only. */
+.sw-assist-themed.sw-mail-page .sw-mail-connection:has(.sw-mail-history-active){
+ display:flex!important;flex-direction:column;overflow:hidden!important;min-height:0;
+}
+.sw-assist-themed.sw-mail-page .sw-mail-connection:has(.sw-mail-history-active)>div:first-child,
+.sw-assist-themed.sw-mail-page .sw-mail-connection:has(.sw-mail-history-active)>div.mt-3{
+ display:none!important;
+}
+.sw-assist-themed.sw-mail-page .sw-mail-connection .sw-mail-history-active{
+ flex:1 1 auto;min-height:0;height:100%;overflow:hidden;
+}
+.sw-assist-themed.sw-mail-page .sw-mail-connection .sw-mail-history-active>.sw-mail-history-mode{
+ height:100%;min-height:0;overflow:hidden;
+}
+.sw-assist-themed.sw-mail-page .sw-mail-connection .sw-mail-history-mode button:focus-visible{
+ outline:2px solid rgba(var(--assist-accent),.9);outline-offset:2px;
+}
+@media(max-width:767px){
+ .sw-assist-themed.sw-mail-page .sw-mail-connection:has(.sw-mail-history-active){padding:9px!important;}
+ .sw-assist-themed.sw-mail-page .sw-mail-history-mode{gap:7px;}
+ .sw-assist-themed.sw-mail-page .sw-mail-history-mode>div:nth-child(2){padding:7px;}
+}
