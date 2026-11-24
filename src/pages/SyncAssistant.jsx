@@ -26,6 +26,8 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import api, { getActiveBusinessId } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import { useWorkspaceAppearance } from "../components/customer/CustomerWorkspace";
+import "../components/sync/SyncAssistTheme.css";
 import SyncActionStudio from "../components/sync/SyncActionStudio";
 import SyncAssistTeamDrawer from "../components/sync/SyncAssistTeamDrawer";
 import SyncConnectionDiagnostics from "../components/sync/SyncConnectionDiagnostics";
@@ -89,6 +91,7 @@ function inferWorkspace(pathname, returnTo) {
 export default function SyncAssistant() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [appearance] = useWorkspaceAppearance();
   const pilotAccess = String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com";
   const location = useLocation();
   const recognitionRef = useRef(null);
@@ -458,8 +461,8 @@ export default function SyncAssistant() {
   }, [mobilePanel]);
 
   return (
-    <div className="min-h-dvh bg-[#020617] text-slate-100 lg:h-dvh lg:overflow-hidden">
-      <div aria-hidden="true" className="pointer-events-none fixed inset-0" style={{backgroundImage: officeBackground ? 'linear-gradient(90deg,rgba(2,6,23,.94),rgba(2,6,23,.79) 50%,rgba(2,6,23,.89)),url("/assist-themes/executive-office.svg")' : 'radial-gradient(circle at 30% 10%,rgba(34,211,238,.12),transparent 40%),radial-gradient(circle at 80% 80%,rgba(139,92,246,.12),transparent 40%)',backgroundSize:"cover",backgroundPosition:"center",backgroundAttachment:"fixed"}} />
+    <div data-assist-theme={appearance.theme} data-assist-motion={appearance.motion?"on":"off"} className="sw-assist-themed flex h-[calc(100dvh-155px)] min-h-[350px] flex-col overflow-hidden text-slate-100">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{backgroundImage:officeBackground?"var(--assist-room-shade), var(--assist-room-image)":"none",backgroundSize:"cover",backgroundPosition:"center",opacity:officeBackground?1:0}} />
 
       <header className="hidden lg:block border-b border-slate-800/90 bg-slate-950/88 px-4 py-3 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
@@ -509,7 +512,7 @@ export default function SyncAssistant() {
         </div>
       </header>
 
-      <main className="relative mx-auto max-w-6xl space-y-3 px-4 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-3 lg:h-[calc(100dvh-4.5rem)] lg:space-y-2 lg:overflow-hidden lg:pb-4 lg:pt-2">
+      <main className="relative mx-auto min-h-0 w-full max-w-6xl flex-1 space-y-3 overflow-hidden px-4 pb-16 pt-3 lg:space-y-2 lg:pb-16 lg:pt-2">
         <div className="flex items-center justify-between gap-2 lg:hidden">
           <div><p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">SYNC ASSIST</p><h1 className="text-lg font-black">Your command center</h1></div>
           <button type="button" onClick={() => setMobilePanel("settings")} aria-label="SYNC settings" className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-500/10"><Settings2 className="h-5 w-5"/></button>
@@ -931,9 +934,9 @@ export default function SyncAssistant() {
           </div>
         ) : null}
       </main>
-      <div className="fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom))] right-3 z-[180] max-w-[calc(100vw-1.5rem)] lg:bottom-7 lg:right-24" aria-label="SYNC AI employee dock">
-        <button type="button" aria-expanded={teamDockOpen} onClick={()=>setTeamDockOpen(v=>!v)} className="lg:hidden flex items-center gap-2 rounded-full border border-cyan-300/45 bg-[#061327]/95 px-3 py-2 text-xs font-bold text-white shadow-xl"><img src={configuredAvatars[0]?.photo||""} alt="" className="h-8 w-8 rounded-full object-cover object-top"/>{teamDockOpen?"Close team":"AI team"}<ChevronRight size={15}/></button>
-        <div className={`${teamDockOpen?"flex":"hidden lg:flex"} absolute bottom-full right-0 mb-2 max-h-[min(60dvh,420px)] max-w-[calc(100vw-1.5rem)] flex-wrap justify-end gap-2 overflow-y-auto rounded-2xl border border-cyan-400/30 bg-[#061327]/95 p-3 shadow-2xl backdrop-blur-xl lg:static lg:mb-0 lg:max-h-none lg:flex-nowrap lg:overflow-visible lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none`}>
+      <div className="absolute bottom-3 right-3 z-[180] max-w-[calc(100vw-1.5rem)]" aria-label="SYNC AI employee dock">
+        <button type="button" aria-expanded={teamDockOpen} onClick={()=>setTeamDockOpen(v=>!v)} className="flex items-center gap-2 rounded-full border border-cyan-300/45 bg-[var(--assist-glass-strong)] px-3 py-2 text-xs font-bold text-white shadow-xl"><img src={configuredAvatars[0]?.photo||""} alt="" className="h-8 w-8 rounded-full object-cover object-top"/>{teamDockOpen?"Close team":"AI team"}<ChevronRight size={15}/></button>
+        <div className={`${teamDockOpen?"flex":"hidden"} absolute bottom-full right-0 mb-2 max-h-[min(60dvh,380px)] max-w-[calc(100vw-1.5rem)] flex-wrap justify-end gap-2 overflow-y-auto rounded-2xl border border-cyan-400/30 bg-[var(--assist-glass-strong)] p-3 shadow-2xl backdrop-blur-xl`}>
           {configuredAvatars.map((assistant) => (
             <button
               key={assistant.id}
