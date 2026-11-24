@@ -4,12 +4,23 @@ import api from "../../api/client";
 const BASE="/sync-ai/assist/pilot/mailboxes/";
 const TYPES=["PERSONAL","PROPERTY","SYNCWORKS","FINANCE","OTHER"];
 const LEVELS=["CRITICAL","HIGH","NORMAL","LOW"];
+const OAUTH_MESSAGES={"connected":"Outlook authorization completed. Refresh to confirm the mailbox appears.","consent_denied":"Microsoft authorization was declined. No mailbox was connected.","microsoft_rejected":"Microsoft rejected authorization. Check app account types and registered redirect URI.","config_missing":"Ohio Render is missing or has invalid Microsoft OAuth settings.","authorization_missing":"Microsoft did not return an authorization code.","state_invalid":"Invalid connection request. Start a fresh connection from Mail Desk.","state_expired":"Authorization expired or was already used. Start a fresh connection.","token_exchange_failed":"Microsoft returned a code, but SyncWorks could not exchange it for a token. Check the rotated client secret and exact Ohio redirect URI.","token_incomplete":"Microsoft did not return the credentials needed for continued inbox access.","profile_failed":"Microsoft authorized, but SyncWorks couldn't read the account profile. Check User.Read permission.","account_missing":"Microsoft didn't provide a usable mailbox address.","save_failed":"SyncWorks could not save the mailbox securely. Review Ohio backend logs.","provider_timeout":"Microsoft did not respond in time. Please retry.","provider_unavailable":"Microsoft is temporarily unavailable. Please retry.","unauthorized":"This SyncWorks account cannot connect this mailbox.","limit":"Maximum number of connected mailboxes reached."};
 export default function SyncAssistMultiMailboxes(){
  const [state,setState]=useState(null),[view,setView]=useState("accounts"),[active,setActive]=useState(null),[messages,setMessages]=useState([]),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
  const [form,setForm]=useState({label:"Property Management",category:"PROPERTY",priority:"HIGH"});
  const [editing,setEditing]=useState(null);
  const load=useCallback(async()=>{setError("");try{const r=await api.get(BASE);setState(r.data)}catch(e){setError(e?.response?.data?.detail||"Unable to load mailbox connections.")}},[]);
  useEffect(()=>{load()},[load]);
+ useEffect(()=>{
+ const params=new URLSearchParams(window.location.search);
+ const result=params.get("mailbox_connection");
+ if(!result)return;
+ const message=OAUTH_MESSAGES[result]||"The mailbox connection did not complete.";
+ if(result==="connected")setNotice(message);else setError(message);
+ params.delete("mailbox_connection");
+ const rest=params.toString();
+ window.history.replaceState(null,"",window.location.pathname+(rest?"?"+rest:"")+window.location.hash);
+ },[]);
  const connect=async()=>{setBusy(true);setError("");try{const r=await api.post(BASE+"connect/",form);const url=r.data.authorization_url;if(!url?.startsWith("https://login.microsoftonline.com/"))throw Error("Unexpected authorization destination.");window.location.assign(url)}catch(e){setError(e?.response?.data?.detail||e.message||"Connection unavailable.")}finally{setBusy(false)}};
  const openInbox=async account=>{setBusy(true);setError("");setActive(account);setMessages([]);setView("inbox");try{const r=await api.get(BASE+encodeURIComponent(account.account_id)+"/inbox/");setMessages(r.data.messages||[])}catch(e){setError(e?.response?.data?.detail||"Unable to open this inbox.")}finally{setBusy(false)}};
  const save=async()=>{setBusy(true);setError("");try{const r=await api.patch(BASE,{account_id:editing.account_id,...form});setState(v=>({...v,accounts:r.data.accounts}));setNotice("Mailbox settings saved.");setEditing(null)}catch(e){setError(e?.response?.data?.detail||"Could not save mailbox settings.")}finally{setBusy(false)}};
