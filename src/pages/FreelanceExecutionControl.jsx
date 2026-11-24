@@ -1,120 +1,126 @@
 import React,{useCallback,useEffect,useMemo,useState} from "react";
 import api from "../api/client";
-import {Activity,AlertTriangle,CheckCircle2,Cloud,Download,FileSpreadsheet,Play,RefreshCw,ShieldCheck,Trash2} from "lucide-react";
+import {AlertTriangle,CheckCircle2,Cloud,Download,FileSpreadsheet,Play,Plus,RefreshCw,ShieldCheck,SlidersHorizontal,TerminalSquare,XCircle} from "lucide-react";
+import "./FreelanceStudioConsole.css";
+
 const ROOT="/sync-ai/freelance/pilot/synthetic-jobs/";
 const ACCESS="/sync-ai/freelance/pilot/access/";
-const btn="sw-upwork-action";
-const detail=x=>typeof x==="string"?x:typeof x?.detail==="string"?x.detail:"The request could not be completed.";
-const stat=(state)=>({QUEUED:"Queued for worker",RUNNING:"Processing",REVIEW:"Review required",APPROVED:"Approved for download",CANCELLED:"Cancelled",FAILED:"Failed"}[state]||state);
-function saveDownload(name,base64) {
- const bytes=Uint8Array.from(atob(base64),ch=>ch.charCodeAt(0));
- const blob=new Blob([bytes],{type:"text/csv;charset=utf-8"});
- const url=URL.createObjectURL(blob);
- const anchor=document.createElement("a");anchor.href=url;anchor.download=name;document.body.appendChild(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+const label=state=>({QUEUED:"Queued",RUNNING:"Processing",REVIEW:"Needs review",APPROVED:"Approved",CANCELLED:"Cancelled",FAILED:"Failed"}[state]||state);
+const detail=value=>typeof value==="string"?value:typeof value?.detail==="string"?value.detail:"The request could not be completed.";
+function saveDownload(name,content){
+ const data=Uint8Array.from(atob(content),letter=>letter.charCodeAt(0));
+ const uri=URL.createObjectURL(new Blob([data],{type:"text/csv;charset=utf-8"}));
+ const link=document.createElement("a");link.href=uri;link.download=name;document.body.appendChild(link);link.click();link.remove();
+ setTimeout(()=>URL.revokeObjectURL(uri),1500);
 }
-export default function FreelanceExecutionControl(){
- const [enabled,setEnabled]=useState(false),[loading,setLoading]=useState(true),[jobs,setJobs]=useState([]),[msg,setMsg]=useState(""),[error,setError]=useState(""),[busy,setBusy]=useState(false);
- const [rowCount,setRowCount]=useState(100),[seed,setSeed]=useState(42),[consent,setConsent]=useState(false);
- const [reviewed,setReviewed]=useState({});
- const [runConsent,setRunConsent]=useState({});
+
+export default function FreelanceExecutionControl({demo}){
+ const [tab,setTab]=useState("jobs");
+ const [jobs,setJobs]=useState([]),[selected,setSelected]=useState(null);
+ const [loading,setLoading]=useState(true),[connected,setConnected]=useState(false);
+ const [busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
+ const [rowCount,setRowCount]=useState(100),[seed,setSeed]=useState(42),[queueConsent,setQueueConsent]=useState(false);
+ const [runConsents,setRunConsents]=useState({}),[reviewConsents,setReviewConsents]=useState({});
  const refresh=useCallback(async()=>{
-  setLoading(true);setError("");
-  try {
-   const [access,queue]=await Promise.all([api.get(ACCESS),api.get(ROOT)]);
-   if(!access?.data?.enabled)throw Error("Founder access has not been enabled for this account.");
-   setEnabled(true);setJobs(queue.data.jobs||[]);
-  }catch(e){
-   setEnabled(false);
-   setError(e.response?.status===403?"The signed-in account does not have backend founder access.":"The backend queue could not be reached. "+detail(e.response?.data||e.message));
-  }finally{setLoading(false);}
+   setLoading(true);setError("");
+   try{
+     const [access,queue]=await Promise.all([api.get(ACCESS),api.get(ROOT)]);
+     if(!access?.data?.enabled)throw new Error("Founder access was not granted.");
+     const records=queue?.data?.jobs||[];
+     setConnected(true);setJobs(records);
+     setSelected(current=>current&&records.some(j=>j.id===current)?current:records[0]?.id||null);
+   }catch(e){
+     setConnected(false);setError(e.response?.status===403?"Your signed-in account does not have founder access.":detail(e.response?.data||e.message));
+   }finally{setLoading(false)}
  },[]);
- useEffect(()=>{refresh();},[refresh]);
- const submit=async e=>{
-  e.preventDefault();if(!consent)return;
-  setBusy(true);setMsg("");setError("");
-  try{
-   await api.post(ROOT,{row_count:Number(rowCount),seed:Number(seed),consent_synthetic_only:true});
-   setMsg("Synthetic-only job queued. Execution requires the separately enabled worker; this request did not upload any client files or call paid AI.");
-   setConsent(false);await refresh();
-  }catch(e){setError(detail(e.response?.data));}finally{setBusy(false);}
+ useEffect(()=>{refresh()},[refresh]);
+ const job=useMemo(()=>jobs.find(x=>x.id===selected)||null,[jobs,selected]);
+ const pending=jobs.filter(j=>j.state==="QUEUED").length;
+ const needsReview=jobs.filter(j=>j.state==="REVIEW").length;
+ const formInput=e=>{if(e.target.name==="rows")setRowCount(e.target.value);else setSeed(e.target.value)};
+ const queue=async(e)=>{
+   e.preventDefault();if(!queueConsent)return;
+   setBusy(true);setError("");setNotice("");
+   try{
+     const {data}=await api.post(ROOT,{row_count:Number(rowCount),seed:Number(seed),consent_synthetic_only:true});
+     setQueueConsent(false);setTab("jobs");await refresh();setSelected(data?.job?.id||null);
+     setNotice("Synthetic test queued. It has not executed or incurred AI costs.");
+   }catch(e){setError(detail(e.response?.data||e.message))}finally{setBusy(false)}
  };
- const executeTest=async job=>{
-  if(!runConsent[job.id])return;
-  setBusy(true);setMsg("");setError("");
-  try{
-    const {data}=await api.post(ROOT+job.id+"/run-test/",{consent_synthetic_only:true});
-    setMsg(data?.job?.state==="REVIEW"?"Synthetic job executed. Review the report below before approving the download.":"Test request completed; inspect the updated job status.");
-    setRunConsent(p=>({...p,[job.id]:false}));
-    await refresh();
-  }catch(e){
-    setError(e.response?.status===403?"This one-time test executor is currently disabled or founder access was denied.":detail(e.response?.data||e.message));
-  }finally{setBusy(false);}
+ const run=async()=>{
+   if(!job||!runConsents[job.id])return;
+   setBusy(true);setError("");setNotice("");
+   try{
+     const {data}=await api.post(ROOT+job.id+"/run-test/",{consent_synthetic_only:true});
+     setRunConsents(v=>({...v,[job.id]:false}));await refresh();
+     setNotice(data?.job?.state==="REVIEW"?"Execution completed. Inspect the quality report before approval.":"Check the updated job status.");
+   }catch(e){setError(e.response?.status===403?"Single-test execution is currently disabled or access was denied.":detail(e.response?.data||e.message))}finally{setBusy(false)}
  };
- const decide=async(job,decision)=>{
-  if(decision==="approve"&&!reviewed[job.id])return;
-  setBusy(true);setMsg("");setError("");
-  try{
-   await api.post(ROOT+job.id+"/",{decision});
-   setMsg(decision==="approve"?"Synthetic result approved for private download. No client delivery was made.":"Synthetic job cancelled.");
-   await refresh();
-  }catch(e){setError(detail(e.response?.data));}finally{setBusy(false);}
+ const decide=async decision=>{
+   if(!job||(decision==="approve"&&!reviewConsents[job.id]))return;
+   setBusy(true);setError("");setNotice("");
+   try{
+     await api.post(ROOT+job.id+"/",{decision});
+     setReviewConsents(v=>({...v,[job.id]:false}));await refresh();
+     setNotice(decision==="approve"?"Result approved for private download only. No Upwork delivery occurred.":"Test job cancelled.");
+   }catch(e){setError(detail(e.response?.data||e.message))}finally{setBusy(false)}
  };
- const download=async job=>{
-  setBusy(true);setError("");
-  try{
-   const {data}=await api.get(ROOT+job.id+"/download/");
-   if(!data.synthetic_only)throw Error("Unexpected non-synthetic output.");
-   saveDownload(data.filename||"synthetic-cleaned.csv",data.content_base64);
-   setMsg("Downloaded deterministic synthetic demonstration CSV. No client or Upwork upload occurred.");
-  }catch(e){setError(detail(e.response?.data||e.message));}finally{setBusy(false);}
+ const download=async()=>{
+   if(!job)return;
+   setBusy(true);setError("");
+   try{
+     const {data}=await api.get(ROOT+job.id+"/download/");
+     if(!data.synthetic_only)throw Error("Only synthetic CSV is permitted.");
+     saveDownload(data.filename||"synthetic-cleaned.csv",data.content_base64);
+     setNotice("Synthetic CSV downloaded locally. No external delivery was made.");
+   }catch(e){setError(detail(e.response?.data||e.message))}finally{setBusy(false)}
  };
- return <section className="sw-freelance-drawer-stack" aria-label="Synthetic execution monitor">
-   <div className="sw-upwork-drawer-card">
-    <div style={{display:"flex",alignItems:"center",gap:9}}><Cloud size={19}/><h3>Backend Execution Monitor</h3></div>
-    <p>Private, account-scoped job queue. This test creates only simulated CSV rows and uses a deterministic rules engine; it is <strong>not an AI freelancer</strong> and cannot process client documents or submit to Upwork.</p>
-    <p style={{fontSize:12,color:"var(--uw-accent)"}}>{loading?"Checking backend…":enabled?"Backend connected · synthetic processing only":"Connection unavailable"}</p>
-    <button type="button" className={btn} onClick={refresh} disabled={loading||busy}><RefreshCw size={14}/> Refresh status</button>
+ return <section className="sw-studio-console" aria-label="Freelance synthetic execution console">
+   <header className="sw-studio-toolbar">
+     <div className="sw-studio-toolbar-heading"><span className={"sw-studio-signal "+(connected?"connected":"")}/><span>{loading?"Checking backend":connected?"Founder backend connected":"Backend unavailable"}</span><small>Synthetic only · $0 AI spend</small></div>
+     <button type="button" className="sw-studio-mini-btn" onClick={refresh} disabled={loading||busy}><RefreshCw size={14}/> <span>Refresh</span></button>
+   </header>
+   <nav className="sw-studio-tabs" aria-label="Automation Studio views">
+     <button type="button" className={tab==="jobs"?"active":""} onClick={()=>setTab("jobs")}><TerminalSquare size={16}/> Work queue <span className="sw-studio-count">{jobs.length}</span></button>
+     <button type="button" className={tab==="new"?"active":""} onClick={()=>setTab("new")}><Plus size={16}/> New test</button>
+     <button type="button" className={tab==="demo"?"active":""} onClick={()=>setTab("demo")}><FileSpreadsheet size={16}/> Local CSV lab</button>
+   </nav>
+   {(error||notice)&&<div className={"sw-studio-feedback "+(error?"error":"")} role={error?"alert":"status"}>{error?<AlertTriangle size={15}/>:<CheckCircle2 size={15}/>}<span>{error||notice}</span><button type="button" aria-label="Dismiss message" onClick={()=>{setError("");setNotice("")}}>×</button></div>}
+   <div className="sw-studio-panel" data-mode={tab}>
+     {tab==="jobs"&&<div className="sw-studio-jobs">
+       <aside className="sw-studio-job-list" aria-label="Synthetic job records">
+         <div className="sw-studio-mini-heading"><strong>Recorded tests</strong><span>{pending} queued · {needsReview} reviews</span></div>
+         <div className="sw-studio-list-items">
+           {jobs.length===0?<p className="sw-studio-muted">No synthetic jobs. Use New test to create one.</p>:jobs.map(j=><button type="button" key={j.id} className={"sw-studio-job-item "+(selected===j.id?"selected":"")} onClick={()=>setSelected(j.id)}>
+             <span className="sw-studio-job-item-top"><strong>{j.row_count} rows</strong><span className={"sw-studio-state state-"+j.state.toLowerCase()}>{label(j.state)}</span></span>
+             <span className="sw-studio-muted">{new Date(j.created_at).toLocaleString()} · {j.attempts} attempts</span>
+           </button>)}
+         </div>
+         <button type="button" className="sw-studio-bottom-action" onClick={()=>setTab("new")}><Plus size={14}/> New synthetic test</button>
+       </aside>
+       <section className="sw-studio-detail" aria-label="Selected job details">
+         {job?<><div className="sw-studio-detail-head"><div><small>SELECTED TEST</small><h3>{job.row_count} simulated records</h3><p>Seed {job.seed??42} · Attempt {job.attempts} · No client files</p></div><span className={"sw-studio-state state-"+job.state.toLowerCase()}>{label(job.state)}</span></div>
+           {(job.state==="REVIEW"||job.state==="APPROVED")&&<div className="sw-studio-report">{[["Source rows",job.result?.source_rows],["Cleaned",job.result?.cleaned_rows],["Duplicates",job.result?.duplicates_removed],["Flagged",job.result?.flagged_count]].map(([name,value])=><div key={name}><small>{name}</small><strong>{value??"—"}</strong></div>)}</div>}
+           {job.error_code&&<p className="sw-studio-error-line">{job.error_code}</p>}
+           <div className="sw-studio-workflow"><span className={job.state!=="QUEUED"?"done":""}>1. Queue</span><span className={["REVIEW","APPROVED"].includes(job.state)?"done":""}>2. Execute</span><span className={job.state==="APPROVED"?"done":""}>3. Review</span><span>4. Download</span></div>
+           {job.state==="QUEUED"&&<div className="sw-studio-task-action"><label><input type="checkbox" checked={!!runConsents[job.id]} onChange={e=>setRunConsents(v=>({...v,[job.id]:e.target.checked}))}/> I authorize running this one synthetic test now.</label><button className="sw-studio-primary" type="button" disabled={busy||!connected||!runConsents[job.id]} onClick={run}><Play size={15}/> Run this test</button><small>One-time founder action · background worker disabled</small></div>}
+           {job.state==="REVIEW"&&<div className="sw-studio-task-action"><label><input type="checkbox" checked={!!reviewConsents[job.id]} onChange={e=>setReviewConsents(v=>({...v,[job.id]:e.target.checked}))}/> I reviewed the synthetic report and approve private download.</label><button className="sw-studio-primary" type="button" disabled={busy||!reviewConsents[job.id]} onClick={()=>decide("approve")}><ShieldCheck size={15}/> Approve result</button></div>}
+           {job.state==="APPROVED"&&<div className="sw-studio-task-action"><p className="sw-studio-muted">Approved for private download. No client delivery is connected.</p><button className="sw-studio-primary" type="button" disabled={busy} onClick={download}><Download size={15}/> Download cleaned CSV</button></div>}
+           {job.state==="RUNNING"&&<p className="sw-studio-muted">The server is processing this job. Refresh its status to check the result.</p>}
+           {job.state==="FAILED"&&<p className="sw-studio-muted">The worker failed. Inspect the error and cancel if appropriate.</p>}
+           {job.state==="CANCELLED"&&<p className="sw-studio-muted">This test was cancelled. Create a fresh job to try again.</p>}
+           {["QUEUED","REVIEW","FAILED"].includes(job.state)&&<button className="sw-studio-secondary" type="button" disabled={busy} onClick={()=>decide("cancel")}><XCircle size={14}/> Cancel selected test</button>}
+         </>:<div className="sw-studio-empty"><Cloud size={28}/><strong>No test selected</strong><p>Choose a job to inspect it or create a synthetic sample.</p></div>}
+       </section>
+     </div>}
+     {tab==="new"&&<form className="sw-studio-create" onSubmit={queue}>
+       <div className="sw-studio-create-heading"><SlidersHorizontal size={21}/><div><h3>Queue synthetic work</h3><p>Fabricated data only. No AI providers or Upwork calls.</p></div></div>
+       <div className="sw-studio-create-fields"><label>Simulated rows (1–1,000)<input name="rows" type="number" min="1" max="1000" step="1" required value={rowCount} onChange={formInput}/></label><label>Reproducible seed<input name="seed" type="number" min="0" max="999999" required value={seed} onChange={formInput}/></label></div>
+       <label className="sw-studio-consent"><input type="checkbox" checked={queueConsent} onChange={e=>setQueueConsent(e.target.checked)}/> I authorize creating one simulated-data job. No client files.</label>
+       <div className="sw-studio-actions"><button type="button" className="sw-studio-secondary" onClick={()=>setTab("jobs")}>Back to queue</button><button type="submit" className="sw-studio-primary" disabled={!queueConsent||busy||!connected}><Plus size={15}/> Queue test</button></div>
+     </form>}
+     {tab==="demo"&&<div className="sw-studio-demo"><div className="sw-studio-demo-head"><FileSpreadsheet size={18}/><div><strong>Local CSV practice</strong><p>Browser-only. Use non-confidential example data.</p></div></div><div className="sw-studio-demo-body">{demo||<p className="sw-studio-muted">The CSV practice lab is not available.</p>}</div></div>}
    </div>
-   {error&&<p className="sw-upwork-caution" role="alert"><AlertTriangle size={15}/> {error}</p>}
-   {msg&&<p role="status" className="sw-upwork-drawer-card">{msg}</p>}
-   {enabled&&<form onSubmit={submit} className="sw-upwork-drawer-card">
-      <h3>Queue a synthetic-only test job</h3>
-      <p>No client upload, no paid model, no external messages. Results require your review before download.</p>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-        <label className="sw-upwork-field">Simulated rows (1–1,000)<input type="number" required min="1" max="1000" step="1" value={rowCount} onChange={e=>setRowCount(e.target.value)} /></label>
-        <label className="sw-upwork-field">Reproducible seed<input type="number" required min="0" max="999999" step="1" value={seed} onChange={e=>setSeed(e.target.value)} /></label>
-      </div>
-      <label style={{display:"flex",gap:10,alignItems:"flex-start",fontSize:12,color:"var(--uw-muted)"}}>
-       <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/>
-       I authorize one synthetic-only job; no real customer or Upwork files.
-      </label>
-      <button className={btn+" sw-upwork-action-primary"} disabled={busy||!consent} type="submit"><Play size={15}/> Queue test job</button>
-   </form>}
-   {enabled&&<div className="sw-upwork-drawer-card">
-     <h3>Recorded worker jobs</h3>
-     <p>Queued jobs require an explicitly authorized worker or one-time founder test run. Queued state is not a processing failure.</p>
-     {jobs.length===0?<p>No synthetic tests queued yet.</p>:jobs.map(j=><article key={j.id} style={{padding:"13px 0",borderBottom:"1px solid var(--uw-border)",display:"flex",flexDirection:"column",gap:8}}>
-       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
-        <strong>{j.row_count} simulated records</strong><span style={{fontSize:11,color:"var(--uw-accent)"}}>{stat(j.state)}</span>
-       </div>
-       <p style={{fontSize:11}}>Attempts {j.attempts} · Created {new Date(j.created_at).toLocaleString()} · No paid AI cost</p>
-       {j.error_code&&<p style={{fontSize:12}} role="alert">Worker exception: {j.error_code}</p>}
-       {(j.state==="REVIEW"||j.state==="APPROVED")&&<div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
-        {[["Source rows",j.result?.source_rows],["Cleaned rows",j.result?.cleaned_rows],["Duplicates removed",j.result?.duplicates_removed],["Flagged rows",j.result?.flagged_count]].map(([name,val])=><div key={name} style={{padding:9,border:"1px solid var(--uw-border)",borderRadius:9}}><small>{name}</small><strong style={{display:"block"}}>{val??"—"}</strong></div>)}
-       </div>}
-       {j.state==="QUEUED"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
-         <label style={{fontSize:12,display:"flex",gap:8,alignItems:"center"}}>
-          <input type="checkbox" checked={!!runConsent[j.id]} onChange={e=>setRunConsent(p=>({...p,[j.id]:e.target.checked}))}/>
-          I approve running this one simulated-data test now. No client data or paid AI.
-         </label>
-         <button className={btn+" sw-upwork-action-primary"} type="button" disabled={busy||!runConsent[j.id]} onClick={()=>executeTest(j)}><Play size={14}/> Run this synthetic test now</button>
-         <p style={{fontSize:11}}>Temporary founder-only inline pilot test. A separate background worker remains disabled until its database access is configured.</p>
-       </div>}
-       {j.state==="REVIEW"&&<><label style={{fontSize:12,display:"flex",gap:8,alignItems:"center"}}><input type="checkbox" checked={!!reviewed[j.id]} onChange={e=>setReviewed(p=>({...p,[j.id]:e.target.checked}))}/> I reviewed the simulated report and approve download only.</label><button className={btn} type="button" disabled={busy||!reviewed[j.id]} onClick={()=>decide(j,"approve")}><ShieldCheck size={14}/> Approve synthetic result</button></>}
-       {j.state==="APPROVED"&&<button type="button" className={btn} disabled={busy} onClick={()=>download(j)}><Download size={14}/> Download approved synthetic CSV</button>}
-       {["QUEUED","FAILED","REVIEW"].includes(j.state)&&<button type="button" className={btn} disabled={busy} onClick={()=>decide(j,"cancel")}>Cancel job</button>}
-     </article>)}
-   </div>}
-   <p className="sw-upwork-caution">Execution status here is backed by SyncWorks, not Upwork. This pilot never guarantees that an arbitrary client project can be automated at 90–100% accuracy. Real assignments require explicit client permissions, QA, secure data handling and milestone confirmation.</p>
+   <footer className="sw-studio-footnote"><ShieldCheck size={13}/> Founder-only pilot · Synthetic tests require explicit approval · Upwork sync and paid AI disabled</footer>
  </section>;
 }
