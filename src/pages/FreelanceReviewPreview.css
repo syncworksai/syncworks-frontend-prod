@@ -1,0 +1,25 @@
+/* Visible synthetic review is a compact view inside the existing anchored job detail. */
+.sw-review{display:flex;flex-direction:column;min-height:0;gap:9px;flex:1}
+.sw-review-heading{display:flex;justify-content:space-between;align-items:center;gap:9px}
+.sw-review-heading strong{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--uw-ink)}
+.sw-review-heading p,.sw-review-gate small{font-size:10px;color:var(--uw-muted);line-height:1.35;margin-top:3px}
+.sw-review-close{font-size:11px;color:var(--uw-accent);border:1px solid var(--uw-border);padding:7px 10px;border-radius:8px;background:var(--uw-inset);cursor:pointer}
+.sw-review-message{display:flex;align-items:center;gap:7px;color:var(--uw-muted);font-size:11px}
+.sw-review-error{color:#f8bca6}
+.sw-review-gate{padding:10px 12px;background:color-mix(in srgb,#4aaa89 8%,var(--uw-inset));border:1px solid var(--uw-border);border-radius:10px}
+.sw-review-gate strong{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--uw-ink)}
+.sw-review-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.sw-review-checks>div{font-size:10px;display:flex;align-items:center;gap:6px;border:1px solid var(--uw-border);padding:7px;border-radius:8px;color:var(--uw-ink)}
+.sw-review-checks>div.pass svg{color:#66d4a5;flex:none}.sw-review-checks>div.fail svg{color:#faac84;flex:none}
+.sw-review-pill{white-space:nowrap;color:var(--uw-accent);font-size:10px;border:1px solid var(--uw-border);padding:5px 8px;border-radius:20px}
+.sw-review-table-container{min-height:95px;max-height:230px;overflow:auto;scrollbar-width:thin;overscroll-behavior:contain;border-radius:9px;border:1px solid var(--uw-border)}
+.sw-review-table-container table{width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap}
+.sw-review-table-container th{background:var(--uw-glass);position:sticky;top:0;z-index:1;color:var(--uw-accent);text-transform:capitalize}
+.sw-review-table-container th,.sw-review-table-container td{text-align:left;padding:8px 9px;border-bottom:1px solid var(--uw-border)}
+.sw-review-table-container tr:nth-child(even){background:color-mix(in srgb,var(--uw-accent) 5%,transparent)}
+.sw-review-ellipsis{text-align:center;color:var(--uw-muted)}
+.sw-review-ellipsis td{text-align:center}
+.sw-review-actions{padding-top:2px;display:flex;justify-content:flex-end}
+.sw-review-actions button{width:100%}
+@media(max-height:780px){.sw-review{gap:6px}.sw-review-gate{padding:7px}.sw-review-checks>div{padding:5px}.sw-review-table-container{max-height:150px}.sw-review-table-container td,.sw-review-table-container th{padding:6px}}
+@media(max-width:720px){.sw-review-checks{grid-template-columns:1fr}.sw-review-table-container{min-height:75px;max-height:160px}}
