@@ -201,7 +201,7 @@ export default function PMPropertyDetail() {
 
   return <main className={`min-w-0 space-y-3 overflow-x-hidden px-3 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 ${tab === "correspondence" ? "sarah-property-main" : ""}`}>
     {notice ? <div className="rounded-2xl border border-cyan-400/25 bg-cyan-500/10 p-4 text-sm text-cyan-100">{notice}</div> : null}
-    {tab !== "correspondence" && <PMProperty360Snapshot data={summary} loading={summaryLoading} error={summaryError} property}
+    {tab !== "correspondence" && <PMProperty360Snapshot data={summary} loading={summaryLoading} error={summaryError} property={property}
       reload={load} navigate={nav} openTab={(next) => { setTab(next); nav(`/pm/properties/${propertyId}?tab=${next}`); window.requestAnimationFrame(() => document.getElementById("pm-property-sections")?.scrollIntoView({ behavior: "smooth", block: "start" })); }}
       onDetails={() => setDetailsOpen(true)} />}
     {tab !== "correspondence" && <section className="flex items-center justify-between gap-2 rounded-xl border border-slate-700/70 bg-[#07111f] px-3 py-2">
