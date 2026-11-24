@@ -16,6 +16,7 @@ export default function FreelanceExecutionControl(){
  const [enabled,setEnabled]=useState(false),[loading,setLoading]=useState(true),[jobs,setJobs]=useState([]),[msg,setMsg]=useState(""),[error,setError]=useState(""),[busy,setBusy]=useState(false);
  const [rowCount,setRowCount]=useState(100),[seed,setSeed]=useState(42),[consent,setConsent]=useState(false);
  const [reviewed,setReviewed]=useState({});
+ const [runConsent,setRunConsent]=useState({});
  const refresh=useCallback(async()=>{
   setLoading(true);setError("");
   try {
@@ -36,6 +37,18 @@ export default function FreelanceExecutionControl(){
    setMsg("Synthetic-only job queued. Execution requires the separately enabled worker; this request did not upload any client files or call paid AI.");
    setConsent(false);await refresh();
   }catch(e){setError(detail(e.response?.data));}finally{setBusy(false);}
+ };
+ const executeTest=async job=>{
+  if(!runConsent[job.id])return;
+  setBusy(true);setMsg("");setError("");
+  try{
+    const {data}=await api.post(ROOT+job.id+"/run-test/",{consent_synthetic_only:true});
+    setMsg(data?.job?.state==="REVIEW"?"Synthetic job executed. Review the report below before approving the download.":"Test request completed; inspect the updated job status.");
+    setRunConsent(p=>({...p,[job.id]:false}));
+    await refresh();
+  }catch(e){
+    setError(e.response?.status===403?"This one-time test executor is currently disabled or founder access was denied.":detail(e.response?.data||e.message));
+  }finally{setBusy(false);}
  };
  const decide=async(job,decision)=>{
   if(decision==="approve"&&!reviewed[job.id])return;
@@ -79,7 +92,7 @@ export default function FreelanceExecutionControl(){
    </form>}
    {enabled&&<div className="sw-upwork-drawer-card">
      <h3>Recorded worker jobs</h3>
-     <p>Jobs do not begin until an operator enables a separate worker deployment. Queued state is not a processing failure.</p>
+     <p>Queued jobs require an explicitly authorized worker or one-time founder test run. Queued state is not a processing failure.</p>
      {jobs.length===0?<p>No synthetic tests queued yet.</p>:jobs.map(j=><article key={j.id} style={{padding:"13px 0",borderBottom:"1px solid var(--uw-border)",display:"flex",flexDirection:"column",gap:8}}>
        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
         <strong>{j.row_count} simulated records</strong><span style={{fontSize:11,color:"var(--uw-accent)"}}>{stat(j.state)}</span>
@@ -88,6 +101,14 @@ export default function FreelanceExecutionControl(){
        {j.error_code&&<p style={{fontSize:12}} role="alert">Worker exception: {j.error_code}</p>}
        {(j.state==="REVIEW"||j.state==="APPROVED")&&<div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
         {[["Source rows",j.result?.source_rows],["Cleaned rows",j.result?.cleaned_rows],["Duplicates removed",j.result?.duplicates_removed],["Flagged rows",j.result?.flagged_count]].map(([name,val])=><div key={name} style={{padding:9,border:"1px solid var(--uw-border)",borderRadius:9}}><small>{name}</small><strong style={{display:"block"}}>{val??"—"}</strong></div>)}
+       </div>}
+       {j.state==="QUEUED"&&<div style={{display:"flex",flexDirection:"column",gap:8}}>
+         <label style={{fontSize:12,display:"flex",gap:8,alignItems:"center"}}>
+          <input type="checkbox" checked={!!runConsent[j.id]} onChange={e=>setRunConsent(p=>({...p,[j.id]:e.target.checked}))}/>
+          I approve running this one simulated-data test now. No client data or paid AI.
+         </label>
+         <button className={btn+" sw-upwork-action-primary"} type="button" disabled={busy||!runConsent[j.id]} onClick={()=>executeTest(j)}><Play size={14}/> Run this synthetic test now</button>
+         <p style={{fontSize:11}}>Temporary founder-only inline pilot test. A separate background worker remains disabled until its database access is configured.</p>
        </div>}
        {j.state==="REVIEW"&&<><label style={{fontSize:12,display:"flex",gap:8,alignItems:"center"}}><input type="checkbox" checked={!!reviewed[j.id]} onChange={e=>setReviewed(p=>({...p,[j.id]:e.target.checked}))}/> I reviewed the simulated report and approve download only.</label><button className={btn} type="button" disabled={busy||!reviewed[j.id]} onClick={()=>decide(j,"approve")}><ShieldCheck size={14}/> Approve synthetic result</button></>}
        {j.state==="APPROVED"&&<button type="button" className={btn} disabled={busy} onClick={()=>download(j)}><Download size={14}/> Download approved synthetic CSV</button>}
