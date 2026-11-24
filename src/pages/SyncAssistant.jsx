@@ -517,7 +517,7 @@ export default function SyncAssistant() {
           <div><p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-200">SYNC ASSIST</p><h1 className="text-lg font-black">Your command center</h1></div>
           <button type="button" onClick={() => setMobilePanel("settings")} aria-label="SYNC settings" className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-500/10"><Settings2 className="h-5 w-5"/></button>
         </div>
-        {pilotAccess && <div className="flex flex-wrap justify-end gap-2">
+        {pilotAccess && <div className="sw-sync-top-actions flex flex-wrap justify-end gap-2">
           <button type="button" onClick={() => navigate("/sync/assist")} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-cyan-400/30 bg-slate-950/70 px-3 py-2 text-xs font-bold text-cyan-100">Workday & results <ChevronRight className="h-4 w-4"/></button>
           <SyncAssistTeamDrawer onTeamChange={setTeamEmployees}/>
         </div>}
@@ -753,11 +753,12 @@ export default function SyncAssistant() {
           ) : null}
         </section>
 
-        <div className="sw-sync-utility-controls grid grid-cols-3 gap-2">
+        <nav className="sw-sync-utility-controls grid grid-cols-3 gap-2" aria-label="SYNC command tools">
           {[["shortcuts", "Shortcuts", Sparkles], ["tools", "Tools", Bot], ["settings", "Settings", Settings2]].map(([id, label, Icon]) => (
             <button key={id} type="button" onClick={() => setMobilePanel(id)} className="flex min-h-12 flex-row items-center justify-center gap-2 rounded-xl border border-cyan-400/25 bg-slate-950/70 text-xs font-black text-cyan-100"><Icon className="h-4 w-4"/>{label}</button>
           ))}
-        </div>
+          {pilotAccess&&<><button type="button" className="sw-sync-desktop-link" onClick={()=>navigate("/sync/assist")}><CalendarDays size={16}/> Workday</button><button type="button" className="sw-sync-desktop-link" onClick={()=>navigate("/sync/assist/employees")}><Settings2 size={16}/> AI team</button></>}
+        </nav>
         <div className={mobilePanel === "shortcuts" ? "fixed inset-0 z-[250] flex items-end justify-end bg-black/85 px-2 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(.75rem,env(safe-area-inset-bottom))] backdrop-blur-md" : "hidden"}>
           <div role="dialog" aria-modal={mobilePanel === "shortcuts" ? "true" : undefined} aria-label="SYNC shortcuts" className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto overscroll-contain rounded-2xl bg-[#081326] lg:h-full lg:max-h-full lg:rounded-l-2xl">
             <button type="button" onClick={() => setMobilePanel(null)} className="sticky top-0 z-10 flex min-h-12 w-full items-center justify-between border-b border-cyan-400/20 bg-[#081326] px-4 text-sm font-black text-white ">Voice shortcuts <X className="h-5 w-5"/></button>
