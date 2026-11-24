@@ -280,40 +280,10 @@ export default function PMPropertyDetail() {
         </article>)}</div>}
       </Panel>
     </div> : null}
-    {tab === "correspondence" ? <div className="space-y-3">
-      <SarahPropertyActionDesk property={property} reports={correspondenceReports} workOrders={workOrders} onOpenTab={setTab} onFindMail={()=>nav("/sync/assist/email")}/>
-      <Panel title="Sarah · Correspondence & Briefings"
-        subtitle="Property-specific evidence, activity timeline and handoff to Victoria. Reviewed records only."
-        action={<div className="flex flex-wrap gap-2"><Button onClick={()=>nav("/sync/assist/email")}>Find correspondence</Button><Button tone="cyan" onClick={()=>nav("/sync/assist/daily")}>Victoria's briefing</Button></div>}>
-        {reportsError&&<p role="alert" className="text-xs text-amber-200">{reportsError}</p>}
-        <div className="grid gap-2 sm:grid-cols-3">
-          <div className="rounded-lg border border-white/15 p-3"><div className="text-xl font-black">{correspondenceReports.length}</div><div className="text-xs text-slate-400">Reviewed reports</div></div>
-          <div className="rounded-lg border border-white/15 p-3"><div className="text-xl font-black">{new Set(correspondenceReports.flatMap(r=>(r.references||[]).map(m=>m.message_id))).size}</div><div className="text-xs text-slate-400">Unique email references</div></div>
-          <div className="rounded-lg border border-white/15 p-3"><div className="text-sm font-black">Manual review</div><div className="text-xs text-slate-400">Evidence verification status</div></div>
-        </div>
-        <p className="mt-3 text-xs text-amber-200">No rent balance, payment receipt, inspection, lease renewal or work-order completion is confirmed by an email summary. Open the linked source and reconcile against property records.</p>
-      </Panel>
-      <Panel title="Correspondence Timeline" subtitle="Newest first · duplicates excluded · open original source for context">
-        {(() => {
-          const unique=new Map();
-          correspondenceReports.forEach(r=>(r.references||[]).forEach(item=>{if(item.message_id&&!unique.has(item.message_id))unique.set(item.message_id,item)}));
-          const sorted=[...unique.values()].sort((a,b)=>String(b.received_at||"").localeCompare(String(a.received_at||"")));
-          return sorted.length?<div className="max-h-[55dvh] space-y-2 overflow-y-auto overscroll-contain">
-            {sorted.map(m=><article key={m.message_id} className="rounded-lg border border-white/15 bg-black/10 px-3 py-2">
-              <div className="flex flex-wrap items-center justify-between gap-2"><strong className="text-xs">{m.subject||"Untitled email"}</strong><span className="text-[11px] text-slate-300">{m.received_at?.slice(0,10)}</span></div>
-              <p className="mt-1 text-[11px] text-slate-300">{m.sender} · {m.category||"Review"}</p>
-              <p className="mt-1 text-[11px] text-amber-200">Source correspondence only — requires verification</p>
-              {!!m.attachments?.length&&<details className="mt-2 rounded-lg border border-white/10 px-2 py-1">
-                <summary className="cursor-pointer text-[11px]">{m.attachments.length} attachment reference(s) · metadata only</summary>
-                <div className="space-y-1 pt-1">{m.attachments.map((a,i)=><div key={i} className="text-[11px] text-slate-300">{a.name} · {a.content_type||"unknown type"} · Not downloaded or verified</div>)}</div>
-              </details>}
-              {m.outlook_url&&<a href={m.outlook_url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-xs underline">Open original email</a>}
-            </article>)}
-          </div>:<p className="text-xs text-slate-400">No reviewed correspondence attached. Open Sarah's historical search, link this property, and select relevant emails to attach.</p>;
-        })()}
-      </Panel>
+    {tab === "correspondence" ? <div className="sarah-property-screen">
+      <SarahPropertyActionDesk property={property} reports={correspondenceReports} workOrders={workOrders} reportsError={reportsError} onOpenTab={setTab} onFindMail={()=>nav("/sync/assist/email")} onVictoria={()=>nav("/sync/assist/daily")}/>
     </div> : null}
-    {tab === "documents" ? <PMPropertyPaperworkDock embeddedPropertyId={propertyId} /> : null}
+        {tab === "documents" ? <PMPropertyPaperworkDock embeddedPropertyId={propertyId} /> : null}
     {tab === "reports" ? <Panel title="Owner & Investor Reporting" subtitle="Property health, lifecycle, work history, projects, costs, and supporting documents."><div className="grid gap-3 sm:grid-cols-2"><Button onClick={() => nav(`/pm/settings?view=messages&property=${propertyId}`)}>Owner Communications</Button><Button onClick={() => setTab("documents")}>Operating Statements & Documents</Button><Button onClick={() => nav(`/pm/settings?view=make-ready&property=${propertyId}`)}>Make-Ready Report</Button><Button onClick={() => setTab("overview")}>Lifecycle & Checklists</Button></div></Panel> : null}
 
     <PMPropertyDetailsDrawer open={detailsOpen} onClose={() => setDetailsOpen(false)} workspace={workspace} property={property} units={units} onChanged={() => setNotice("Property profile updated.")} />
