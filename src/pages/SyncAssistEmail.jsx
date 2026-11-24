@@ -15,6 +15,7 @@ export default function SyncAssistEmail() {
   const {user}=useAuth();
   const [appearance]=useWorkspaceAppearance();
   const [setupOpen,setSetupOpen]=useState(false);
+  const [mailSettingsOpen,setMailSettingsOpen]=useState(false);
   const pilot=String(user?.email||"").trim().toLowerCase()==="jacoblord7@outlook.com";
   const [status,setStatus]=useState(null),[messages,setMessages]=useState([]),[busy,setBusy]=useState(false);
   const [error,setError]=useState(""),[notice,setNotice]=useState(""),[selected,setSelected]=useState(null);
@@ -132,10 +133,16 @@ export default function SyncAssistEmail() {
       <button type="button" onClick={()=>{setMobilePanel("preferences");setPrefsOpen(true)}} aria-pressed={mobilePanel==="preferences"}>Writing</button>
       <button type="button" onClick={()=>compose(null)} aria-pressed={mobilePanel==="compose"}>Compose</button>
       {brief&&<button type="button" onClick={()=>setMobilePanel("brief")} aria-pressed={mobilePanel==="brief"}>Brief</button>}
+      <button type="button" onClick={()=>setMailSettingsOpen(true)} className="sw-mail-settings-trigger ml-auto" aria-haspopup="dialog">⚙ Mail settings</button>
     </nav>
     <section className="sw-mail-connection sw-assist-panel mt-3 rounded-2xl border p-4">
       <div className="mb-3 flex items-center justify-between gap-2"><h2 className="text-sm font-bold">Mail accounts and permissions</h2><span className="text-[11px] text-slate-300">Microsoft mailbox connections</span></div>
       <SyncAssistMultiMailboxes/>
+    </section>
+    {mailSettingsOpen&&<div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/75 p-3" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setMailSettingsOpen(false)}}>
+      <section role="dialog" aria-modal="true" aria-label="Outlook mail settings" className="sw-mail-settings-dialog w-full max-w-xl overflow-hidden rounded-2xl border border-white/25 p-4 shadow-2xl">
+        <div className="flex items-center justify-between gap-3"><h2 className="text-base font-bold">Mail connection settings</h2><button type="button" onClick={()=>setMailSettingsOpen(false)} className="rounded-lg border border-white/20 px-3 py-2 text-xs">✕ Close</button></div>
+        <div className="mt-3 max-h-[min(70dvh,540px)] space-y-3 overflow-y-auto overscroll-contain">
       <div className="mt-3 rounded-xl border border-white/15 bg-black/10 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2"><div><strong className="text-xs">Primary Outlook account</strong><p className="text-[11px] text-slate-300">jacoblord7@outlook.com · Email drafts and approvals</p></div><span className="text-[10px] text-cyan-200">{status?.connected?"Connected":status?.configured?"Ready to connect":"Setup required"}</span></div>
         <div className="mt-2 flex flex-wrap gap-2">{status?.configured&&!status?.connected&&<button disabled={busy} onClick={connect} className="rounded-lg border border-cyan-300/40 bg-cyan-400/15 px-3 py-2 text-xs">Connect primary Outlook</button>}
@@ -152,7 +159,10 @@ export default function SyncAssistEmail() {
           <li>Connect each mailbox independently; Sarah receives only property-approved data after role-specific delegation is implemented.</li>
         </ol>}
       </div>
-    </section>
+
+        </div>
+      </section>
+    </div>}
     {briefOpen && brief && <section className="sw-mail-brief sw-assist-panel mt-3 rounded-2xl border p-4">
       <div className="flex items-center justify-between"><h2 className="font-black">Inbox Brief</h2><button onClick={()=>setBriefOpen(false)} className="min-h-10 rounded-lg border border-slate-600 px-3 text-xs">Close</button></div>
       <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-200">{brief.summary}</p>
