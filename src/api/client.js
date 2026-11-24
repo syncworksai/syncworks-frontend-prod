@@ -325,6 +325,7 @@ function shouldExcludeBusinessContext(config) {
     isTenantRequest(config) ||
     isInvestorRequest(config) ||
     isMeScopedRequest(config) ||
+    normalizedPath(config).startsWith("/sync-ai/freelance/pilot/") ||
     isUserScopedAuthRequest(config) ||
     isCustomerServiceRequestCreate(config)
   );
