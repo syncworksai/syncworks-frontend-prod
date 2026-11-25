@@ -5,6 +5,7 @@ import api from "../api/client";
 import {JarvisAvatar} from "../components/sync/JarvisAvatar";
 import "./SyncAssistChiefOfStaff.css";
 import {useAuth} from "../auth/AuthContext";
+import {useWorkspaceAppearance} from "../components/customer/CustomerWorkspace";
 
 const BASE="/sync-ai/assist/pilot/chief/";
 const THEMES = {
@@ -21,10 +22,8 @@ export default function SyncAssistChiefOfStaff(){
   const [error,setError]=useState(""),[notice,setNotice]=useState("");
   const [expanded,setExpanded]=useState("today"),[adding,setAdding]=useState(false);
   const [activePanel,setActivePanel]=useState("today");
-  const [theme,setTheme]=useState(()=>{
-    try {const saved=window.localStorage.getItem("sw-assist-chief-theme");return THEMES[saved]?saved:"future";}catch{return "future";}
-  });
-  const [themeOpen,setThemeOpen]=useState(false);
+  const [appearance] = useWorkspaceAppearance();
+  const theme = appearance.theme === "light" ? "daylight" : appearance.theme === "classic" ? "executive" : "future";
   const avatarId = "executive-female"; // Sydney is permanently assigned to Chief of Staff.
   const [avatarTalking,setAvatarTalking]=useState(false);
   const voiceContext=React.useRef(null);
@@ -99,17 +98,16 @@ export default function SyncAssistChiefOfStaff(){
   const isLight=theme==="daylight";
   const textColor=isLight?"text-slate-900":"text-white";
   const subText=isLight?"text-slate-700":"text-slate-300";
-  function chooseTheme(next) {
-    if(!THEMES[next])return;
-    setTheme(next);setThemeOpen(false);
-    try{window.localStorage.setItem("sw-assist-chief-theme",next);}catch{}
-  }
+
   const [form,setForm]=useState(EMPTY),[resolution,setResolution]=useState({}),[showResolved,setShowResolved]=useState(false);
   async function refresh(){
     setBusy(true);setError("");
     try{
-      const [b,c]=await Promise.all([api.get(BASE+"brief/",{timeout:20000}),api.get(BASE+"cases/",{timeout:20000})]);
-      setBrief(b.data);setCases(c.data.cases||[]);
+      const [b,c]=await Promise.allSettled([api.get(BASE+"brief/",{timeout:60000}),api.get(BASE+"cases/",{timeout:60000})]);
+      if(b.status==="fulfilled")setBrief(b.value.data);
+      if(c.status==="fulfilled")setCases(c.value.data.cases||[]);
+      const failed=[["Briefing",b],["Case register",c]].filter(([,r])=>r.status==="rejected");
+      if(failed.length)setError(failed.map(([label,r])=>`${label}: ${r.reason?.response?.status ? `HTTP ${r.reason.response.status}` : r.reason?.code==="ECONNABORTED" ? "request timed out" : "connection unavailable"}`).join(" · ") + ". Tap Refresh to retry.");
     }catch(e){setError(e?.response?.data?.detail||"Unable to load Chief of Staff. Try again.");}
     finally{setBusy(false);}
   }
@@ -135,15 +133,8 @@ export default function SyncAssistChiefOfStaff(){
     <div className="sw-chief-layout relative z-10 mx-auto w-full max-w-6xl">
       <div className="sw-chief-theme-row mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className={`text-[10px] font-black uppercase tracking-[.2em] ${isLight?"text-slate-700":design.accent}`}>Your workspace · {design.label}</div>
-        <button type="button" onClick={()=>setThemeOpen(v=>!v)} aria-expanded={themeOpen} className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 text-xs font-bold backdrop-blur-xl ${design.border} ${design.panel}`}><Palette size={17}/> Change theme</button>
       </div>
-      {themeOpen&&<div className={`mb-4 grid grid-cols-1 gap-2 rounded-2xl border p-3 backdrop-blur-xl sm:grid-cols-3 ${design.border} ${design.panel}`}>
-        {Object.entries(THEMES).map(([key,value])=><button key={key} type="button" onClick={()=>chooseTheme(key)} aria-pressed={theme===key} className={`sw-chief-theme-button overflow-hidden rounded-xl border text-left transition focus:outline-none focus:ring-2 focus:ring-sky-400 ${theme===key?"border-amber-400":"border-slate-500/35"}`}>
-          <img src={value.image} alt="" loading="lazy" className="h-20 w-full object-cover"/>
-          <span className={`block px-3 py-2 text-xs font-bold ${isLight?"bg-white text-slate-900":"bg-slate-950 text-white"}`}>{value.label}{theme===key?" · Selected":""}</span>
-        </button>)}
-        <p className={`sm:col-span-3 text-xs ${subText}`}>Saved on this device. Only the appearance changes; SYNC Assist data and permissions and actions stay the same.</p>
-      </div>}
+
     <div className="sw-chief-actions mb-4 flex items-center justify-between gap-2">
       <button type="button" onClick={()=>navigate("/sync/assist/daily")} className="flex min-h-11 items-center gap-2 rounded-xl border border-white/20 px-3 text-sm"><ArrowLeft size={17}/> Daily Briefing</button>
       <button type="button" onClick={refresh} disabled={busy||!authorized} className="flex min-h-11 items-center gap-2 rounded-xl border border-cyan-400/30 px-3 text-sm"><RefreshCw size={16}/> Refresh</button>

@@ -128,7 +128,7 @@ export default function MobileCustomerCommandCenter({ name, brief, attentionCoun
         <button type="button" onClick={() => open("/customer/new-request")}><Plus size={17}/> New Request</button>
         <button type="button" onClick={() => onOpenWorkspace("apps")}><Grid2X2 size={17}/> Apps</button>
       </div>
-      <div className="mt-2"><AutomationDiscoverCTA compact /></div>
+      {!founderPilot && <div className="mt-2"><AutomationDiscoverCTA compact /></div>}
       {activePanel && createPortal(<div className="sw-mobile-sheet-backdrop sw-mobile-attention-top-backdrop" onClick={() => setActivePanel(null)} role="presentation">
         <div className="sw-mobile-sheet sw-mobile-attention-top-sheet" role="dialog" aria-modal="true" aria-label={activePanel === "archive" ? "Attention archive" : activePanel === "day" ? "Today's agenda" : "Needs attention"} onClick={e => e.stopPropagation()}>
           <div className="sw-mobile-sheet-head sw-mobile-attention-sticky-head">
