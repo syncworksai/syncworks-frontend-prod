@@ -155,6 +155,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const weather=weatherOverride||brief?.executive_context?.weather||{};
   const forecast=weather.current_period||{};
   const dailyWeather=weather.daily_summary||{};
+  const severeAlerts=(Array.isArray(weather.alerts)?weather.alerts:[]).filter(a=>/severe|extreme/i.test(a.severity||"")||/tornado|severe thunderstorm|flash flood|hurricane|tropical storm|winter storm|blizzard|ice storm/i.test(a.event||a.headline||a.title||""));
   const tempLabel=v=>v==null?"Unavailable":Math.round(v)+"°F";
   const rainLabel=dailyWeather.rain==null?"Unavailable":Math.round(dailyWeather.rain)+"%";
   const weatherAdvice=()=>{
@@ -203,6 +204,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     if(support?.available)paragraphs.push(support.open||support.in_progress?"Rebecca has "+support.open+" open support requests and "+support.in_progress+" in progress. Let's review anything needing escalation.":"Rebecca has no open or in-progress support tickets.");
     const pending=brief.counts?.ai_assignments_pending;
     if(pending)paragraphs.push("There "+(pending===1?"is one employee assignment":"are "+pending+" employee assignments")+" awaiting your review.");
+    if(severeAlerts.length)paragraphs.push("Be weather aware today. "+severeAlerts.map(a=>clean(a.event||a.headline||a.title)).filter(Boolean).join(". ")+". Check the weather workspace for official details before heading out.");
     if(!weather.available)paragraphs.push("Local weather is not available yet; use the weather connection control when convenient.");
     paragraphs.push("My recommendation is to protect your health routine, address verified urgent obligations, and reserve focused time for the next SyncWorks milestone. Review the detailed records before approving any action.");
     return paragraphs;
@@ -214,9 +216,9 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
       const data=await getLiveWeather(location);const current=data?.current||{};
       if(current.temp_f==null&&!current.description&&!current.condition)throw Error("No current weather returned");
       const tz=data?.location?.timezone;
-      const localDate=d=>{try{return new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit"}).format(d);}catch{return null;}};
+      const localDate=d=>{try{const parts=Object.fromEntries(new Intl.DateTimeFormat("en-US",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(d).map(p=>[p.type,p.value]));return `${parts.year}-${parts.month}-${parts.day}`;}catch{return null;}};
       const day=(Array.isArray(data.daily)?data.daily:[]).find(row=>{
-        const stamp=row.timestamp??row.dt;
+        const stamp=row.timestamp??row.dt??row.date;
         if(typeof row.date==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(row.date))return row.date===localDate(new Date());
         if(stamp==null)return false;
         const d=new Date(typeof stamp==="number"&&stamp<1e12?stamp*1000:stamp);
@@ -225,7 +227,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
       const numeric=v=>v==null||v===""||!Number.isFinite(Number(v))?null:Number(v);
       const rawRain=numeric(day.precip_probability);
       const pop=numeric(day.pop);
-      setWeatherOverride({available:true,daily_summary:{high:numeric(day.high_f??day.temp_high_f??day.max_temp_f??day.temp?.max??day.temperature?.max),low:numeric(day.low_f??day.temp_low_f??day.min_temp_f??day.temp?.min??day.temperature?.min),rain:rawRain!=null&&rawRain>=0&&rawRain<=100?rawRain:pop!=null&&pop>=0&&pop<=1?pop*100:null},current_period:{temperature:numeric(current.temp_f),temperature_unit:"F",short_forecast:current.description||current.condition||"Current conditions"}});
+      setWeatherOverride({available:true,alerts:Array.isArray(data.alerts)?data.alerts:[],daily_summary:{high:numeric(day.high_f??day.temp_high_f??day.max_temp_f??day.temp?.max??day.temperature?.max),low:numeric(day.low_f??day.temp_low_f??day.min_temp_f??day.temp?.min??day.temperature?.min),rain:rawRain!=null&&rawRain>=0&&rawRain<=100?rawRain:pop!=null&&pop>=0&&pop<=1?pop*100:null},current_period:{temperature:numeric(current.temp_f),temperature_unit:"F",short_forecast:current.description||current.condition||"Current conditions"}});
     }catch(e){setWeatherError("Local weather unavailable. Check location permission and try again.");}finally{setWeatherLoading(false);}
   }
   useEffect(()=>{if(selected==="executive-female"&&panel==="brief"&&!weatherOverride)void loadWeather();},[selected,panel]);
@@ -371,7 +373,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     return ()=>{alive=false;window.clearInterval(interval);};
   },[permitted,selected,employees,workRefresh]);
   useEffect(() => {
-    if (!selected) return;
+    if (!selected || !visible) return;
     const onEscape = (event) => { if (event.key === "Escape") {if(placement==="launcher")onDismiss?.();else setSelected(null);} };
     window.addEventListener("keydown", onEscape);
     const previous = document.body.style.overflow;
@@ -474,7 +476,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           <button type="button" className="sw-ai-conversation-close" aria-label="Close employee conversation" onClick={()=>placement==="launcher"?onDismiss?.():setSelected(null)}><X size={19}/></button>
         </header>
         <div className="sw-ai-conversation-toolbar">
-          <button type="button" onClick={()=>{setSelected(null);nav("/sync/assist/assignments?new=1&role="+encodeURIComponent(active.roleKey||"CHIEF_OF_STAFF"))}}><BriefcaseBusiness size={15}/> Assign work</button>
+          <button type="button" onClick={()=>goAction("/sync/assist/assignments?new=1&role="+encodeURIComponent(active.roleKey||"CHIEF_OF_STAFF"))}><BriefcaseBusiness size={15}/> Assign work</button>
           <button type="button" onClick={()=>{if(active.id==="executive-female"){stopVoice();setScheduleOpen(false);setReadBrief(false);setReviewOpen(false);setShowPlan(false);setShowArchive(false);setTodoOpen(false);setPanel(v=>v==="brief"?"chat":"brief");}else{setSelected(null);openEmployee(active);}}}><Maximize2 size={15}/> {active.id==="executive-female"?(panel==="brief"?"Back to chat":"Daily briefing"):"Employee workspace"}</button>
         </div>
         <div className="sw-ai-work-summary">
@@ -483,7 +485,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           </div>
           {currentWork?.status==="error"?<p role="status">Assigned work unavailable. {currentWork.message}</p>:
            currentWork?.status==="ready"?(currentWork.data.assignments?.length?
-           <div className="sw-ai-work-summary-items">{currentWork.data.assignments.slice(0,3).map(item=><button type="button" key={item.assignment_id} onClick={()=>{setSelected(null);nav("/sync/assist/assignments")}}>
+           <div className="sw-ai-work-summary-items">{currentWork.data.assignments.slice(0,3).map(item=><button type="button" key={item.assignment_id} onClick={()=>goAction("/sync/assist/assignments")}>
              <span>{item.kind}{item.ticket_id?` #${item.ticket_id}`:""} · {item.state?.replaceAll("_"," ")}</span>
              <strong>{item.description}</strong>
              {item.status_changed_since_review&&<em>Ticket status changed — review again</em>}
@@ -512,7 +514,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           {showArchive&&<div className="sw-ai-brief-story">{archiveBusy?<p>Loading archive…</p>:archiveRows.length?archiveRows.map(row=><details key={row.id}><summary>{new Date(row.saved_at).toLocaleString()}</summary>{String(row.text||"").split("\n\n").map((part,i)=><p key={i}>{part}</p>)}</details>):<p>No saved briefings.</p>}</div>}
           {voiceNotice&&<p role="status">{voiceNotice}</p>}
           {briefError?<p role="alert">{briefError}</p>:!brief?<p><LoaderCircle size={15} className="animate-spin"/> Loading executive briefing…</p>:<>
-          <div className="sw-ai-brief-context"><strong>{brief.date} · {brief.executive_context?.local_time?new Date(brief.executive_context.local_time).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"Time unavailable"}</strong><p>{weather.available?[forecast.temperature!=null?forecast.temperature+"°"+(forecast.temperature_unit||"F"):"",forecast.short_forecast].filter(Boolean).join(" · "):"Local weather not connected"}</p>{weather.available&&<><p>High {tempLabel(dailyWeather.high)} · Low {tempLabel(dailyWeather.low)} · Rain {rainLabel}</p>{weatherAdvice()&&<p>{weatherAdvice()}</p>}</>}{!weather.available&&<button type="button" disabled={weatherLoading} onClick={loadWeather}>{weatherLoading?"Getting weather…":"Use my location for weather"}</button>}{weatherError&&<p role="status">{weatherError}</p>}</div>
+          <div className="sw-ai-brief-context"><strong>{brief.date} · {brief.executive_context?.local_time?new Date(brief.executive_context.local_time).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"Time unavailable"}</strong><p>{weather.available?[forecast.temperature!=null?forecast.temperature+"°"+(forecast.temperature_unit||"F"):"",forecast.short_forecast].filter(Boolean).join(" · "):"Local weather not connected"}</p>{weather.available&&<><p>High {tempLabel(dailyWeather.high)} · Low {tempLabel(dailyWeather.low)} · Rain {rainLabel}</p>{weatherAdvice()&&<p>{weatherAdvice()}</p>}{severeAlerts.length>0&&<div role="alert"><strong>Be weather aware</strong>{severeAlerts.map((a,i)=><p key={i}>{a.event||a.headline||a.title}</p>)}<button type="button" onClick={()=>goAction("/customer/weather")}>View weather alerts</button></div>}</>}{!weather.available&&<button type="button" disabled={weatherLoading} onClick={loadWeather}>{weatherLoading?"Getting weather…":"Use my location for weather"}</button>}{weatherError&&<p role="status">{weatherError}</p>}</div>
 
           {showPlan&&<div className="sw-ai-brief-story"><div className="sw-ai-conversation-toolbar">{[["today","Today"],["week","Week"],["month","Month"]].map(([key,label])=><button key={key} type="button" aria-pressed={outlookRange===key} onClick={()=>setOutlookRange(key)}>{label}</button>)}</div><h3>Recorded schedule</h3>{(brief.schedule_outlook||[]).filter(e=>{const now=new Date(brief.generated_at),start=new Date(e.start_at);if(outlookRange==="today")return start.toDateString()===now.toDateString();const cutoff=new Date(now);cutoff.setDate(cutoff.getDate()+(outlookRange==="week"?7:30));return start>=now&&start<=cutoff;}).map(e=><p key={e.id}><strong>{e.title}</strong><br/>{new Date(e.start_at).toLocaleString()} · {e.status==="ENDED"?"Window ended":e.status==="IN_PROGRESS"?"In progress":e.minutes_until>=0&&e.minutes_until<=60?"Starts in "+e.minutes_until+" minutes":"Upcoming"}</p>)}<button type="button" onClick={()=>goAction("/calendar")}>Open calendar</button><h3>Active projects</h3>{(brief.project_progress||[]).filter(p=>p.status==="ACTIVE").map(p=><div key={p.id}><strong>{p.title}</strong><p>{p.done} of {p.total} recorded tasks completed</p>{p.next_tasks.map(t=><p key={t.id}>{t.title}</p>)}</div>)}<button type="button" onClick={()=>goAction("/customer/projects")}>Open projects & complete tasks</button></div>}
           {readBrief&&<><article className="sw-ai-brief-story">{narrative.map((paragraph,n)=><p key={n}>{paragraph}</p>)}</article><section className="sw-ai-brief-story"><h3>Recommended actions</h3>{suggestedActions.map(a=><div className="sw-ai-action-row" key={a.key}><span>{a.title}</span><button type="button" onClick={()=>goAction(a.url)}>Go to</button><button type="button" disabled={todoBusy} onClick={()=>saveAction(a)}>Add to list</button></div>)}</section>
