@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { BriefcaseBusiness, ChevronRight, Grip, MessageCircle, RefreshCw, RotateCcw, Users, Send, X, Sparkles, Maximize2 } from "lucide-react";
+import { BriefcaseBusiness, ChevronRight, Grip, MessageCircle, RefreshCw, RotateCcw, Users, Send, X, Sparkles, Maximize2, LoaderCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
+import {getLiveWeather} from "../../api/liveContext";
+import {getBrowserCurrentLocation} from "../../api/locationContext";
 import { AVATARS, getAvatarPhotoForUser } from "../sync/JarvisAvatar";
 import {getPilotAgentsForUser} from "../sync/pilotAgentRoster";
 import "./OfficeAgentDockV27.css";
@@ -23,9 +25,39 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const [briefError,setBriefError]=useState("");
   const [voiceNotice,setVoiceNotice]=useState("");
   const [speaking,setSpeaking]=useState(false);
+  const [voiceLoading,setVoiceLoading]=useState(false);
+  const [audioReady,setAudioReady]=useState(false);
+  const [weatherOverride,setWeatherOverride]=useState(null);
+  const [weatherLoading,setWeatherLoading]=useState(false);
+  const [weatherError,setWeatherError]=useState("");
+  const feedRef=useRef(null);
+  const weather=weatherOverride||brief?.executive_context?.weather||{};
+  const forecast=weather.current_period||{};
+  const sections=brief?.sections||[];
+  const narrative=brief?[
+    "Hello. Sydney here, your Chief of Staff. Let's review what needs your attention today.",
+    weather.available?("For your local weather, "+(forecast.short_forecast||"a forecast is available")+(forecast.temperature!=null?", with a temperature of "+forecast.temperature+" degrees "+(forecast.temperature_unit||"Fahrenheit"):"")+"."):"I don't have a verified local forecast yet. You can enable location in this briefing.",
+    ...sections.filter(s=>s.key!=="weather" && !(/^0 recorded assignments/.test(s.headline||""))).map(s=>{
+      const headline=String(s.headline||"No summary available").replace(/[.]+$/,"");
+      const items=(s.items||[]).slice(0,2).map(i=>[i.title,i.next_action].filter(Boolean).join(". ")).filter(Boolean);
+      return "For "+s.title+", "+headline.charAt(0).toLowerCase()+headline.slice(1)+"."+ (items.length?" Here is what to review: "+items.join(". ")+".":"");
+    }),
+    "I recommend we review the outstanding priorities before delegating further work."
+  ]:[];
+  async function loadWeather(){
+    setWeatherLoading(true);setWeatherError("");
+    try{
+      const location=await getBrowserCurrentLocation({enableHighAccuracy:false,timeout:10000,maximumAge:300000});
+      const data=await getLiveWeather(location);const current=data?.current||{};
+      if(current.temp_f==null&&!current.description&&!current.condition)throw Error("No current weather returned");
+      setWeatherOverride({available:true,current_period:{temperature:current.temp_f,temperature_unit:"F",short_forecast:current.description||current.condition||"Current conditions"}});
+    }catch(e){setWeatherError("Local weather unavailable. Check location permission and try again.");}finally{setWeatherLoading(false);}
+  }
+  useEffect(()=>{if(feedRef.current)feedRef.current.scrollTop=0;},[panel]);
+
   const audioRef=useRef(null);
   const speechRun=useRef(0);
-  const stopVoice=()=>{speechRun.current++;if(audioRef.current){audioRef.current.pause();URL.revokeObjectURL(audioRef.current.src);audioRef.current=null;}setSpeaking(false);};
+  const stopVoice=()=>{speechRun.current++;if(audioRef.current){audioRef.current.pause();URL.revokeObjectURL(audioRef.current.src);audioRef.current=null;}setSpeaking(false);setVoiceLoading(false);setAudioReady(false);};
   useEffect(()=>()=>{speechRun.current++;if(audioRef.current){audioRef.current.pause();URL.revokeObjectURL(audioRef.current.src);}},[]);
   useEffect(()=>{if(!selected){stopVoice();setPanel("chat");if(placement==="launcher"&&openSignal)onDismiss?.();}},[selected]);
   useEffect(()=>{
@@ -35,16 +67,21 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     return()=>{alive=false;};
   },[selected,panel,workRefresh]);
   async function listenBrief(){
-    if(speaking){stopVoice();return;}
+    if(voiceLoading||speaking){stopVoice();return;}
+    if(audioReady&&audioRef.current){try{await audioRef.current.play();setAudioReady(false);setSpeaking(true);setVoiceNotice("");}catch{setVoiceNotice("Audio is ready. Tap Play audio again to start playback.");}return;}
     if(!brief)return;
-    const run=++speechRun.current;setSpeaking(true);setVoiceNotice("");
-    const text=["Sydney, your Chief of Staff.",brief.date,...(brief.sections||[]).map(s=>[s.title,s.headline,...(s.items||[]).slice(0,2).map(i=>i.title+". "+(i.next_action||""))].join(". "))].join(". ").slice(0,2400);
+    const run=++speechRun.current;setVoiceLoading(true);setVoiceNotice("");
+    // Narrate a concise opening and priority updates, never cut a sentence mid-word.
+    const text=narrative.reduce((out,paragraph)=>out.length+paragraph.length+2<=1600?out+(out?"\n\n":"")+paragraph:out,"");
     try{
       const response=await api.post("/sync-ai/voice/synthesize/",{role:"founder_chief",text},{responseType:"blob",timeout:90000});
       if(run!==speechRun.current)return;
       if(!response.data?.size||!response.data.type?.startsWith("audio/"))throw Error("Invalid audio");
-      const player=new Audio(URL.createObjectURL(response.data));audioRef.current=player;player.onended=stopVoice;await player.play();
+      const player=new Audio(URL.createObjectURL(response.data));audioRef.current=player;player.onended=stopVoice;
+      player.onerror=()=>{if(run===speechRun.current){stopVoice();setVoiceNotice("Audio could not be played.");}};
+      try{await player.play();if(run===speechRun.current)setSpeaking(true);}catch{if(run===speechRun.current){setAudioReady(true);setVoiceNotice("Audio is ready. Tap Play audio to begin.");}}
     }catch(e){if(run!==speechRun.current)return;stopVoice();setVoiceNotice("Premium voice unavailable"+(e?.response?.status?" (HTTP "+e.response.status+")":"")+". Written briefing remains available.");}
+    finally{if(run===speechRun.current)setVoiceLoading(false);}
   }
 
   const [chatDraft, setChatDraft] = useState("");
@@ -267,7 +304,14 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
            <p>No work assigned to {active.name} yet.</p>):
            <p>Loading this employee's task inbox…</p>}
         </div>
-        {panel==="brief"?<div className="sw-ai-conversation-feed"><div className="sw-ai-conversation-toolbar"><button type="button" onClick={listenBrief} disabled={!brief}>{speaking?"Stop audio":"Listen to briefing"}</button><button type="button" onClick={()=>setWorkRefresh(v=>v+1)}>Refresh</button></div>{voiceNotice&&<p role="status">{voiceNotice}</p>}{briefError?<p role="alert">{briefError}</p>:!brief?<p>Loading executive briefing…</p>:<><strong>{brief.date} · {brief.executive_context?.local_time?new Date(brief.executive_context.local_time).toLocaleTimeString():"Time unavailable"}</strong>{(brief.sections||[]).map(s=><details key={s.key} className="sw-ai-conversation-message"><summary>{s.title} — {s.headline}</summary>{(s.items||[]).map((i,n)=><p key={n}>{i.title} · {i.next_action}</p>)}</details>)}</>}</div>:<><div className="sw-ai-conversation-feed" role="log" aria-live="polite" aria-relevant="additions text">
+        {panel==="brief"?<div className="sw-ai-conversation-feed" ref={feedRef}>
+          <div className="sw-ai-brief-controls sw-ai-conversation-toolbar"><button type="button" onClick={listenBrief} disabled={!brief} aria-busy={voiceLoading}>{voiceLoading?<><LoaderCircle size={15} className="animate-spin"/> Preparing audio… (cancel)</>:speaking?"Stop audio":audioReady?"Play audio":"Listen to briefing"}</button><button type="button" onClick={()=>{stopVoice();setWorkRefresh(v=>v+1)}}>Refresh</button></div>
+          {voiceNotice&&<p role="status">{voiceNotice}</p>}
+          {briefError?<p role="alert">{briefError}</p>:!brief?<p><LoaderCircle size={15} className="animate-spin"/> Loading executive briefing…</p>:<>
+          <div className="sw-ai-brief-context"><strong>{brief.date} · {brief.executive_context?.local_time?new Date(brief.executive_context.local_time).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"Time unavailable"}</strong><p>{weather.available?[forecast.temperature!=null?forecast.temperature+"°"+(forecast.temperature_unit||"F"):"",forecast.short_forecast].filter(Boolean).join(" · "):"Local weather not connected"}</p>{!weather.available&&<button type="button" disabled={weatherLoading} onClick={loadWeather}>{weatherLoading?"Getting weather…":"Use my location for weather"}</button>}{weatherError&&<p role="status">{weatherError}</p>}</div>
+          <article className="sw-ai-brief-story">{narrative.map((paragraph,n)=><p key={n}>{paragraph}</p>)}</article>
+          <details className="sw-ai-brief-evidence"><summary>Detailed records & employee reports</summary>{sections.map(s=><details key={s.key}><summary>{s.title} — {s.headline}</summary>{(s.items||[]).map((i,n)=><p key={n}>{i.title} · {i.next_action}</p>)}</details>)}</details>
+          </>}</div>:<><div className="sw-ai-conversation-feed" role="log" aria-live="polite" aria-relevant="additions text">
           {!messages.length && <div className="sw-ai-conversation-intro">
             <img src={active.photo} onError={e=>{if(active.fallbackPhoto&&!e.currentTarget.src.endsWith(active.fallbackPhoto))e.currentTarget.src=active.fallbackPhoto;}} alt="" aria-hidden="true"/>
             <strong>Talk with {active.name}</strong>
