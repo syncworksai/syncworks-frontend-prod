@@ -60,6 +60,7 @@ import CustomerAppointments from "./pages/CustomerAppointments";
 import CustomerProfessionalDiscover from "./pages/CustomerProfessionalDiscover";
 import AffiliateDashboard from "./pages/AffiliateDashboard";
 import DayTradingFutures from "./pages/DayTradingFutures";
+import CharlotteResearch from "./pages/CharlotteResearch";
 
 import SboDashboard from "./pages/SboDashboard";
 import SboGrowth from "./pages/SboGrowth";
@@ -258,6 +259,7 @@ export default function App() {
         <Route path="/billing/cash-fee-invoices" element={<ProtectedRoute><CashFeeInvoices /></ProtectedRoute>} />
         <Route path="/sales/*" element={<Navigate to="/customer" replace />} />
         <Route path="/customer" element={<ProtectedRoute><CustomerDashboard /></ProtectedRoute>} />
+        <Route path="/customer/market-intelligence" element={<ProtectedRoute><CharlotteResearch /></ProtectedRoute>} />
         <Route path="/customer/freelance" element={<ProtectedRoute><Navigate to="/customer/freelance/overview" replace /></ProtectedRoute>} />
         <Route path="/customer/freelance/:section" element={<ProtectedRoute><FreelanceWorkCenter /></ProtectedRoute>} />
         <Route path="/customer/games" element={<ProtectedRoute><CustomerGamesHome /></ProtectedRoute>} />
