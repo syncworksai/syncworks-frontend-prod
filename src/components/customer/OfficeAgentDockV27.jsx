@@ -18,7 +18,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const [employees, setEmployees] = useState([]);
   const [fetchState, setFetchState] = useState("loading");
   const [version, setVersion] = useState(0);
-  const [selected, setSelected] = useState(()=>placement==="launcher"&&openSignal?initialAgentId:null);
+  const [selected, setSelected] = useState(()=>placement==="launcher"?initialAgentId:null);
   useEffect(()=>{if(placement==="launcher"&&openSignal)setSelected(initialAgentId);},[placement,openSignal,initialAgentId]);
   const [workRefresh, setWorkRefresh] = useState(0);
   const [panel,setPanel]=useState("chat");
@@ -244,7 +244,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const speechRun=useRef(0);
   const stopVoice=()=>{speechRun.current++;if(audioRef.current){audioRef.current.pause();URL.revokeObjectURL(audioRef.current.src);audioRef.current=null;}setSpeaking(false);setVoiceLoading(false);setAudioReady(false);};
   useEffect(()=>()=>{speechRun.current++;if(audioRef.current){audioRef.current.pause();URL.revokeObjectURL(audioRef.current.src);}},[]);
-  useEffect(()=>{if(!selected){setScheduleOpen(false);stopVoice();setShowPlan(false);setShowArchive(false);setReadBrief(false);setPanel("chat");if(placement==="launcher"&&openSignal)onDismiss?.();}},[selected]);
+  useEffect(()=>{if(!selected&&placement!=="launcher"){setScheduleOpen(false);stopVoice();setShowPlan(false);setShowArchive(false);setReadBrief(false);setPanel("chat");if(placement==="launcher"&&openSignal)onDismiss?.();}},[selected]);
   useEffect(()=>{
     if(selected!=="executive-female"||panel!=="brief")return;
     let alive=true;const controller=new AbortController();setBrief(null);setBriefError("");
@@ -390,7 +390,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   }, [selected,visible]);
   useEffect(() => { chatEndRef.current?.scrollIntoView({block:"end",behavior:"instant"}); }, [messages.length,selected,chatBusy]);
   const selectEmployee = (person) => {
-    if(person.id==="executive-female"&&placement!=="launcher"){window.dispatchEvent(new Event("syncworks:victoria-open"));return;}
+    if(person.id==="executive-female"&&placement!=="launcher"){const request=new CustomEvent("syncworks:victoria-open",{cancelable:true});if(!window.dispatchEvent(request))return;}
     const computed = dockRef.current ? window.getComputedStyle(dockRef.current) : null;
     if (computed) {
       const vars = ["--sw-workspace-accent","--sw-lobby-glass","--sw-ui-surface","--sw-ui-text","--sw-lobby-border"];
