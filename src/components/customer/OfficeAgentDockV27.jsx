@@ -17,6 +17,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const [version, setVersion] = useState(0);
   const [selected, setSelected] = useState(()=>placement==="launcher"&&openSignal?"executive-female":null);
   useEffect(()=>{if(placement==="launcher"&&openSignal)setSelected("executive-female");},[placement,openSignal]);
+  const [workRefresh, setWorkRefresh] = useState(0);
   const [panel,setPanel]=useState("chat");
   const [brief,setBrief]=useState(null);
   const [briefError,setBriefError]=useState("");
@@ -52,7 +53,6 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const [chatBusy, setChatBusy] = useState(false);
   const [dialogTheme, setDialogTheme] = useState({});
   const [employeeWork, setEmployeeWork] = useState({});
-  const [workRefresh, setWorkRefresh] = useState(0);
   const chatEndRef = useRef(null);
   const chatFieldRef = useRef(null);
   const dockRef = useRef(null);
