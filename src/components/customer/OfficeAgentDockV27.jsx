@@ -41,6 +41,24 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     try{const {data}=await api.get("/sync-ai/assist/pilot/chief/archive/");setArchiveRows(data.briefings||[]);}catch{setArchiveNotice("Archive unavailable.");}finally{setArchiveBusy(false);}
   }
 
+  const [noteDrafts,setNoteDrafts]=useState({});
+  const [noteBusy,setNoteBusy]=useState(null);
+  const [noteNotice,setNoteNotice]=useState("");
+  async function saveTaskNote(id){
+    setNoteBusy(id);setNoteNotice("");
+    try{
+      const {data:row}=await api.get("/personal-calendar/events/"+encodeURIComponent(id)+"/");
+      if(itemType(row)!=="TASK")throw Error("Not a task");
+      const note=String(noteDrafts[id]??row.metadata?.task_note??"").slice(0,4000);
+      const {data:updated}=await api.patch("/personal-calendar/events/"+encodeURIComponent(id)+"/",{metadata:{...row.metadata,task_note:note}});
+      setTodoRows(old=>old.map(t=>t.id===id?updated:t));
+      setDailyReview(old=>old?{...old,tasks:old.tasks.map(t=>t.id===id?{...t,note}:t)}:old);
+      setNoteNotice("Note saved.");window.dispatchEvent(new Event("syncworks:tasks-changed"));
+    }catch{setNoteNotice("Note could not be saved. Retry.");}finally{setNoteBusy(null);}
+  }
+  function taskNotes(t){
+    return <details className="sw-ai-task-note"><summary>Notes</summary><textarea aria-label={"Notes for "+t.title} maxLength={4000} rows={3} value={noteDrafts[t.id]??t.note??t.metadata?.task_note??""} onChange={e=>setNoteDrafts(old=>({...old,[t.id]:e.target.value}))}/><button type="button" disabled={noteBusy!==null} onClick={()=>saveTaskNote(t.id)}>{noteBusy===t.id?"Saving…":"Save note"}</button></details>;
+  }
   const [todoRows,setTodoRows]=useState([]);
   const [todoReady,setTodoReady]=useState(false);
   const [todoBusy,setTodoBusy]=useState(false);
@@ -267,7 +285,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     return()=>{alive=false;window.clearInterval(timer);};
   },[permitted,roster,version,workRefresh]);
   const office = placement === "office" || placement === "launcher";
-  const shown = placement === "launcher" ? roster : office ? roster.filter((person) => person.id === "executive-female") : roster.filter(person=>!["property-female","accounting-female"].includes(person.id));
+  const shown = placement === "launcher" ? roster.filter(person=>!["trading-strategy","market-research","market-intelligence"].includes(person.id)&&!["Bobby","Axe","Charlotte"].includes(person.name)) : office ? roster.filter((person) => person.id === "executive-female") : roster.filter(person=>!["property-female","accounting-female","trading-strategy","market-research","market-intelligence"].includes(person.id)&&!["Bobby","Axe","Charlotte"].includes(person.name));
   const active = roster.find((person) => person.id === selected);
   const messages = active ? (chatHistory[active.id] || []) : [];
   const currentWork = active ? employeeWork[active.id] : null;
@@ -412,10 +430,10 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           <div className="sw-ai-conversation-toolbar"><button type="button" aria-expanded={showPlan} disabled={!brief} onClick={()=>{setShowArchive(false);setReadBrief(false);setShowPlan(v=>!v)}}>{showPlan?"Hide plan":"My plan"}</button><button type="button" onClick={archiveBrief} disabled={!brief||archiveBusy}>Save briefing</button><button type="button" aria-expanded={showArchive} onClick={openArchive}>Archive</button></div>
           <div className="sw-ai-conversation-toolbar"><button type="button" onClick={()=>{setTodoOpen(v=>!v);if(!todoOpen)loadTodos();}}>{todoOpen?"Hide tasks":"My to-do list"}</button><button type="button" onClick={()=>goAction("/calendar")}>Edit schedule</button><button type="button" onClick={()=>goAction("/customer/projects")}>Projects</button></div>
           <details className="sw-ai-brief-evidence"><summary>Morning review &amp; progress</summary>
-          {reviewBusy?<p>Reconciling your task list…</p>:reviewError?<p role="alert">{reviewError} <button type="button" onClick={()=>runDailyReview()}>Retry</button></p>:dailyReview?<><p>{dailyReview.created} new tasks added in this review.</p><h3>Completed since previous saved briefing</h3>{dailyReview.tasks.filter(t=>t.recently_completed).length?dailyReview.tasks.filter(t=>t.recently_completed).map(t=><p key={t.id}>✓ {t.title}</p>):<p>No recorded completions in this period.</p>}<h3>Still to do — have you completed any of these?</h3>{dailyReview.tasks.filter(t=>t.status==="OPEN").map(t=><div className="sw-ai-action-row" key={t.id}><span>{t.title}{t.due_date?" · "+t.due_date:""}</span><button type="button" disabled={reviewBusy} onClick={()=>runDailyReview([t.id])}>Done</button>{safeRoute(t.url)&&<button type="button" onClick={()=>goAction(t.url)}>Start</button>}</div>)}<button type="button" onClick={()=>runDailyReview()}>Refresh progress</button></>:<button type="button" onClick={()=>runDailyReview()}>Start daily review</button>}
+          {reviewBusy?<p>Reconciling your task list…</p>:reviewError?<p role="alert">{reviewError} <button type="button" onClick={()=>runDailyReview()}>Retry</button></p>:dailyReview?<><p>{dailyReview.created} new tasks added in this review.</p><h3>Completed since previous saved briefing</h3>{dailyReview.tasks.filter(t=>t.recently_completed).length?dailyReview.tasks.filter(t=>t.recently_completed).map(t=><p key={t.id}>✓ {t.title}</p>):<p>No recorded completions in this period.</p>}<h3>Still to do — have you completed any of these?</h3>{dailyReview.tasks.filter(t=>t.status==="OPEN").map(t=><div className="sw-ai-action-row" key={t.id}><span>{t.title}{t.due_date?" · "+t.due_date:""}</span><button type="button" disabled={reviewBusy} onClick={()=>runDailyReview([t.id])}>Done</button>{safeRoute(t.url)&&<button type="button" onClick={()=>goAction(t.url)}>Start</button>}{taskNotes(t)}</div>)}<button type="button" onClick={()=>runDailyReview()}>Refresh progress</button></>:<button type="button" onClick={()=>runDailyReview()}>Start daily review</button>}
           </details>
-          {todoNotice&&<p role="status">{todoNotice}</p>}
-          {todoOpen&&<div className="sw-ai-brief-story"><h3>My tasks</h3>{todoBusy?<p>Updating tasks…</p>:!todoReady?<button type="button" onClick={loadTodos}>Retry task list</button>:todoRows.filter(t=>!t.metadata?.project_id&&["OPEN","DONE"].includes(t.metadata?.task_status||"OPEN")).map(t=><div key={t.id} className="sw-ai-action-row"><span>{t.title}</span><button type="button" disabled={todoBusy} onClick={()=>finishTodo(t,t.metadata?.task_status==="DONE"?"OPEN":"DONE")}>{t.metadata?.task_status==="DONE"?"Reopen":"Complete"}</button>{safeRoute(t.metadata?.action_url)&&<button type="button" onClick={()=>goAction(t.metadata.action_url)}>Go to</button>}</div>)}<form onSubmit={e=>{e.preventDefault();saveAction({key:"manual:"+todoDraft.trim(),title:todoDraft.trim()});}}><input aria-label="New task" maxLength={180} value={todoDraft} onChange={e=>setTodoDraft(e.target.value)} placeholder="Add a task"/><button disabled={todoBusy||!todoDraft.trim()} type="submit">Add</button></form></div>}
+          {noteNotice&&<p role="status">{noteNotice}</p>}{todoNotice&&<p role="status">{todoNotice}</p>}
+          {todoOpen&&<div className="sw-ai-brief-story"><h3>My tasks</h3>{todoBusy?<p>Updating tasks…</p>:!todoReady?<button type="button" onClick={loadTodos}>Retry task list</button>:todoRows.filter(t=>!t.metadata?.project_id&&["OPEN","DONE"].includes(t.metadata?.task_status||"OPEN")).map(t=><div key={t.id} className="sw-ai-action-row"><span>{t.title}</span><button type="button" disabled={todoBusy} onClick={()=>finishTodo(t,t.metadata?.task_status==="DONE"?"OPEN":"DONE")}>{t.metadata?.task_status==="DONE"?"Reopen":"Complete"}</button>{safeRoute(t.metadata?.action_url)&&<button type="button" onClick={()=>goAction(t.metadata.action_url)}>Go to</button>}{taskNotes(t)}</div>)}<form onSubmit={e=>{e.preventDefault();saveAction({key:"manual:"+todoDraft.trim(),title:todoDraft.trim()});}}><input aria-label="New task" maxLength={180} value={todoDraft} onChange={e=>setTodoDraft(e.target.value)} placeholder="Add a task"/><button disabled={todoBusy||!todoDraft.trim()} type="submit">Add</button></form></div>}
           {archiveNotice&&<p role="status">{archiveNotice}</p>}
           {showArchive&&<div className="sw-ai-brief-story">{archiveBusy?<p>Loading archive…</p>:archiveRows.length?archiveRows.map(row=><details key={row.id}><summary>{new Date(row.saved_at).toLocaleString()}</summary>{String(row.text||"").split("\n\n").map((part,i)=><p key={i}>{part}</p>)}</details>):<p>No saved briefings.</p>}</div>}
           {voiceNotice&&<p role="status">{voiceNotice}</p>}
