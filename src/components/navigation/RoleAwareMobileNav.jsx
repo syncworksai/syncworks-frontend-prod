@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { getAvatarPhotoForUser } from "../sync/JarvisAvatar";
 import { getPilotAgentsForUser } from "../sync/pilotAgentRoster";
+import OfficeAgentDock from "../customer/OfficeAgentDockV27";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   CalendarDays,
@@ -184,6 +185,7 @@ export default function RoleAwareMobileNav() {
   const [items, setItems] = useState(() => navMode ? readPreference(navMode, user) : []);
   const [unread, setUnread] = useState(0);
   const [aiTeamOpen, setAiTeamOpen] = useState(false);
+  const [mobileChiefOpen, setMobileChiefOpen] = useState(false);
   // The global dock is rendered outside the themed CustomerWorkspace root.
   // Keep its theme in sync with the user's saved appearance without changing
   // the appearance of non-Customer dashboards.
@@ -203,7 +205,7 @@ export default function RoleAwareMobileNav() {
       window.removeEventListener("storage", syncTheme);
     };
   }, []);
-  useEffect(() => setAiTeamOpen(false), [location.pathname, location.search]);
+  useEffect(() => {setAiTeamOpen(false);setMobileChiefOpen(false);}, [location.pathname, location.search]);
 
   const hidden = useMemo(() => {
     if (!navMode) return true;
@@ -288,6 +290,7 @@ export default function RoleAwareMobileNav() {
 
   return (
     <>
+      {founderPilot && mobileChiefOpen && pathname === "/customer" && <OfficeAgentDock user={user} placement="launcher" theme={customerTheme} openSignal={1} onDismiss={()=>setMobileChiefOpen(false)}/>}
       {aiTeamOpen && teamAgents.length > 0 && navMode === "CUSTOMER" && pathname === "/customer" && (
         <div className="sw-mobile-ai-team-shade lg:hidden" onClick={() => setAiTeamOpen(false)}>
           <section className="sw-mobile-ai-team-panel" role="dialog" aria-modal="true" aria-label="Your SYNC AI employees" onClick={(event) => event.stopPropagation()}>
@@ -297,7 +300,7 @@ export default function RoleAwareMobileNav() {
             </div>
             <div className="sw-mobile-ai-team-grid">
               {teamAgents.map((worker) => (
-                <button type="button" key={worker.id} onClick={() => {if(founderPilot&&worker.role==="Chief of Staff")window.dispatchEvent(new Event("syncworks:victoria-open"));else navigateAssistant(worker.role === "Chief of Staff" ? "/sync/assist/chief" : `/sync/assist/employee/${encodeURIComponent(worker.id)}`);}} aria-label={`Open ${worker.name}, ${worker.role}`}>
+                <button type="button" key={worker.id} onClick={() => {if(founderPilot&&worker.role==="Chief of Staff"){setAiTeamOpen(false);setMobileChiefOpen(true);}else navigateAssistant(worker.role === "Chief of Staff" ? "/sync/assist/chief" : `/sync/assist/employee/${encodeURIComponent(worker.id)}`);}} aria-label={`Open ${worker.name}, ${worker.role}`}>
                   <img src={getAvatarPhotoForUser(worker, user)} alt="" loading="lazy" />
                   <strong>{worker.name}</strong>
                   <small>{worker.role}</small>
@@ -314,7 +317,7 @@ export default function RoleAwareMobileNav() {
           <div className="sw-mobile-bots-people">
             {teamAgents.slice(0, 4).map((worker) => (
               <button type="button" key={worker.id} aria-label={`Open ${worker.name}, ${worker.role}`}
-                onClick={() => {if(worker.role==="Chief of Staff"){setAiTeamOpen(false);window.dispatchEvent(new Event("syncworks:victoria-open"));}else navigateAssistant(`/sync/assist/employee/${encodeURIComponent(worker.id)}`);}}
+                onClick={() => {if(worker.role==="Chief of Staff"){setAiTeamOpen(false);setMobileChiefOpen(true);}else navigateAssistant(`/sync/assist/employee/${encodeURIComponent(worker.id)}`);}}
                 title={`${worker.name} · ${worker.role}`}>
                 <img src={getAvatarPhotoForUser(worker, user)} alt="" loading="eager" />
                 <span>{worker.name}</span>
