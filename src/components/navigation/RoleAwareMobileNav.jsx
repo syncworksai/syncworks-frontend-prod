@@ -304,7 +304,7 @@ export default function RoleAwareMobileNav() {
                 </button>
               ))}
             </div>
-            <button type="button" className="sw-mobile-ai-team-all" onClick={() => navigateAssistant("/sync/assist")}>Open SYNC Assist workspace</button>
+            <button type="button" className="sw-mobile-ai-team-all" onClick={() => navigateAssistant("/sync/assist/employees")}>Manage AI employees</button>
           </section>
         </div>
       )}
@@ -312,7 +312,7 @@ export default function RoleAwareMobileNav() {
         <div className={`sw-mobile-bots-dock lg:hidden ${founderPilot?"sw-mobile-bots-dock-compact":""}`} role="group" aria-label="Your docked AI employees">
           <span className="sw-mobile-bots-label">AI TEAM</span>
           <div className="sw-mobile-bots-people">
-            {teamAgents.map((worker) => (
+            {teamAgents.slice(0, 4).map((worker) => (
               <button type="button" key={worker.id} aria-label={`Open ${worker.name}, ${worker.role}`}
                 onClick={() => navigateAssistant(worker.role === "Chief of Staff" ? "/sync/assist/chief" : `/sync/assist/employee/${encodeURIComponent(worker.id)}`)}
                 title={`${worker.name} · ${worker.role}`}>
@@ -321,7 +321,7 @@ export default function RoleAwareMobileNav() {
               </button>
             ))}
           </div>
-          <button type="button" className="sw-mobile-bots-expand" onClick={() => navigateAssistant("/sync/assist/employees")} aria-label="Manage AI team">Manage</button>
+          <button type="button" className="sw-mobile-bots-expand" onClick={() => setAiTeamOpen(true)} aria-label="View all AI employees">View all</button>
         </div>
       )}
       <nav className="sw-role-mobile-nav lg:hidden" aria-label="Mobile quick navigation" data-sync-theme={navMode === "CUSTOMER" ? customerTheme : undefined} data-forge-route={pathname === "/customer/forge" ? "true" : undefined}>
