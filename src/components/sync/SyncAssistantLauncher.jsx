@@ -28,6 +28,8 @@ export default function SyncAssistantLauncher() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [commandOpen,setCommandOpen]=useState(false);
+  const [commandSignal,setCommandSignal]=useState(0);
+  const openChief=()=>{setCommandOpen(true);setCommandSignal(v=>v+1);};
   const [businessAgentId,setBusinessAgentId]=useState(null);
   useEffect(()=>{
     const onOpen=e=>{const id=String(e?.detail?.agentId||"");if(id){setCommandOpen(false);setBusinessAgentId(id);}};
@@ -35,7 +37,7 @@ export default function SyncAssistantLauncher() {
     return()=>window.removeEventListener("syncworks:business-agent-open",onOpen);
   },[]);
   useEffect(()=>{setBusinessAgentId(null);},[location.pathname]);
-  useEffect(()=>{const listener=()=>{setBusinessAgentId(null);setCommandOpen(true);};window.addEventListener("syncworks:victoria-open",listener);return()=>window.removeEventListener("syncworks:victoria-open",listener);},[]);
+  useEffect(()=>{const listener=()=>{setBusinessAgentId(null);openChief();};window.addEventListener("syncworks:victoria-open",listener);return()=>window.removeEventListener("syncworks:victoria-open",listener);},[]);
 
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   useEffect(() => {
@@ -157,7 +159,7 @@ export default function SyncAssistantLauncher() {
       <div className={`fixed bottom-24 right-4 z-[260] flex flex-col items-end gap-3 lg:bottom-6 lg:right-6 ${taskDialogOpen && showChief ? "hidden" : mobileVisible ? "" : "hidden lg:flex"}`}>
         {showChief && location.pathname !== "/sync" && !isCustomerHome && !showBusinessDock && location.pathname !== "/platform" && (
           <>
-            <button type="button" aria-haspopup="dialog" aria-label="Open Sydney Chief of Staff briefing" title="Sydney — Chief of Staff" onClick={() => setCommandOpen(true)}
+            <button type="button" aria-haspopup="dialog" aria-label="Open Sydney Chief of Staff briefing" title="Sydney — Chief of Staff" onClick={openChief}
               className="group flex min-h-12 items-center gap-2 rounded-full border border-cyan-300/45 bg-[#061327]/95 py-1 pl-1 pr-2 text-left text-white shadow-[0_0_26px_rgba(34,211,238,.22)] transition hover:border-cyan-300">
               <span className="relative block h-11 w-11 shrink-0"><img src={getAvatarPhotoForUser(chiefAvatar, user)} alt="" className="h-11 w-11 rounded-full border border-cyan-300/55 object-cover object-top" onError={(event)=>{const fallback=getAvatarFallbackPhotoForUser(chiefAvatar,user);if(fallback && event.currentTarget.src !== new URL(fallback,window.location.href).href)event.currentTarget.src=fallback;}} />
                 {workdayStatus.available && workdayStatus.unread > 0 && <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white ring-2 ring-slate-950" aria-label={`${workdayStatus.unread} new workday results`}>{workdayStatus.unread > 99 ? "99+" : workdayStatus.unread}</span>}
@@ -180,9 +182,9 @@ export default function SyncAssistantLauncher() {
 
 
       </div>
-      {showBusinessDock&&<BusinessAssistantDock user={user} onVictoria={()=>setCommandOpen(true)}/>}
+      {showBusinessDock&&<BusinessAssistantDock user={user} onVictoria={openChief}/>}
       {showChief&&businessAgentId&&!excludedVictoria&&<BusinessAgentQuickChat agentId={businessAgentId} user={user} onClose={()=>setBusinessAgentId(null)}/>}
-      {showChief && commandOpen && <OfficeAgentDock user={user} placement="launcher" theme={appearance.theme} openSignal={1} onDismiss={()=>setCommandOpen(false)}/>}
+      {pilotFounder && <OfficeAgentDock key={String(user.id||user.email)} user={user} placement="launcher" theme={appearance.theme} openSignal={commandSignal} visible={showChief&&commandOpen} onDismiss={()=>setCommandOpen(false)}/>}
       <SyncAlertDrawer open={alertsOpen} onClose={() => { setAlertsOpen(false); loadUnread(); }} onCountChange={setUnread} />
     </>
   );
