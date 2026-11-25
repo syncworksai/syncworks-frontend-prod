@@ -11,14 +11,14 @@ import "./OfficeAgentDockV27.css";
 
 // One source of truth for the private-pilot employees. Membership is NOT live
 // activity or proof that an agent is currently executing a task.
-export default function OfficeAgentDock({ user, placement = "home", theme = "future", openSignal = 0, onDismiss }) {
+export default function OfficeAgentDock({ user, placement = "home", theme = "future", openSignal = 0, initialAgentId = "executive-female", onDismiss }) {
   const nav = useNavigate();
   const permitted = String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com";
   const [employees, setEmployees] = useState([]);
   const [fetchState, setFetchState] = useState("loading");
   const [version, setVersion] = useState(0);
-  const [selected, setSelected] = useState(()=>placement==="launcher"&&openSignal?"executive-female":null);
-  useEffect(()=>{if(placement==="launcher"&&openSignal)setSelected("executive-female");},[placement,openSignal]);
+  const [selected, setSelected] = useState(()=>placement==="launcher"&&openSignal?initialAgentId:null);
+  useEffect(()=>{if(placement==="launcher"&&openSignal)setSelected(initialAgentId);},[placement,openSignal,initialAgentId]);
   const [workRefresh, setWorkRefresh] = useState(0);
   const [panel,setPanel]=useState("chat");
   const [readBrief,setReadBrief]=useState(false);
@@ -213,7 +213,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     return()=>{alive=false;window.clearInterval(timer);};
   },[permitted,roster,version,workRefresh]);
   const office = placement === "office" || placement === "launcher";
-  const shown = office ? roster.filter((person) => person.id === "executive-female") : roster.filter(person=>!["property-female","accounting-female"].includes(person.id));
+  const shown = placement === "launcher" ? roster : office ? roster.filter((person) => person.id === "executive-female") : roster.filter(person=>!["property-female","accounting-female"].includes(person.id));
   const active = roster.find((person) => person.id === selected);
   const messages = active ? (chatHistory[active.id] || []) : [];
   const currentWork = active ? employeeWork[active.id] : null;
