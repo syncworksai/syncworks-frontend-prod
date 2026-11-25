@@ -25,7 +25,7 @@ const SNAPSHOTS=[
   expected:"30.00"}
 ];
 const money=x=>Number(x||0).toLocaleString("en-US",{style:"currency",currency:"USD"});
-export default function FreelanceProposalTracker(){
+export default function FreelanceProposalTracker({onOpenLedger}){
  const [records,setRecords]=useState([]),[connected,setConnected]=useState(false);
  const [busy,setBusy]=useState(""),[message,setMessage]=useState(""),[error,setError]=useState("");
  const [selected,setSelected]=useState(SNAPSHOTS[0].proposalId);
@@ -61,7 +61,7 @@ export default function FreelanceProposalTracker(){
   {error&&<p className="sw-tracker-message error" role="alert"><ShieldAlert size={14}/>{error}</p>}
   <div className="sw-tracker-body">
    <aside className="sw-tracker-list"><div className="sw-tracker-list-head">APPLICATIONS <span>{SNAPSHOTS.length} checked</span></div>{SNAPSHOTS.map(job=><button type="button" key={job.proposalId} onClick={()=>setSelected(job.proposalId)} className={"sw-tracker-record "+(selected===job.proposalId?"selected":"")}><strong>{job.title}</strong><span>{job.statusLabel}</span><small>{inCloud.has(job.upworkJobId)?"In cloud ledger":"Not yet saved to cloud"}</small></button>)}
-   <button type="button" className="sw-tracker-ledgerlink" onClick={()=>{const target=document.querySelector('[data-freelance-ledger-action]');if(target)target.click()}}>Full ledger <Wallet size={13}/></button>
+   <button type="button" className="sw-tracker-ledgerlink" onClick={onOpenLedger}>Full ledger <Wallet size={13}/></button>
    </aside>
    <article className="sw-tracker-detail">
     <div className="sw-tracker-detail-heading"><div><small>UPWORK PROPOSAL · LAST CHECKED NOVEMBER 25</small><h3>{active.title}</h3><p>{active.summary}</p></div><span className="sw-tracker-state">{active.statusLabel}</span></div>
