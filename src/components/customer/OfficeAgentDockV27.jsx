@@ -24,6 +24,33 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const [panel,setPanel]=useState("chat");
   const [readBrief,setReadBrief]=useState(false);
   const [reviewOpen,setReviewOpen]=useState(false);
+  const [scheduleOpen,setScheduleOpen]=useState(false);
+  const [scheduleDraft,setScheduleDraft]=useState(null);
+  const [scheduleKeys,setScheduleKeys]=useState([]);
+  const [scheduleBusy,setScheduleBusy]=useState(false);
+  const [scheduleNotice,setScheduleNotice]=useState("");
+  async function buildSchedule(){
+    if(scheduleBusy)return;
+    setPanel("brief");setScheduleOpen(true);setReadBrief(false);setShowPlan(false);setShowArchive(false);setTodoOpen(false);setReviewOpen(false);
+    setScheduleBusy(true);setScheduleNotice("");setScheduleDraft(null);setScheduleKeys([]);
+    try{
+      const {data}=await api.post("/sync-ai/assist/pilot/chief/schedule/",{mode:"preview"},{timeout:45000});
+      setScheduleDraft(data);setScheduleKeys((data.proposed||[]).map(e=>e.key));
+    }catch{setScheduleNotice("Could not build schedule. No calendar changes were made. Please retry.");}
+    finally{setScheduleBusy(false);}
+  }
+  async function applySchedule(){
+    if(scheduleBusy||!scheduleKeys.length)return;
+    setScheduleBusy(true);setScheduleNotice("");
+    try{
+      const {data}=await api.post("/sync-ai/assist/pilot/chief/schedule/",{mode:"apply",approved_keys:scheduleKeys},{timeout:45000});
+      setScheduleNotice((data.created_ids||[]).length+" calendar blocks saved. Existing appointments were preserved. Refresh the preview before adding anything else.");
+      setScheduleKeys([]);setScheduleDraft(null);
+      window.dispatchEvent(new Event("syncworks:tasks-changed"));setWorkRefresh(v=>v+1);
+    }catch{setScheduleNotice("Save could not be confirmed. Rebuild the preview before retrying.");}
+    finally{setScheduleBusy(false);}
+  }
+
   const [outlookRange,setOutlookRange]=useState("today");
   const [showPlan,setShowPlan]=useState(false);
   const [showArchive,setShowArchive]=useState(false);
@@ -172,7 +199,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const speechRun=useRef(0);
   const stopVoice=()=>{speechRun.current++;if(audioRef.current){audioRef.current.pause();URL.revokeObjectURL(audioRef.current.src);audioRef.current=null;}setSpeaking(false);setVoiceLoading(false);setAudioReady(false);};
   useEffect(()=>()=>{speechRun.current++;if(audioRef.current){audioRef.current.pause();URL.revokeObjectURL(audioRef.current.src);}},[]);
-  useEffect(()=>{if(!selected){stopVoice();setShowPlan(false);setShowArchive(false);setReadBrief(false);setPanel("chat");if(placement==="launcher"&&openSignal)onDismiss?.();}},[selected]);
+  useEffect(()=>{if(!selected){setScheduleOpen(false);stopVoice();setShowPlan(false);setShowArchive(false);setReadBrief(false);setPanel("chat");if(placement==="launcher"&&openSignal)onDismiss?.();}},[selected]);
   useEffect(()=>{
     if(selected!=="executive-female"||panel!=="brief")return;
     let alive=true;const controller=new AbortController();setBrief(null);setBriefError("");
@@ -337,6 +364,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     setChatBusy(true);
     setChatError("");
     setChatDraft("");
+    if(id==="executive-female"&&/^build my (schedule|week|day)[.!]?$/i.test(question)){await buildSchedule();setChatBusy(false);return;}
     setChatHistory(previous => ({...previous,[id]:[...(previous[id]||[]),{by:"user",text:question}]}));
     try {
       // Reuse the existing authenticated SYNC read-only chat provider. These are
@@ -410,7 +438,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
         </header>
         <div className="sw-ai-conversation-toolbar">
           <button type="button" onClick={()=>{setSelected(null);nav("/sync/assist/assignments?new=1&role="+encodeURIComponent(active.roleKey||"CHIEF_OF_STAFF"))}}><BriefcaseBusiness size={15}/> Assign work</button>
-          <button type="button" onClick={()=>{if(active.id==="executive-female"){stopVoice();setReadBrief(false);setReviewOpen(false);setShowPlan(false);setShowArchive(false);setTodoOpen(false);setPanel(v=>v==="brief"?"chat":"brief");}else{setSelected(null);openEmployee(active);}}}><Maximize2 size={15}/> {active.id==="executive-female"?(panel==="brief"?"Back to chat":"Daily briefing"):"Employee workspace"}</button>
+          <button type="button" onClick={()=>{if(active.id==="executive-female"){stopVoice();setScheduleOpen(false);setReadBrief(false);setReviewOpen(false);setShowPlan(false);setShowArchive(false);setTodoOpen(false);setPanel(v=>v==="brief"?"chat":"brief");}else{setSelected(null);openEmployee(active);}}}><Maximize2 size={15}/> {active.id==="executive-female"?(panel==="brief"?"Back to chat":"Daily briefing"):"Employee workspace"}</button>
         </div>
         <div className="sw-ai-work-summary">
           <div className="sw-ai-work-summary-head"><strong>Assigned work</strong><span>{currentWork?.status==="ready"?`${currentWork.data.pending_count} awaiting review`:"Review-only pilot"}</span>
@@ -427,7 +455,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
            <p>Loading this employee's task inbox…</p>}
         </div>
         {panel==="brief"?<div className="sw-ai-command-body">
-          <nav className="sw-ai-command-nav" aria-label="Executive workspace">
+          <nav className="sw-ai-command-nav" aria-label="Executive workspace" onClick={e=>{if(e.target.closest("button")&&!e.target.closest("[data-schedule-build]"))setScheduleOpen(false)}}><button data-schedule-build type="button" className="sw-ai-review-nav" onClick={buildSchedule} disabled={scheduleBusy}>Build my schedule</button>
 
           <div className="sw-ai-brief-controls sw-ai-conversation-toolbar"><button type="button" onClick={listenBrief} disabled={!brief} aria-busy={voiceLoading}>{voiceLoading?<><LoaderCircle size={15} className="animate-spin"/> Preparing audio… (cancel)</>:speaking?"Stop audio":audioReady?"Play audio":"Listen to briefing"}</button><button type="button" onClick={()=>{setShowPlan(false);setShowArchive(false);setTodoOpen(false);setReviewOpen(false);setReadBrief(v=>!v)}} disabled={!brief} aria-expanded={readBrief}>{readBrief?"Hide briefing":"Read briefing"}</button><button type="button" title="Refresh briefing" aria-label="Refresh briefing" onClick={()=>{stopVoice();setWorkRefresh(v=>v+1)}}><RefreshCw size={15}/></button></div>
           <div className="sw-ai-conversation-toolbar"><button type="button" aria-expanded={showPlan} disabled={!brief} onClick={()=>{setShowArchive(false);setReadBrief(false);setTodoOpen(false);setReviewOpen(false);setShowPlan(v=>!v)}}>{showPlan?"Hide plan":"My plan"}</button><button type="button" onClick={archiveBrief} disabled={!brief||archiveBusy}>Save briefing</button><button type="button" aria-expanded={showArchive} onClick={()=>{setShowPlan(false);setReadBrief(false);setTodoOpen(false);setReviewOpen(false);openArchive()}}>Archive</button></div>
@@ -436,6 +464,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           <button className="sw-ai-review-nav" type="button" aria-expanded={reviewOpen} onClick={()=>{setShowPlan(false);setReadBrief(false);setShowArchive(false);setTodoOpen(false);setReviewOpen(v=>!v)}}>Morning review & progress</button>
           </nav>
           <div className="sw-ai-conversation-feed sw-ai-command-content" ref={feedRef}>
+          {scheduleOpen&&<section className="sw-ai-brief-story"><h3>Build my schedule · Next seven days</h3><p>Review the proposed calendar blocks. Existing appointments are not changed.</p>{scheduleNotice&&<p role="status">{scheduleNotice}</p>}{scheduleBusy&&<p role="status">Preparing your schedule…</p>}{scheduleDraft&&<><p>{scheduleDraft.proposed.length} proposed blocks · {scheduleDraft.existing.length} existing appointments · {scheduleDraft.skipped.length} conflicts skipped</p>{!scheduleDraft.workout_plan_recorded&&<button type="button" onClick={()=>goAction("/customer/health")}>Plan workout in Health</button>}{scheduleDraft.proposed.map(e=><label className="sw-ai-action-row" key={e.key}><input type="checkbox" checked={scheduleKeys.includes(e.key)} onChange={v=>setScheduleKeys(old=>v.target.checked?[...old,e.key]:old.filter(k=>k!==e.key))}/><span><strong>{e.title}</strong><br/>{new Date(e.start_at).toLocaleString()} – {new Date(e.end_at).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</span></label>)}<button type="button" disabled={scheduleBusy||!scheduleKeys.length} onClick={applySchedule}>Save {scheduleKeys.length} selected blocks</button><details><summary>Existing appointments and conflicts</summary>{scheduleDraft.existing.map(e=><p key={e.id}>{e.title} · {new Date(e.start_at).toLocaleString()}</p>)}{scheduleDraft.skipped.map((e,i)=><p key={i}>{e.date} · {e.title} — {e.reason}</p>)}</details><details><summary>Open tasks to review</summary>{scheduleDraft.tasks.map(t=><p key={t.id}>{t.title}{t.note?" — "+t.note:""}</p>)}</details></>}<button type="button" onClick={()=>goAction("/calendar")}>Open calendar</button></section>}
           {reviewOpen&&<section className="sw-ai-brief-evidence"><h3>Morning review &amp; progress</h3>
           {reviewBusy?<p>Reconciling your task list…</p>:reviewError?<p role="alert">{reviewError} <button type="button" onClick={()=>runDailyReview()}>Retry</button></p>:dailyReview?<><p>{dailyReview.created} new tasks added in this review.</p><h3>Completed since previous saved briefing</h3>{dailyReview.tasks.filter(t=>t.recently_completed).length?dailyReview.tasks.filter(t=>t.recently_completed).map(t=><p key={t.id}>✓ {t.title}</p>):<p>No recorded completions in this period.</p>}<h3>Still to do — have you completed any of these?</h3>{dailyReview.tasks.filter(t=>t.status==="OPEN").map(t=><div className="sw-ai-action-row" key={t.id}><span>{t.title}{t.due_date?" · "+t.due_date:""}</span><button type="button" disabled={reviewBusy} onClick={()=>runDailyReview([t.id])}>Done</button>{safeRoute(t.url)&&<button type="button" onClick={()=>goAction(t.url)}>Start</button>}{taskNotes(t)}</div>)}<button type="button" onClick={()=>runDailyReview()}>Refresh progress</button></>:<button type="button" onClick={()=>runDailyReview()}>Start daily review</button>}
           </section>}
@@ -453,7 +482,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           </>}</div></div>:<><div className="sw-ai-conversation-feed" role="log" aria-live="polite" aria-relevant="additions text">
           {!messages.length && <div className="sw-ai-conversation-intro">
             <img src={active.photo} onError={e=>{if(active.fallbackPhoto&&!e.currentTarget.src.endsWith(active.fallbackPhoto))e.currentTarget.src=active.fallbackPhoto;}} alt="" aria-hidden="true"/>
-            <strong>Talk with {active.name}</strong>
+            <strong>Talk with {active.name}</strong>{active.id==="executive-female"&&<button type="button" className="sw-ai-review-nav" onClick={buildSchedule} disabled={scheduleBusy}>Build my schedule</button>}
             <p>Ask about {active.role.toLowerCase()} priorities, request a recommendation, or assign a real task using the button above.</p>
             <small>Responses use SYNC advisory chat with a role-focused prompt. This is not a separate autonomous employee session; no business actions run from chat.</small>
           </div>}
