@@ -5,8 +5,9 @@ export const PILOT_AGENTS = Object.freeze([
   { id: "accounting-female", name: "Charlotte", role: "Accounting & Finance", workerRole: "accounting_finance", voiceName: "Mel", voiceId: "S4nguEX1VTAu3fNbnGzT", photo: "/jarvis-avatars/Charlotte.png", fallbackPhoto: "/jarvis-avatars/elizabeth.jpeg" },
   { id: "future-female", name: "Elizabeth", role: "Marketing Manager", workerRole: "social_media_marketing", voiceName: "Laura", voiceId: "FGY2WhTYpPnrIDTdsKH5", photo: "/jarvis-avatars/Elizabeth.png", fallbackPhoto: "/jarvis-avatars/elizabeth.jpeg" },
   { id: "executive-male", name: "Scarlett", role: "Sales Manager", workerRole: "sales_manager", voiceName: "Emily", voiceId: "uc7PdIi19FG6Iu2Iqkdc", photo: "/jarvis-avatars/Scarlett.png", fallbackPhoto: "/jarvis-avatars/james.jpeg" },
-  { id: "future-male", name: "Sophia", role: "Research Analyst", workerRole: "research_analyst", voiceName: "Alice", voiceId: "Xb7hH8MSUJpSbSDYk0k2", photo: "/jarvis-avatars/Sophia.png", fallbackPhoto: "/jarvis-avatars/william.jpeg" },
+  { id: "future-male", name: "Sophia", role: "Research Analyst", workerRole: "research_analyst", voiceName: "Alice", voiceId: "Xb7hH8MSUJpSbSDYk0k2", photo: "/jarvis-avatars/newsophia.png", fallbackPhoto: "/jarvis-avatars/Sophia.png" },
   { id: "property-female", name: "Sarah", role: "Property Assistant", workerRole: "property_manager", voiceName: "Tiffany - Warm, Conversational Narrator", voiceId: "6fLd3vCll0LutxnciLI8", photo: "/jarvis-avatars/Sarah.png", fallbackPhoto: "/jarvis-avatars/Victoria.png" },
+  { id: "customer-service", name: "Customer Support", role: "Customer Service", workerRole: "customer_service", photo: "/jarvis-avatars/Victoria.png", fallbackPhoto: "/jarvis-avatars/victoria.jpeg" },
 ]);
 export const isFounderPilot = (user) => String(user?.email || "").trim().toLowerCase() === PILOT_EMAIL;
 export const getPilotAgentsForUser = (user, defaultAgents) => isFounderPilot(user) ? PILOT_AGENTS : defaultAgents;
