@@ -15,7 +15,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const [employees, setEmployees] = useState([]);
   const [fetchState, setFetchState] = useState("loading");
   const [version, setVersion] = useState(0);
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState(()=>placement==="launcher"&&openSignal?"executive-female":null);
   useEffect(()=>{if(placement==="launcher"&&openSignal)setSelected("executive-female");},[placement,openSignal]);
   const [panel,setPanel]=useState("chat");
   const [brief,setBrief]=useState(null);
