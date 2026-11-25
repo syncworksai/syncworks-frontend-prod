@@ -16,6 +16,35 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const [fetchState, setFetchState] = useState("loading");
   const [version, setVersion] = useState(0);
   const [selected, setSelected] = useState(null);
+  const [panel,setPanel]=useState("chat");
+  const [brief,setBrief]=useState(null);
+  const [briefError,setBriefError]=useState("");
+  const [voiceNotice,setVoiceNotice]=useState("");
+  const [speaking,setSpeaking]=useState(false);
+  const audioRef=useRef(null);
+  const speechRun=useRef(0);
+  const stopVoice=()=>{speechRun.current++;if(audioRef.current){audioRef.current.pause();URL.revokeObjectURL(audioRef.current.src);audioRef.current=null;}setSpeaking(false);};
+  useEffect(()=>()=>{speechRun.current++;if(audioRef.current){audioRef.current.pause();URL.revokeObjectURL(audioRef.current.src);}},[]);
+  useEffect(()=>{if(!selected){stopVoice();setPanel("chat");}},[selected]);
+  useEffect(()=>{
+    if(selected!=="executive-female"||panel!=="brief")return;
+    let alive=true;setBrief(null);setBriefError("");
+    api.get("/sync-ai/assist/pilot/chief/brief/",{timeout:45000}).then(({data})=>{if(alive)setBrief(data);}).catch(()=>{if(alive)setBriefError("Briefing unavailable. Refresh to retry.");});
+    return()=>{alive=false;};
+  },[selected,panel,workRefresh]);
+  async function listenBrief(){
+    if(speaking){stopVoice();return;}
+    if(!brief)return;
+    const run=++speechRun.current;setSpeaking(true);setVoiceNotice("");
+    const text=["Victoria, your Chief of Staff.",brief.date,...(brief.sections||[]).map(s=>[s.title,s.headline,...(s.items||[]).slice(0,2).map(i=>i.title+". "+(i.next_action||""))].join(". "))].join(". ").slice(0,2400);
+    try{
+      const response=await api.post("/sync-ai/voice/synthesize/",{role:"female_assistant",text},{responseType:"blob",timeout:90000});
+      if(run!==speechRun.current)return;
+      if(!response.data?.size||!response.data.type?.startsWith("audio/"))throw Error("Invalid audio");
+      const player=new Audio(URL.createObjectURL(response.data));audioRef.current=player;player.onended=stopVoice;await player.play();
+    }catch(e){if(run!==speechRun.current)return;stopVoice();setVoiceNotice("Premium voice unavailable"+(e?.response?.status?" (HTTP "+e.response.status+")":"")+". Written briefing remains available.");}
+  }
+
   const [chatDraft, setChatDraft] = useState("");
   const [chatHistory, setChatHistory] = useState({});
   const [chatError, setChatError] = useState("");
@@ -136,6 +165,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
       setDialogTheme(Object.fromEntries(vars.map(key=>[key,computed.getPropertyValue(key).trim()]).filter(([,value])=>value)));
     }
     setChatError("");
+    setPanel("chat");
     setSelected(current=>current===person.id?null:person.id);
   };
   const sendMessage = async (event) => {
@@ -220,7 +250,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
         </header>
         <div className="sw-ai-conversation-toolbar">
           <button type="button" onClick={()=>{setSelected(null);nav("/sync/assist/assignments")}}><BriefcaseBusiness size={15}/> Assign work</button>
-          <button type="button" onClick={()=>{setSelected(null);openEmployee(active)}}><Maximize2 size={15}/> {active.id==="executive-female"?"Daily briefing":"Employee workspace"}</button>
+          <button type="button" onClick={()=>{if(active.id==="executive-female"){stopVoice();setPanel(v=>v==="brief"?"chat":"brief");}else{setSelected(null);openEmployee(active);}}}><Maximize2 size={15}/> {active.id==="executive-female"?(panel==="brief"?"Back to chat":"Daily briefing"):"Employee workspace"}</button>
         </div>
         <div className="sw-ai-work-summary">
           <div className="sw-ai-work-summary-head"><strong>Assigned work</strong><span>{currentWork?.status==="ready"?`${currentWork.data.pending_count} awaiting review`:"Review-only pilot"}</span>
@@ -236,7 +266,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
            <p>No work assigned to {active.name} yet.</p>):
            <p>Loading this employee's task inbox…</p>}
         </div>
-        <div className="sw-ai-conversation-feed" role="log" aria-live="polite" aria-relevant="additions text">
+        {panel==="brief"?<div className="sw-ai-conversation-feed"><div className="sw-ai-conversation-toolbar"><button type="button" onClick={listenBrief} disabled={!brief}>{speaking?"Stop audio":"Listen to briefing"}</button><button type="button" onClick={()=>setWorkRefresh(v=>v+1)}>Refresh</button></div>{voiceNotice&&<p role="status">{voiceNotice}</p>}{briefError?<p role="alert">{briefError}</p>:!brief?<p>Loading executive briefing…</p>:<><strong>{brief.date} · {brief.executive_context?.local_time?new Date(brief.executive_context.local_time).toLocaleTimeString():"Time unavailable"}</strong>{(brief.sections||[]).map(s=><details key={s.key} className="sw-ai-conversation-message"><summary>{s.title} — {s.headline}</summary>{(s.items||[]).map((i,n)=><p key={n}>{i.title} · {i.next_action}</p>)}</details>)}</>}</div>:<><div className="sw-ai-conversation-feed" role="log" aria-live="polite" aria-relevant="additions text">
           {!messages.length && <div className="sw-ai-conversation-intro">
             <img src={active.photo} onError={e=>{if(active.fallbackPhoto&&!e.currentTarget.src.endsWith(active.fallbackPhoto))e.currentTarget.src=active.fallbackPhoto;}} alt="" aria-hidden="true"/>
             <strong>Talk with {active.name}</strong>
@@ -258,6 +288,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
             placeholder={`Ask ${active.name} a question…`} disabled={chatBusy}/>
           <button type="submit" aria-label={`Send message to ${active.name}`} disabled={!chatDraft.trim()||chatBusy}><Send size={19}/></button>
         </form>
+        </>}
         <div className="sw-ai-conversation-footnote">Advisor chat · review proposed actions before execution · pilot access only</div>
       </section>
     </div>,document.body
