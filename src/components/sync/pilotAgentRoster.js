@@ -1,7 +1,7 @@
 // Founder-only presentation mapping. Backend worker permissions and dispatch remain authoritative.
 export const PILOT_EMAIL = "jacoblord7@outlook.com";
 export const PILOT_AGENTS = Object.freeze([
-  { id: "executive-female", name: "Victoria", role: "Chief of Staff", workerRole: "chief_of_staff", voiceName: "Terri - Conversational Australian", voiceId: "3F0Z2rlB8b72i7fhQVJ1", photo: "/jarvis-avatars/Victoria.png", fallbackPhoto: "/lady10.png?v=pilot-victoria-20261117" },
+  { id: "executive-female", name: "Victoria", role: "Chief of Staff", workerRole: "chief_of_staff", voiceName: "Terri - Conversational Australian", voiceId: "3F0Z2rlB8b72i7fhQVJ1", photo: "/jarvis-avatars/newvictoria.png", fallbackPhoto: "/jarvis-avatars/Victoria.png" },
   { id: "accounting-female", name: "Charlotte", role: "Accounting & Finance", workerRole: "accounting_finance", voiceName: "Mel", voiceId: "S4nguEX1VTAu3fNbnGzT", photo: "/jarvis-avatars/Charlotte.png", fallbackPhoto: "/jarvis-avatars/elizabeth.jpeg" },
   { id: "future-female", name: "Elizabeth", role: "Marketing Manager", workerRole: "social_media_marketing", voiceName: "Laura", voiceId: "FGY2WhTYpPnrIDTdsKH5", photo: "/jarvis-avatars/Elizabeth.png", fallbackPhoto: "/jarvis-avatars/elizabeth.jpeg" },
   { id: "executive-male", name: "Scarlett", role: "Sales Manager", workerRole: "sales_manager", voiceName: "Emily", voiceId: "uc7PdIi19FG6Iu2Iqkdc", photo: "/jarvis-avatars/Scarlett.png", fallbackPhoto: "/jarvis-avatars/james.jpeg" },
