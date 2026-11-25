@@ -226,11 +226,11 @@ export default function SyncAssistMultiMailboxes(){
     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-xl border border-white/15 bg-black/10 p-3">
       {!historyReport?<div className="flex h-full min-h-32 flex-col items-center justify-center gap-2 text-center">
        <strong className="text-sm">{propertyProfiles.length?"Select a property and press Search emails":"No property search saved yet"}</strong>
-       <p className="max-w-lg text-xs text-slate-300">Search historical Outlook correspondence across folders, using property-specific terms and contacts. Up to 300 recent messages are checked per search.</p>
+       <p className="max-w-lg text-xs text-slate-300">Search Outlook by property names, sender names, and agency keywords across folders. Indexed search runs before a bounded recent-mail scan.</p>
        {!propertyProfiles.length&&<button type="button" onClick={()=>setPropertyDrawerOpen(true)} className="rounded-lg border border-cyan-300/35 px-3 py-2 text-xs">Add your first property</button>}
       </div>:<div className="space-y-2">
        <div className="flex flex-wrap items-center justify-between gap-2">
-        <strong className="text-xs">{historyReport.findings?.length||0} matches · {historyReport.scanned} messages scanned</strong>
+        <strong className="text-xs">{historyReport.findings?.length||0} matches · {historyReport.scanned} messages checked · {historyReport.indexed_hits||0} indexed hits</strong>
         <span className="text-[11px] text-slate-300">{historyReport.property?.name}{historyReport.partial?" · Partial results":""}</span>
        </div>
        <p className="text-[11px] text-amber-100">Keyword matches are candidates, not verified property records. Select only genuine property correspondence for review. Email previews do not verify money or inspections.</p>
@@ -238,9 +238,9 @@ export default function SyncAssistMultiMailboxes(){
         <span className="text-xs">{selectedEvidenceIds.length} selected (max 20)</span>
         <button type="button" disabled={busy||!selectedEvidenceIds.length} onClick={saveReviewedEvidence} className="rounded-lg border border-cyan-300/60 px-3 py-2 text-xs font-bold disabled:opacity-50">Attach reviewed report</button>
        </div>}
-       {reportSaved&&<a className="text-xs underline" href={"/pm/properties/"+reportSaved.pm_property_id+"?tab=messages"}>Open PM property correspondence</a>}
+       {reportSaved&&<a className="text-xs underline" href={"/pm/properties/"+reportSaved.pm_property_id+"?tab=correspondence"}>Open PM property correspondence</a>}
        <div className="flex flex-wrap gap-2">{Object.entries(historyReport.counts||{}).map(([k,n])=><span key={k} className="rounded-lg border border-white/20 px-2 py-1 text-xs">{k}: {n}</span>)}</div>
-       {(historyReport.findings||[]).length===0&&<p className="text-xs text-slate-300">No matching messages within this scanned sample. Older correspondence may still exist.</p>}
+       {(historyReport.findings||[]).length===0&&<p className="text-xs text-slate-300">No matching emails for these terms in this bounded search. Add sender names, exact email addresses, or agency names above and search again. A zero result does not prove correspondence is missing.</p>}
        {(historyReport.findings||[]).map(m=><article key={m.message_id} className="rounded-lg border border-white/20 bg-black/10 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2"><label className="flex min-w-0 items-center gap-2"><input type="checkbox" aria-label={"Include "+m.subject+" in reviewed report"} checked={selectedEvidenceIds.includes(m.message_id)} disabled={!propertyProfiles.find(p=>p.profile_id===selectedProperty)?.pm_property_id||(!selectedEvidenceIds.includes(m.message_id)&&selectedEvidenceIds.length>=20)} onChange={e=>setSelectedEvidenceIds(prev=>e.target.checked?[...prev,m.message_id]:prev.filter(id=>id!==m.message_id))}/><strong className="text-xs">{m.subject}</strong></label><span className="text-[11px]">{m.category} · {m.received_at?.slice(0,10)}</span></div>
         <p className="mt-1 text-[11px] text-slate-300">{m.sender}</p>
