@@ -47,6 +47,17 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const [todoNotice,setTodoNotice]=useState("");
   const [todoDraft,setTodoDraft]=useState("");
   const [todoOpen,setTodoOpen]=useState(false);
+  const [dailyReview,setDailyReview]=useState(null);
+  const [reviewBusy,setReviewBusy]=useState(false);
+  const [reviewError,setReviewError]=useState("");
+  async function runDailyReview(ids=[]){
+    if(reviewBusy)return;
+    setReviewBusy(true);setReviewError("");
+    try{const {data}=await api.post("/sync-ai/assist/pilot/chief/daily-review/",{completed_task_ids:ids},{timeout:45000});setDailyReview(data);}
+    catch{setReviewError("Daily review unavailable. Retry to reconcile your tasks.");}
+    finally{setReviewBusy(false);}
+  }
+
   async function loadTodos(){
     setTodoBusy(true);setTodoNotice("");
     try{setTodoRows((await getWorkspaceRecords()).filter(t=>itemType(t)==="TASK"));setTodoReady(true);}
@@ -149,6 +160,9 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     api.get("/sync-ai/assist/pilot/chief/brief/",{timeout:60000,signal:controller.signal}).then(({data})=>{if(alive)setBrief(data);}).catch(error=>{if(alive)setBriefError(error?.response?.status?"Briefing unavailable (HTTP "+error.response.status+"). Refresh to retry.":"Briefing request timed out or connection failed. Refresh to retry.");});
     return()=>{alive=false;controller.abort();};
   },[selected,panel,workRefresh]);
+  useEffect(()=>{
+    if(selected==="executive-female"&&panel==="brief")runDailyReview();
+  },[selected,panel]);
   async function listenBrief(){
     if(voiceLoading||speaking){stopVoice();return;}
     if(audioReady&&audioRef.current){try{await audioRef.current.play();setAudioReady(false);setSpeaking(true);setVoiceNotice("");}catch{setVoiceNotice("Audio is ready. Tap Play audio again to start playback.");}return;}
@@ -397,6 +411,9 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           <div className="sw-ai-brief-controls sw-ai-conversation-toolbar"><button type="button" onClick={listenBrief} disabled={!brief} aria-busy={voiceLoading}>{voiceLoading?<><LoaderCircle size={15} className="animate-spin"/> Preparing audio… (cancel)</>:speaking?"Stop audio":audioReady?"Play audio":"Listen to briefing"}</button><button type="button" onClick={()=>setReadBrief(v=>!v)} disabled={!brief} aria-expanded={readBrief}>{readBrief?"Hide briefing":"Read briefing"}</button><button type="button" title="Refresh briefing" aria-label="Refresh briefing" onClick={()=>{stopVoice();setWorkRefresh(v=>v+1)}}><RefreshCw size={15}/></button></div>
           <div className="sw-ai-conversation-toolbar"><button type="button" aria-expanded={showPlan} disabled={!brief} onClick={()=>{setShowArchive(false);setReadBrief(false);setShowPlan(v=>!v)}}>{showPlan?"Hide plan":"My plan"}</button><button type="button" onClick={archiveBrief} disabled={!brief||archiveBusy}>Save briefing</button><button type="button" aria-expanded={showArchive} onClick={openArchive}>Archive</button></div>
           <div className="sw-ai-conversation-toolbar"><button type="button" onClick={()=>{setTodoOpen(v=>!v);if(!todoOpen)loadTodos();}}>{todoOpen?"Hide tasks":"My to-do list"}</button><button type="button" onClick={()=>goAction("/calendar")}>Edit schedule</button><button type="button" onClick={()=>goAction("/customer/projects")}>Projects</button></div>
+          <details className="sw-ai-brief-evidence"><summary>Morning review &amp; progress</summary>
+          {reviewBusy?<p>Reconciling your task list…</p>:reviewError?<p role="alert">{reviewError} <button type="button" onClick={()=>runDailyReview()}>Retry</button></p>:dailyReview?<><p>{dailyReview.created} new tasks added in this review.</p><h3>Completed since previous saved briefing</h3>{dailyReview.tasks.filter(t=>t.recently_completed).length?dailyReview.tasks.filter(t=>t.recently_completed).map(t=><p key={t.id}>✓ {t.title}</p>):<p>No recorded completions in this period.</p>}<h3>Still to do — have you completed any of these?</h3>{dailyReview.tasks.filter(t=>t.status==="OPEN").map(t=><div className="sw-ai-action-row" key={t.id}><span>{t.title}{t.due_date?" · "+t.due_date:""}</span><button type="button" disabled={reviewBusy} onClick={()=>runDailyReview([t.id])}>Done</button>{safeRoute(t.url)&&<button type="button" onClick={()=>goAction(t.url)}>Start</button>}</div>)}<button type="button" onClick={()=>runDailyReview()}>Refresh progress</button></>:<button type="button" onClick={()=>runDailyReview()}>Start daily review</button>}
+          </details>
           {todoNotice&&<p role="status">{todoNotice}</p>}
           {todoOpen&&<div className="sw-ai-brief-story"><h3>My tasks</h3>{todoBusy?<p>Updating tasks…</p>:!todoReady?<button type="button" onClick={loadTodos}>Retry task list</button>:todoRows.filter(t=>!t.metadata?.project_id&&["OPEN","DONE"].includes(t.metadata?.task_status||"OPEN")).map(t=><div key={t.id} className="sw-ai-action-row"><span>{t.title}</span><button type="button" disabled={todoBusy} onClick={()=>finishTodo(t,t.metadata?.task_status==="DONE"?"OPEN":"DONE")}>{t.metadata?.task_status==="DONE"?"Reopen":"Complete"}</button>{safeRoute(t.metadata?.action_url)&&<button type="button" onClick={()=>goAction(t.metadata.action_url)}>Go to</button>}</div>)}<form onSubmit={e=>{e.preventDefault();saveAction({key:"manual:"+todoDraft.trim(),title:todoDraft.trim()});}}><input aria-label="New task" maxLength={180} value={todoDraft} onChange={e=>setTodoDraft(e.target.value)} placeholder="Add a task"/><button disabled={todoBusy||!todoDraft.trim()} type="submit">Add</button></form></div>}
           {archiveNotice&&<p role="status">{archiveNotice}</p>}
