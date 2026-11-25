@@ -82,7 +82,7 @@ export default function SyncAssistMultiMailboxes(){
    setPropertyDrawerOpen(!(r.data.profiles||[]).length && !(r.data.pm_properties||[]).length);
   }catch(e){setError(mailboxError(e,"Loading property searches"));}finally{setBusy(false);}
  };
- const linkAllProperties=async()=>{
+ const linkAllProperties=async(targetPmId=null)=>{
   if(!active)return;
   setBusy(true);setError("");
   try{
@@ -92,9 +92,15 @@ export default function SyncAssistMultiMailboxes(){
    setPmProperties(reloaded.data.pm_properties||[]);
    setPortfolioLinkStatus({total:(reloaded.data.pm_properties||[]).length,
     linked:(reloaded.data.profiles||[]).filter(p=>p.pm_property_id).length});
-   setSelectedProperty(prev=>(reloaded.data.profiles||[]).some(p=>p.profile_id===prev)?prev:(reloaded.data.profiles?.[0]?.profile_id||""));
-   setNotice("Linked "+(r.data.created||[]).length+" properties. Existing links preserved. No emails attached or moved.");
+   setSelectedProperty(prev=>{const profiles=reloaded.data.profiles||[];const target=targetPmId!=null?profiles.find(p=>String(p.pm_property_id)===String(targetPmId)):null;return target?.profile_id||(profiles.some(p=>p.profile_id===prev)?prev:(profiles[0]?.profile_id||""));});
+    setHistoryReport(null);setSelectedEvidenceIds([]);
+   setNotice("Property search profiles refreshed. "+(r.data.created||[]).length+" newly linked; existing links preserved. Select a property and search. No emails attached or moved.");
   }catch(e){setError(mailboxError(e,"Linking portfolio"))}finally{setBusy(false)}
+ };
+ const chooseSearchProperty=async value=>{
+  if(!value.startsWith("pm:")){setSelectedProperty(value);setHistoryReport(null);setSelectedEvidenceIds([]);return;}
+  const pmId=value.slice(3);
+  await linkAllProperties(pmId);
  };
  const saveProperty=async()=>{
   if(!active)return;
@@ -159,7 +165,7 @@ export default function SyncAssistMultiMailboxes(){
     <div className="flex shrink-0 items-center justify-between gap-2">
      <button type="button" onClick={()=>setView("inbox")} className="rounded-lg border border-white/20 px-3 py-2 text-xs">‹ Inbox</button>
      <strong className="truncate text-sm">Sarah · Property Search</strong>
-     <button type="button" disabled={busy||!pmProperties.length} onClick={linkAllProperties} className="shrink-0 rounded-lg border border-cyan-300/60 bg-cyan-400/15 px-3 py-2 text-xs font-bold disabled:opacity-40">Link All</button>
+     <button type="button" disabled={busy||!pmProperties.length} onClick={()=>linkAllProperties()} className="shrink-0 rounded-lg border border-cyan-300/60 bg-cyan-400/15 px-3 py-2 text-xs font-bold disabled:opacity-40">Link All</button>
      <button type="button" onClick={()=>{setEditingPropertyProfile(false);setFormPmProperty("");setPropertyForm({name:"",terms:"housing authority, section 8, inspection, rent ledger",contacts:""});setPropertyDrawerOpen(true)}} className="shrink-0 rounded-lg border border-white/20 px-3 py-2 text-xs">+ New search</button>
     </div>
     {selectedProperty&&<div className="flex shrink-0 items-center justify-end gap-2">
@@ -170,12 +176,13 @@ export default function SyncAssistMultiMailboxes(){
        setEditingPropertyProfile(true);setPropertyDrawerOpen(true);
       }} className="rounded-lg border border-white/20 px-2 py-1 text-[11px]">Refine contacts & search terms</button>
     </div>}
-    {portfolioLinkStatus&&<p className="shrink-0 text-[11px] text-slate-300">{portfolioLinkStatus.linked} of {portfolioLinkStatus.total} saved properties linked · Existing manual profiles preserved · Emails remain unfiled</p>}
+    {portfolioLinkStatus&&<p className="shrink-0 text-[11px] text-slate-300">{portfolioLinkStatus.linked} of {portfolioLinkStatus.total} saved properties linked · Choose an unlinked property below to automatically link it, or use Link All · Emails remain unfiled</p>}
     <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2 rounded-xl border border-cyan-300/25 bg-black/15 p-2 sm:grid-cols-[minmax(0,1fr)_150px_auto]">
       <label className="min-w-0 text-[11px]">Property
-       <select value={selectedProperty} onChange={e=>setSelectedProperty(e.target.value)} className="mt-1 block h-10 w-full min-w-0 rounded-lg border border-white/20 bg-slate-900 px-2 text-xs">
+       <select aria-label="Choose saved property for email search" value={selectedProperty} disabled={busy} onChange={e=>chooseSearchProperty(e.target.value)} className="mt-1 block h-10 w-full min-w-0 rounded-lg border border-white/20 bg-slate-900 px-2 text-xs">
         {!propertyProfiles.length&&<option value="">Add a property to search</option>}
         {propertyProfiles.map(p=><option key={p.profile_id} value={p.profile_id}>{p.name}</option>)}
+         {pmProperties.filter(pm=>!propertyProfiles.some(p=>String(p.pm_property_id)===String(pm.id))).map(pm=><option key={"pm:"+pm.id} value={"pm:"+pm.id}>{pm.name||pm.address||"Property "+pm.id} — link & search</option>)}
        </select>
       </label>
       <label className="hidden text-[11px] sm:block">Date range
