@@ -1,3 +1,4 @@
+import CommercialPricing from "../components/CommercialPricing";
 import React from "react";
 import { ArrowLeft, CalendarDays, CircleDollarSign, Dumbbell, Mail, MapPinned, MessageSquareText, Sparkles, Users, Wrench } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -29,6 +30,7 @@ export default function CustomerPlans() {
       <main className="relative mx-auto max-w-6xl px-3 pb-24 pt-4 sm:px-5">
         <button type="button" onClick={() => nav(-1)} className="inline-flex min-h-10 items-center gap-2 rounded-2xl border border-white/10 bg-white/[.03] px-3 text-xs font-black text-slate-200"><ArrowLeft className="h-4 w-4" />Back</button>
 
+        <div className="mt-4"><CommercialPricing /></div>
         <section className="mt-4 rounded-[1.75rem] border border-cyan-300/15 bg-slate-950/70 p-5 sm:p-7">
           <div className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-300">Plans & features</div>
           <h1 className="mt-2 text-3xl font-black text-white sm:text-5xl">Why would I pay for SyncWorks?</h1>
