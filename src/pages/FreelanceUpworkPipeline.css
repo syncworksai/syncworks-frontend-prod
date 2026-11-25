@@ -23,7 +23,7 @@
 .sw-upwork-pipeline .sw-pipe-ink{color:var(--uw-ink)}
 .sw-upwork-pipeline .sw-pipe-active-border{border-color:var(--uw-accent)}
 .sw-upwork-pipeline .sw-pipe-active-bg{background:var(--uw-inset)}
-.sw-upwork-pipeline .sw-pipe-primary{background:var(--uw-accent);color:var(--uw-inset);border:1px solid var(--uw-accent)}
+.sw-upwork-pipeline .sw-pipe-primary{background:var(--uw-accent);color:#0b1825;border:1px solid var(--uw-accent)}
 .sw-upwork-pipeline .sw-pipe-control{border-color:var(--uw-border);background:var(--uw-inset);color:var(--uw-ink)}
 .sw-upwork-pipeline .sw-pipe-control:hover,.sw-upwork-pipeline button:hover,.sw-upwork-pipeline a:hover{border-color:var(--uw-accent)}
 .sw-upwork-pipeline button:focus-visible,.sw-upwork-pipeline a:focus-visible{outline:2px solid var(--uw-accent);outline-offset:2px}
