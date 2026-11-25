@@ -12,7 +12,7 @@ import "./OfficeAgentDockV27.css";
 
 // One source of truth for the private-pilot employees. Membership is NOT live
 // activity or proof that an agent is currently executing a task.
-export default function OfficeAgentDock({ user, placement = "home", theme = "future", openSignal = 0, initialAgentId = "executive-female", onDismiss }) {
+export default function OfficeAgentDock({ user, placement = "home", theme = "future", openSignal = 0, initialAgentId = "executive-female", visible = true, onDismiss }) {
   const nav = useNavigate();
   const permitted = String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com";
   const [employees, setEmployees] = useState([]);
@@ -166,7 +166,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const sections=brief?.sections||[];
   const sectionLinks={today:"/customer/projects",cases:"/sync/assist/chief",delegation:"/sync/assist/assignments",portfolio:"/pm/properties",sarah_correspondence:"/pm/properties",email:"/sync/assist/email",calendar:"/calendar",money:"/customer/finance",business:"/sbo",health:"/customer/health",scarlett_sales:"/sync/assist/growth",elizabeth_marketing:"/sync/assist/growth",customer_support:"/platform/support",production_project:"/customer/projects"};
   const safeRoute=value=>typeof value==="string"&&/^\/(?!\/)[a-zA-Z0-9/_?=&%-]+$/.test(value)?value:null;
-  const goAction=url=>{if(safeRoute(url)){setSelected(null);nav(url);}};
+  const goAction=url=>{if(safeRoute(url)){if(placement==="launcher")onDismiss?.();else setSelected(null);nav(url);}};
   const suggestedActions=brief?[
     ...(sections.find(s=>s.key==="sarah_correspondence")?.items||[]).filter(i=>/PAYMENT|INSPECTION|DOCUMENT/i.test(i.title||"")).map(i=>({key:"property:"+i.title,title:i.title,detail:i.next_action,url:safeRoute(i.detail_url)||"/pm/properties"})),
     {key:"launch:review",title:"Review SyncWorks launch milestones",detail:"Open the production readiness project and select the next verified milestone.",url:"/customer/projects"},
@@ -372,15 +372,16 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   },[permitted,selected,employees,workRefresh]);
   useEffect(() => {
     if (!selected) return;
-    const onEscape = (event) => { if (event.key === "Escape") setSelected(null); };
+    const onEscape = (event) => { if (event.key === "Escape") {if(placement==="launcher")onDismiss?.();else setSelected(null);} };
     window.addEventListener("keydown", onEscape);
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const id = window.requestAnimationFrame(() => chatFieldRef.current?.focus());
     return () => { window.removeEventListener("keydown", onEscape); document.body.style.overflow = previous; window.cancelAnimationFrame(id); };
-  }, [selected]);
+  }, [selected,visible]);
   useEffect(() => { chatEndRef.current?.scrollIntoView({block:"end",behavior:"instant"}); }, [messages.length,selected,chatBusy]);
   const selectEmployee = (person) => {
+    if(person.id==="executive-female"&&placement!=="launcher"){window.dispatchEvent(new Event("syncworks:victoria-open"));return;}
     const computed = dockRef.current ? window.getComputedStyle(dockRef.current) : null;
     if (computed) {
       const vars = ["--sw-workspace-accent","--sw-lobby-glass","--sw-ui-surface","--sw-ui-text","--sw-lobby-border"];
@@ -457,8 +458,8 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
       </div>
     </section>
   );
-  const conversation = active && shown.some(person => person.id === active.id) ? createPortal(
-    <div className="sw-ai-conversation-overlay" role="presentation" onMouseDown={event => {if(event.target===event.currentTarget)setSelected(null)}}>
+  const conversation = visible && active && shown.some(person => person.id === active.id) ? createPortal(
+    <div className="sw-ai-conversation-overlay" role="presentation" onMouseDown={event => {if(event.target===event.currentTarget){if(placement==="launcher")onDismiss?.();else setSelected(null);}}}>
       <section className={`sw-ai-conversation ${panel==="brief"?"sw-ai-conversation--command":""}`} style={dialogTheme} role="dialog" aria-modal="true" aria-labelledby="sw-ai-conversation-title" data-bubble-theme={theme}>
         <header className="sw-ai-conversation-header">
           <div className="sw-ai-conversation-identity">
@@ -470,7 +471,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
               <span className="sw-ai-conversation-status">{chatBusy ? "SYNC is preparing a response…" : "Role-focused advisory chat"}</span>
             </div>
           </div>
-          <button type="button" className="sw-ai-conversation-close" aria-label="Close employee conversation" onClick={()=>setSelected(null)}><X size={19}/></button>
+          <button type="button" className="sw-ai-conversation-close" aria-label="Close employee conversation" onClick={()=>placement==="launcher"?onDismiss?.():setSelected(null)}><X size={19}/></button>
         </header>
         <div className="sw-ai-conversation-toolbar">
           <button type="button" onClick={()=>{setSelected(null);nav("/sync/assist/assignments?new=1&role="+encodeURIComponent(active.roleKey||"CHIEF_OF_STAFF"))}}><BriefcaseBusiness size={15}/> Assign work</button>
@@ -513,7 +514,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           {briefError?<p role="alert">{briefError}</p>:!brief?<p><LoaderCircle size={15} className="animate-spin"/> Loading executive briefing…</p>:<>
           <div className="sw-ai-brief-context"><strong>{brief.date} · {brief.executive_context?.local_time?new Date(brief.executive_context.local_time).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"Time unavailable"}</strong><p>{weather.available?[forecast.temperature!=null?forecast.temperature+"°"+(forecast.temperature_unit||"F"):"",forecast.short_forecast].filter(Boolean).join(" · "):"Local weather not connected"}</p>{weather.available&&<><p>High {tempLabel(dailyWeather.high)} · Low {tempLabel(dailyWeather.low)} · Rain {rainLabel}</p>{weatherAdvice()&&<p>{weatherAdvice()}</p>}</>}{!weather.available&&<button type="button" disabled={weatherLoading} onClick={loadWeather}>{weatherLoading?"Getting weather…":"Use my location for weather"}</button>}{weatherError&&<p role="status">{weatherError}</p>}</div>
 
-          {showPlan&&<div className="sw-ai-brief-story"><div className="sw-ai-conversation-toolbar">{[["today","Today"],["week","Week"],["month","Month"]].map(([key,label])=><button key={key} type="button" aria-pressed={outlookRange===key} onClick={()=>setOutlookRange(key)}>{label}</button>)}</div><h3>Recorded schedule</h3>{(brief.schedule_outlook||[]).filter(e=>{const now=new Date(brief.generated_at),start=new Date(e.start_at);if(outlookRange==="today")return start.toDateString()===now.toDateString();const cutoff=new Date(now);cutoff.setDate(cutoff.getDate()+(outlookRange==="week"?7:30));return start>=now&&start<=cutoff;}).map(e=><p key={e.id}><strong>{e.title}</strong><br/>{new Date(e.start_at).toLocaleString()} · {e.status==="ENDED"?"Window ended":e.status==="IN_PROGRESS"?"In progress":e.minutes_until>=0&&e.minutes_until<=60?"Starts in "+e.minutes_until+" minutes":"Upcoming"}</p>)}<button type="button" onClick={()=>{setSelected(null);nav("/calendar")}}>Open calendar</button><h3>Active projects</h3>{(brief.project_progress||[]).filter(p=>p.status==="ACTIVE").map(p=><div key={p.id}><strong>{p.title}</strong><p>{p.done} of {p.total} recorded tasks completed</p>{p.next_tasks.map(t=><p key={t.id}>{t.title}</p>)}</div>)}<button type="button" onClick={()=>{setSelected(null);nav("/customer/projects")}}>Open projects & complete tasks</button></div>}
+          {showPlan&&<div className="sw-ai-brief-story"><div className="sw-ai-conversation-toolbar">{[["today","Today"],["week","Week"],["month","Month"]].map(([key,label])=><button key={key} type="button" aria-pressed={outlookRange===key} onClick={()=>setOutlookRange(key)}>{label}</button>)}</div><h3>Recorded schedule</h3>{(brief.schedule_outlook||[]).filter(e=>{const now=new Date(brief.generated_at),start=new Date(e.start_at);if(outlookRange==="today")return start.toDateString()===now.toDateString();const cutoff=new Date(now);cutoff.setDate(cutoff.getDate()+(outlookRange==="week"?7:30));return start>=now&&start<=cutoff;}).map(e=><p key={e.id}><strong>{e.title}</strong><br/>{new Date(e.start_at).toLocaleString()} · {e.status==="ENDED"?"Window ended":e.status==="IN_PROGRESS"?"In progress":e.minutes_until>=0&&e.minutes_until<=60?"Starts in "+e.minutes_until+" minutes":"Upcoming"}</p>)}<button type="button" onClick={()=>goAction("/calendar")}>Open calendar</button><h3>Active projects</h3>{(brief.project_progress||[]).filter(p=>p.status==="ACTIVE").map(p=><div key={p.id}><strong>{p.title}</strong><p>{p.done} of {p.total} recorded tasks completed</p>{p.next_tasks.map(t=><p key={t.id}>{t.title}</p>)}</div>)}<button type="button" onClick={()=>goAction("/customer/projects")}>Open projects & complete tasks</button></div>}
           {readBrief&&<><article className="sw-ai-brief-story">{narrative.map((paragraph,n)=><p key={n}>{paragraph}</p>)}</article><section className="sw-ai-brief-story"><h3>Recommended actions</h3>{suggestedActions.map(a=><div className="sw-ai-action-row" key={a.key}><span>{a.title}</span><button type="button" onClick={()=>goAction(a.url)}>Go to</button><button type="button" disabled={todoBusy} onClick={()=>saveAction(a)}>Add to list</button></div>)}</section>
           <details className="sw-ai-brief-evidence"><summary>Detailed records & employee reports</summary>{sections.map(s=><details key={s.key}><summary>{s.title} — {s.headline}</summary>{safeRoute(sectionLinks[s.key])&&<button type="button" onClick={()=>goAction(sectionLinks[s.key])}>Open workspace</button>}{(s.items||[]).map((i,n)=><p key={n}>{i.title} · {i.next_action} {safeRoute(i.detail_url)&&<button type="button" onClick={()=>goAction(i.detail_url)}>Go to record</button>}</p>)}</details>)}</details></>}
           </>}</div></div>:<><div className="sw-ai-conversation-feed" role="log" aria-live="polite" aria-relevant="additions text">
