@@ -1,3 +1,4 @@
+import CommercialPricing from "../components/CommercialPricing";
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ModeBar from "../components/ModeBar";
@@ -498,7 +499,7 @@ export default function Upgrade() {
             tone="fuchsia"
             title="Property Management"
             badge="PM Workspace"
-            price="$49.99 / month"
+            price="$49.99 / month (100 units)"
             subtitle="Manage properties, units, tenants, invites, workflows, and portfolio operations."
             bullets={[
               "Properties, units, tenants, and leases",
@@ -559,19 +560,19 @@ export default function Upgrade() {
             <button
               type="button"
               onClick={() => startModuleUpgrade(["FINANCE"], "FINANCE")}
-              disabled={!!busyKey && busyKey !== "FINANCE"}
+              disabled={true}
               className="rounded-2xl px-4 py-2 text-sm font-semibold border border-cyan-500/35 bg-cyan-500/12 hover:bg-cyan-500/18 text-cyan-200 disabled:opacity-60"
             >
-              {busyKey === "FINANCE" ? "Redirecting…" : "Add Finance ($0.99/mo) →"}
+              {busyKey === "FINANCE" ? "Redirecting…" : "Finance ($9.99/mo) — billing update pending"}
             </button>
 
             <button
               type="button"
               onClick={() => startModuleUpgrade(["FITNESS"], "FITNESS")}
-              disabled={!!busyKey && busyKey !== "FITNESS"}
+              disabled={true}
               className="rounded-2xl px-4 py-2 text-sm font-semibold border border-emerald-500/35 bg-emerald-500/12 hover:bg-emerald-500/18 text-emerald-200 disabled:opacity-60"
             >
-              {busyKey === "FITNESS" ? "Redirecting…" : "Add Fitness ($2.99/mo) →"}
+              {busyKey === "FITNESS" ? "Redirecting…" : "Health & Fitness ($9.99/mo) — billing update pending"}
             </button>
           </div>
         </div>
@@ -583,71 +584,7 @@ export default function Upgrade() {
         title="Pricing"
         subtitle="Customer-first upgrades with modular billing."
       >
-        <div className="space-y-3">
-          <div className="rounded-3xl border border-slate-800 bg-slate-950/50 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-slate-100">Customers</div>
-                <div className="text-xs text-slate-400 mt-1">Requests, tracking, receipts, and messaging.</div>
-              </div>
-              <Pill tone="cyan">Free</Pill>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-800 bg-slate-950/50 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-slate-100">Start a Business (SBO)</div>
-                <div className="text-xs text-slate-400 mt-1">Business operations and marketplace workflow.</div>
-              </div>
-              <Pill tone="indigo">$19.99 / mo</Pill>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-800 bg-slate-950/50 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-slate-100">Property Management</div>
-                <div className="text-xs text-slate-400 mt-1">Portfolio operations, tenants, and PM workflows.</div>
-              </div>
-              <Pill tone="fuchsia">$49.99 / mo</Pill>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-800 bg-slate-950/50 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-slate-100">Sales OS</div>
-                <div className="text-xs text-slate-400 mt-1">Pipelines, prospect tracking, and sales workflow.</div>
-              </div>
-              <Pill tone="emerald">$9.99 / mo</Pill>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-800 bg-slate-950/50 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-slate-100">Finance Add-on</div>
-                <div className="text-xs text-slate-400 mt-1">Optional finance workspace access.</div>
-              </div>
-              <Pill tone="cyan">$0.99 / mo</Pill>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-800 bg-slate-950/50 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-slate-100">Fitness Add-on</div>
-                <div className="text-xs text-slate-400 mt-1">Optional fitness workspace access.</div>
-              </div>
-              <Pill tone="emerald">$2.99 / mo</Pill>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-800 bg-slate-950/40 p-4 text-sm text-slate-300">
-            <b>Billing:</b> Upgrades start from the customer account first, then continue into the appropriate setup flow.
-          </div>
-        </div>
+        <CommercialPricing />
       </Modal>
     </div>
   );
