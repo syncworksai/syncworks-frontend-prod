@@ -172,3 +172,12 @@
 .sw-ai-conversation[data-bubble-theme="light"]{--sw-workspace-accent:#315c75;--sw-lobby-glass:#f4f6f8;--sw-ui-surface:#e0e8ed;--sw-ui-text:#182b38;--sw-lobby-border:#8da4b3;--sw-ai-glass:#f4f6f8;color:var(--sw-ui-text);background:var(--sw-ai-glass);border-color:var(--sw-lobby-border);}
 .sw-ai-conversation{animation-duration:450ms;}
 @media(prefers-reduced-motion:reduce){.sw-ai-conversation{animation:none!important;}}
+
+/* Keep the briefing toolbar in normal flow to prevent overlapping report text. */
+.sw-ai-conversation-feed .sw-ai-brief-controls{position:static;z-index:auto;background:transparent;}
+.sw-ai-conversation-feed .sw-ai-brief-story,.sw-ai-conversation-feed .sw-ai-brief-evidence{color:inherit;}
+.sw-ai-brief-story button,.sw-ai-brief-evidence button{border:1px solid color-mix(in srgb,currentColor 28%,transparent);border-radius:8px;padding:7px 10px;font-size:12px;color:inherit;}
+.sw-ai-action-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;border:1px solid color-mix(in srgb,currentColor 20%,transparent);border-radius:10px;padding:10px;margin:8px 0;}
+.sw-ai-action-row>span{flex:1;min-width:110px;font-size:13px;}
+.sw-ai-brief-story form{display:flex;gap:8px;flex-wrap:wrap;}
+.sw-ai-brief-story input{min-width:0;flex:1;background:transparent;border:1px solid color-mix(in srgb,currentColor 30%,transparent);border-radius:8px;padding:8px;color:inherit;}
