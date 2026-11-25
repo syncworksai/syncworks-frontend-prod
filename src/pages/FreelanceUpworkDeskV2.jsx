@@ -1,148 +1,77 @@
-import React, {useEffect,useState} from "react";
-import {createPortal} from "react-dom";
-import {useNavigate} from "react-router-dom";
-import {ArrowUpRight,BriefcaseBusiness,Bot,Check,CheckCircle2,ChevronRight,Coins,ExternalLink,FileClock,FileText,LayoutGrid,MessageCircle,ShieldCheck,Sparkles,Wallet,X,Activity,Clock3,Search} from "lucide-react";
-import {useWorkspaceAppearance} from "../components/customer/CustomerWorkspace";
-import "./FreelanceUpworkDesk.css";
+import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Bot, BriefcaseBusiness, CheckCircle2, Clock3, ExternalLink, FileText, ShieldAlert, Sparkles, Wallet, X } from "lucide-react";
+import { useWorkspaceAppearance } from "../components/customer/CustomerWorkspace";
 
-const FIRST = {
-  title:"Manual Amazon Product Research and Spreadsheet Curation",
-  jobUrl:"https://www.upwork.com/jobs/~022124978383444007582",
-  proposalId:"2124993311948001281",
-  jobId:"2124978383444007582",
-  bid:30,
-  connects:8,
-  verifiedAt:"November 23, 2026",
-  letter:`Hello Chin,
-
-I’d be glad to help with the initial six-product Amazon research spreadsheet. Your focus on product judgment, accurate ASINs, exact variants, and original writing matches the way I approach research and data-quality work.
-
-My background includes business operations and project management, and I work with Excel, data cleanup, and online research. For each of your six categories, I’ll manually review candidate listings, verify the exact Amazon.com product and variant available to U.S. shoppers, and record the ASIN, direct URL, date checked, a concise original title, a 20–40-word note, and a clear reason for selecting it. I’ll avoid duplicates and questionable sellers or unsupported claims.
-
-I understand your no-scraping, no-copying requirement and will follow it. I can complete this initial six-product assignment at your listed $30 fixed price, and I’m happy to use your category brief and spreadsheet template.
-
-Best,
-Jacob`
-};
-const stages=["Submitted","Client viewed","Interview","Offer","Hired","Delivered","Paid"];
-const money=n=>Number(n||0).toLocaleString("en-US",{style:"currency",currency:"USD"});
+/**
+ * Founder pilot. The Upwork data below is an explicitly dated read-only snapshot.
+ * Never infer a hire, payment, or current view status from manually changed stages.
+ * This screen does not authenticate with Upwork or schedule server-side agents.
+ */
+const SNAPSHOT_AT="2026-11-25T18:03:46Z";
+const CONFIRMED=[
+ {id:"2124993311948001281",jobId:"2124978383444007582",title:"Manual Amazon Product Research and Spreadsheet Curation",url:"https://www.upwork.com/jobs/~022124978383444007582",stage:"Submitted",amount:"$30 fixed",details:"33 proposals · 8 opened · Not viewed at verification",bot:"Proposal Agent",note:"Do not resubmit or boost. Await client response.",submitted:"Nov 23"},
+ {id:"2125302184257974793",jobId:"2125160830223473195",title:"AI Research Assistant (Remote, Part-Time) — UpForward",url:"https://www.upwork.com/jobs/~022125160830223473195",stage:"Invitation accepted",amount:"$30/hr",details:"21 proposals · 4 shortlisted · Not viewed at verification",bot:"Victoria",note:"Invitation accepted, not hired. Submitted terms propose 15% rate increases every three months.",submitted:"Nov 25"}
+];
+const CANDIDATES=[
+ {id:"2125509670158062800",title:"Online English Teaching Job Researcher",url:"https://www.upwork.com/jobs/~022125509670158062800",price:"$150 fixed",reason:"Low competition at last check (3 proposals). Confirm scope and realistic hours.",risk:"Client has limited hiring history",score:82},
+ {id:"2125631238757032170",title:"U.S.-Based Market Research Participants",url:"https://www.upwork.com/jobs/~022125631238757032170",price:"$45 fixed",reason:"Remote and flexible; client has previous hires.",risk:"Verify expected time and client requirements",score:68}
+];
+const WORKFLOW=[
+ {id:"screen",name:"Screen job opportunities",agent:"Research Agent",state:"Suggested",detail:"Check client history, scope, pay and competition; reject misleading or low-value work."},
+ {id:"draft",name:"Prepare two tailored proposals",agent:"Proposal Agent",state:"Awaiting build",detail:"Draft against the complete postings and genuine portfolio, then place in approval queue."},
+ {id:"monitor",name:"Check existing proposal status",agent:"Victoria",state:"Awaiting connection",detail:"Read Upwork statuses once server-side authorization is available; do not auto-advance."},
+ {id:"deliver",name:"Prepare work deliverables",agent:"Operations Agent",state:"Awaiting contract",detail:"Only after an actual contract and permission for AI assistance; require QA approval."}
+];
+const stages=["Discovered","Qualified","Drafted","Approval","Submitted","Viewed","Interview","Offer","Contract","Delivery","Paid"];
+const cls="rounded-2xl border border-white/15 bg-black/35 backdrop-blur-md";
+function dollars(n){return "$"+Number(n).toFixed(2);}
 export default function FreelanceUpworkDesk({items=[],addJob,updateJob}){
  const nav=useNavigate();
  const [appearance]=useWorkspaceAppearance();
- const [panel,setPanel]=useState(null);
- const [notice,setNotice]=useState("");
- const tracked=items.find(j=>j.upworkJobId===FIRST.jobId||j.proposalId===FIRST.proposalId);
- const latestStage=tracked?.status||"Applied";
- const motion=appearance.motion!==false;
- useEffect(()=>{
-   if(!panel)return;
-   const onKey=e=>{if(e.key==="Escape")setPanel(null)};
-   window.addEventListener("keydown",onKey);
-   return()=>window.removeEventListener("keydown",onKey);
- },[panel]);
- const track=()=>{
-  if(tracked){setPanel("pipeline");return;}
-  addJob({title:FIRST.title,platform:"Upwork",url:FIRST.jobUrl,budget:FIRST.bid,type:"Fixed price",status:"Applied",proposalId:FIRST.proposalId,upworkJobId:FIRST.jobId,connectsSpent:FIRST.connects,source:"Verified Upwork snapshot via ChatGPT 2026-11-23"});
-  setNotice("Proposal saved in this browser's local pipeline; no new application was sent.");
-  setPanel("pipeline");
+ const [tab,setTab]=useState("pipeline");
+ const [selected,setSelected]=useState(null);
+ const [message,setMessage]=useState("");
+ const [approvals,setApprovals]=useState({});
+ const [paused,setPaused]=useState(true);
+ const stored=useMemo(()=>CONFIRMED.map(p=>({...p,local:items.find(x=>x.proposalId===p.id||x.upworkJobId===p.jobId)})),[items]);
+ const imported=stored.filter(p=>p.local).length;
+ const saveCandidate=c=>{if(items.some(x=>x.upworkJobId===c.id)){setMessage("Already recorded locally.");return;}
+  addJob({title:c.title,platform:"Upwork",url:c.url,type:"Fixed price",budget:Number(c.price.match(/\d+/)?.[0]||0),upworkJobId:c.id,status:"Saved",source:"Manual shortlist from 2026-11-25; not a live SyncWorks feed"});
+  setMessage("Saved to this browser only. No proposal submitted or Connects spent.");
  };
- const changeStatus=status=>{
-   if(!tracked)return;
-   updateJob(tracked.id,{status});
-   setNotice("Local stage updated. This is not a verified Upwork status.");
+ const saveKnown=p=>{if(p.local)return setSelected(p);
+  addJob({title:p.title,platform:"Upwork",url:p.url,type:p.amount.includes("/hr")?"Hourly":"Fixed price",budget:p.amount.includes("/hr")?0:30,proposalId:p.id,upworkJobId:p.jobId,status:"Applied",source:"Upwork snapshot verified 2026-11-25; not live"});
+  setMessage("Saved locally. This does not send an application.");
  };
- const open=key=>{setNotice("");setPanel(key)};
- const panels={
-  proposal:["Proposal details",FileText],
-  finances:["Financial breakdown",Wallet],
-  pipeline:["Job pipeline",BriefcaseBusiness],
-  activity:["Activity & status",Activity],
-  jarvis:["AI operations",Bot],
-  search:["Find more work",Search]
- };
- const metricData=[
-  ["Proposals","01","Submitted · verified",FileClock],
-  ["Potential",money(FIRST.bid),"Not earned",Wallet],
-  ["Connects",String(FIRST.connects),"Units used · no cash",Coins],
-  ["Received","$0.00","Not verified paid",CheckCircle2]
- ];
- return <div className="sw-upwork-stage" data-upwork-theme={appearance.theme||"legacy"} data-upwork-motion={motion?"on":"off"}>
-  <div className="sw-upwork-room">
-   <div className="sw-upwork-art" aria-hidden="true"/>
-   <div className="sw-upwork-content">
-    <header className="sw-upwork-top sw-upwork-glass">
-     <div className="sw-upwork-heading">
-      <p className="sw-upwork-kicker"><span className="sw-upwork-live-dot"/> SYNCWORKS / FREELANCE COMMAND</p>
-      <h1>Upwork <span>Desk</span></h1>
-      <p className="sw-upwork-lead">One workspace for proposals, deliverables & earnings.</p>
-     </div>
-     <div className="sw-upwork-header-actions">
-      <span className="sw-upwork-connection"><ShieldCheck size={14}/> ChatGPT connected <i/> Site sync pending</span>
-      <button className="sw-upwork-action sw-upwork-action-primary" type="button" onClick={()=>open("search")}><Search size={16}/> Find work</button>
-      <button className="sw-upwork-icon-button" aria-label="Open activity" title="Activity" onClick={()=>open("activity")} type="button"><Activity size={18}/></button>
-     </div>
-    </header>
-    <div className="sw-upwork-stats" aria-label="Upwork account snapshot">
-     {metricData.map(([name,value,caption,Icon],i)=><button type="button" className="sw-upwork-glass sw-upwork-metric" key={name} onClick={()=>open(i===0?"pipeline":i===2?"activity":"finances")}><span className="sw-upwork-metric-label"><Icon size={15}/>{name}</span><strong>{value}</strong><small>{caption}</small></button>)}
-    </div>
-    <div className="sw-upwork-main">
-     <section className="sw-upwork-glass sw-upwork-deal">
-      <div className="sw-upwork-section-head"><span className="sw-upwork-eyebrow"><BriefcaseBusiness size={15}/> FEATURED APPLICATION</span><span className="sw-upwork-status"><Check size={13}/> Submitted</span></div>
-      <div className="sw-upwork-deal-body">
-       <div className="sw-upwork-emblem" aria-hidden="true"><BriefcaseBusiness size={25}/></div>
-       <div className="sw-upwork-deal-info">
-        <h2>{FIRST.title}</h2>
-        <p>Proposal #{FIRST.proposalId}</p>
-       </div>
-       <div className="sw-upwork-bid"><small>FIXED BID</small><strong>{money(FIRST.bid)}</strong></div>
-      </div>
-      <div className="sw-upwork-deal-meta">
-       <span><Clock3 size={14}/> Less than 1 month</span>
-       <span><Coins size={14}/> 8 Connects</span>
-       <span><ShieldCheck size={14}/> No bid boost</span>
-      </div>
-      <div className="sw-upwork-deal-bottom">
-       <p><span className="sw-upwork-live-dot"/> Awaiting client response <small>· verified {FIRST.verifiedAt}</small></p>
-       <div className="sw-upwork-deal-actions">
-        <button type="button" className="sw-upwork-action sw-upwork-action-primary" onClick={()=>open("proposal")}>View proposal <ChevronRight size={15}/></button>
-        <button type="button" className="sw-upwork-action" onClick={track}>{tracked?"Open pipeline":"Track job"}</button>
-        <a className="sw-upwork-action sw-upwork-external" href={FIRST.jobUrl} target="_blank" rel="noopener noreferrer" title="View original Upwork posting"><ExternalLink size={15}/><span>Upwork</span></a>
-       </div>
-      </div>
-     </section>
-     <aside className="sw-upwork-insights">
-      <section className="sw-upwork-glass sw-upwork-timeline">
-       <div className="sw-upwork-section-head"><span className="sw-upwork-eyebrow">DEAL PROGRESS</span><button type="button" onClick={()=>open("activity")} className="sw-upwork-plain">Details <ChevronRight size={14}/></button></div>
-       <div className="sw-upwork-steps">{stages.map((s,i)=><div key={s} className={"sw-upwork-step "+(i===0?"done":i===1?"current":"")}><span className="sw-upwork-step-marker">{i===0?<Check size={11}/>:i+1}</span><span>{s}</span></div>)}</div>
-      </section>
-      <section className="sw-upwork-glass sw-upwork-next">
-       <div className="sw-upwork-section-head"><span className="sw-upwork-eyebrow"><Sparkles size={14}/> NEXT MOVE</span></div>
-       <strong>Stay ready for the response.</strong>
-       <p>Continue qualifying jobs while this proposal is pending.</p>
-       <div className="sw-upwork-next-buttons"><button type="button" onClick={()=>open("search")}>Find jobs <ArrowUpRight size={13}/></button><button type="button" onClick={()=>open("jarvis")}>AI tools <Bot size={13}/></button></div>
-      </section>
-     </aside>
-    </div>
-    <nav className="sw-upwork-quick" aria-label="Upwork quick actions">
-     {[["Job pipeline",BriefcaseBusiness,"pipeline"],["Finance ledger",Wallet,"finances"],["Activity log",Activity,"activity"],["AI assistant",Bot,"jarvis"]].map(([title,Icon,key])=><button className="sw-upwork-glass" type="button" key={key} onClick={()=>open(key)}><Icon size={17}/><span>{title}</span><ChevronRight size={15}/></button>)}
-    </nav>
-    {notice&&<p className="sw-upwork-toast" role="status">{notice}</p>}
-    <p className="sw-upwork-footnote">Data verified {FIRST.verifiedAt} through ChatGPT; no live SyncWorks–Upwork feed. Manual entries remain browser-local. No client payment verified.</p>
-   </div>
+ const card=(children,extra="")=><div className={cls+" "+extra}>{children}</div>;
+ const select=(record)=>{setSelected(record);setMessage("");};
+ const current=selected?.id?selected:null;
+ return <main className="relative flex min-h-[76dvh] flex-col gap-3 overflow-hidden rounded-3xl border border-white/10 bg-[#101710] p-3 text-[#f5f2e8] sm:p-5" data-upwork-theme={appearance.theme||"legacy"} aria-label="Upwork AI pipeline">
+  <header className="flex flex-wrap items-center justify-between gap-3">
+   <div><div className="text-[10px] font-bold uppercase tracking-[.19em] text-emerald-200">SyncWorks / AI Workforce / Founder pilot</div><h1 className="text-2xl font-semibold">Upwork <span className="text-[#b6aa80]">Income Pipeline</span></h1><p className="text-xs text-white/60">Static account snapshot · November 25, 2026 · Browser-local changes, no site sync</p></div>
+   <div className="flex flex-wrap gap-2"><button className="rounded-xl border border-white/20 px-3 py-2 text-xs" onClick={()=>nav("/sync/assist")}> <Bot size={14} className="inline"/> Victoria / Sync Assist</button><button className="rounded-xl border border-white/20 px-3 py-2 text-xs" onClick={()=>setPaused(v=>!v)} aria-pressed={!paused}>{paused?"Automation paused":"Preview only · not live"}</button></div>
+  </header>
+  <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+   {[["Verified proposals","2","Both require follow-up"],["Saved locally",String(imported)+"/2","Confirmed snapshot imported"],["Connects snapshot","138","Not live balance"],["Verified active contracts","0","No income recorded"]].map(([label,value,description])=><section key={label} className={cls+" p-3"}><p className="text-[11px] text-white/65">{label}</p><strong className="block text-2xl">{value}</strong><small className="text-[10px] text-white/50">{description}</small></section>)}
   </div>
-  {panel&&createPortal(<div className="sw-upwork-backdrop" data-upwork-theme={appearance.theme||"legacy"} data-upwork-motion={motion?"on":"off"} onMouseDown={()=>setPanel(null)}>
-    <aside className="sw-upwork-drawer" role="dialog" aria-modal="true" aria-label={panels[panel][0]} onMouseDown={e=>e.stopPropagation()}>
-     <header className="sw-upwork-drawer-head"><div className="sw-upwork-drawer-title">{React.createElement(panels[panel][1],{size:20})}<div><small>SYNCWORKS / UPWORK</small><h2>{panels[panel][0]}</h2></div></div><button className="sw-upwork-icon-button" type="button" onClick={()=>setPanel(null)} aria-label="Close panel"><X size={20}/></button></header>
-     <div className="sw-upwork-drawer-scroll">
-      {panel==="proposal"&&<><div className="sw-upwork-drawer-card"><small>VERIFIED SUBMISSION</small><h3>{FIRST.title}</h3><p>Submitted November 23, 2026 · ID #{FIRST.proposalId}</p><p>$30 fixed price · Less than 1 month · No attachments · No bid boost</p></div><h3>Sent cover letter</h3><div className="sw-upwork-letter">{FIRST.letter}</div><a className="sw-upwork-action" href={FIRST.jobUrl} target="_blank" rel="noopener noreferrer">Open on Upwork <ExternalLink size={14}/></a></>}
-      {panel==="finances"&&<><p>Accounting separates potential income, signed contracts, received payments and Connects usage.</p>{[["Potential contract","$30.00"],["Signed contract","$0.00"],["Verified billed","$0.00"],["Verified received","$0.00"],["Application Connects","8 units"],["Cash cost for free Connects","$0.00"]].map(([a,b])=><div key={a} className="sw-upwork-ledger-row"><span>{a}</span><strong>{b}</strong></div>)}<p className="sw-upwork-caution">This is a snapshot of the first proposal, not reconciled Upwork or banking data. Actual Upwork fees and payout remain unverified.</p><button className="sw-upwork-action sw-upwork-action-primary" onClick={()=>nav("/customer/freelance/earnings")}>Open secure cloud ledger</button></>}
-      {panel==="pipeline"&&<><div className="sw-upwork-drawer-card"><small>FIRST PROPOSAL</small><h3>{FIRST.title}</h3><p>Upwork submission verified. {tracked?"Tracked locally":"Not yet added to this browser's local pipeline"}.</p></div>{!tracked?<button className="sw-upwork-action sw-upwork-action-primary" type="button" onClick={track}>Add to my pipeline</button>:<><label className="sw-upwork-field">Internal tracking stage<select value={latestStage} onChange={e=>changeStatus(e.target.value)}>{["Applied","Interview","Contracted","In progress","Submitted","Paid","Declined"].map(s=><option key={s}>{s}</option>)}</select></label><p className="sw-upwork-caution">Manual stage updates are not confirmation of client acceptance or payment.</p></>}{notice&&<p role="status">{notice}</p>}<button className="sw-upwork-action" onClick={()=>nav("/customer/freelance/proposals")}>Open all proposals</button></>}
-      {panel==="activity"&&<><div className="sw-upwork-drawer-card"><small>VERIFICATION SNAPSHOT</small><h3>Application sent</h3><p>November 23, 2026</p><p>Upwork confirmed proposal #{FIRST.proposalId} with $30 fixed bid, 8 Connects and no boost.</p></div><div className="sw-upwork-ledger-row"><span>Client viewed at verification</span><strong>No</strong></div><div className="sw-upwork-ledger-row"><span>Interview / offer</span><strong>Not verified</strong></div><div className="sw-upwork-ledger-row"><span>Payment</span><strong>Not verified</strong></div><p className="sw-upwork-caution">Status may have changed since the snapshot. Check Upwork for current results.</p><a className="sw-upwork-action" href={FIRST.jobUrl} target="_blank" rel="noopener noreferrer">Check on Upwork <ExternalLink size={14}/></a></>}
-      {panel==="jarvis"&&<><div className="sw-upwork-drawer-card"><small>CONTROLLED ASSISTANCE</small><h3>AI Freelance Operations</h3><p>Evaluate jobs, draft messages and plan deliverables. Actions still require review and authorization.</p></div>{[["Evaluate job","Assess budget, scope and quality risks."],["Draft proposal","Tailor the bid to my real experience."],["Prepare work plan","Outline manual validation and deliverable QA."]].map(([label,description])=><div className="sw-upwork-ledger-row" key={label}><span><strong>{label}</strong><small>{description}</small></span><button type="button" className="sw-upwork-plain" onClick={()=>nav("/customer/freelance/jarvis")}>Open <ChevronRight size={13}/></button></div>)}<button type="button" className="sw-upwork-action" onClick={()=>nav("/sync/assist")}>Open Sync Assist <Bot size={14}/></button></>}
-      {panel==="search"&&<><div className="sw-upwork-drawer-card"><small>DISCOVERY</small><h3>Qualify the next job</h3><p>Choose lower-competition, payment-verified work aligned with research, Excel or CSV skills. Check work terms before bidding.</p></div><a className="sw-upwork-action sw-upwork-action-primary" href="https://www.upwork.com/nx/find-work/" target="_blank" rel="noopener noreferrer">Open Upwork search <ExternalLink size={14}/></a><button className="sw-upwork-action" type="button" onClick={()=>nav("/customer/freelance/jobs")}>Open local jobs workspace</button></>}
-     </div>
-     <footer className="sw-upwork-drawer-footer">Founder pilot · No autonomous submissions · No live Upwork website connection</footer>
-    </aside>
-   </div>,document.body)}
- </div>;
+  <nav aria-label="Pipeline sections" className="flex shrink-0 gap-2 overflow-x-auto pb-1">
+   {[["pipeline","Pipeline"],["discover","Shortlist"],["agents","AI tasks"],["approvals","Approvals"]].map(([id,name])=><button type="button" key={id} onClick={()=>setTab(id)} aria-pressed={tab===id} className={"shrink-0 rounded-xl border px-4 py-2 text-xs font-semibold "+(tab===id?"border-[#b9ae85] bg-[#b9ae85]/20 text-white":"border-white/15 text-white/65")}>{name}</button>)}
+  </nav>
+  {tab==="pipeline"&&<div className="flex min-h-0 flex-1 flex-col gap-3">
+    <div className="flex gap-1 overflow-x-auto pb-1" aria-label="Pipeline stages">{stages.map(s=><span key={s} className={"shrink-0 rounded-lg border px-2 py-1 text-[10px] "+(["Submitted"].includes(s)?"border-emerald-400/35 text-emerald-200":"border-white/10 text-white/45")}>{s}</span>)}</div>
+    <section className="grid gap-3 lg:grid-cols-2">{stored.map(p=><article key={p.id} className={cls+" p-4"}>
+     <div className="mb-2 flex justify-between gap-2"><span className="text-[10px] uppercase tracking-wide text-emerald-200">{p.stage} · {p.submitted}</span><span className="text-xs font-bold">{p.amount}</span></div>
+     <h2 className="text-sm font-semibold">{p.title}</h2><p className="mt-2 text-xs text-white/60">{p.details}</p><p className="mt-1 text-[11px] text-[#c6b990]">{p.note}</p>
+     <div className="mt-4 flex flex-wrap gap-2"><button onClick={()=>select(p)} className="rounded-lg border border-white/20 px-3 py-2 text-xs">Details & actions</button><button className="rounded-lg border border-white/20 px-3 py-2 text-xs" onClick={()=>saveKnown(p)}>{p.local?"Tracked locally":"Track locally"}</button><a className="rounded-lg border border-white/20 px-3 py-2 text-xs" href={p.url} target="_blank" rel="noopener noreferrer">Upwork <ExternalLink size={12} className="inline"/></a></div>
+    </article>)}</section>
+    {card(<div className="flex flex-wrap justify-between gap-2"><div><p className="text-sm font-semibold">Victoria's next decision</p><p className="text-xs text-white/60">Review the new shortlist, then queue only the best-fitting applications. No current automated application sending.</p></div><button className="rounded-xl bg-[#b6aa80] px-3 py-2 text-xs font-bold text-[#151811]" onClick={()=>setTab("discover")}>Review candidates</button></div>,"p-4")}
+   </div>}
+  {tab==="discover"&&<section className="grid gap-3 lg:grid-cols-2">{CANDIDATES.map(c=><article key={c.id} className={cls+" p-4"}><div className="flex items-center justify-between"><span className="text-xs text-emerald-200">Review first · score {c.score}/100</span><strong className="text-sm">{c.price}</strong></div><h2 className="mt-2 text-base font-semibold">{c.title}</h2><p className="mt-2 text-xs text-white/65">{c.reason}</p><p className="mt-2 text-xs text-amber-200"><ShieldAlert size={13} className="inline"/> {c.risk}</p><div className="mt-4 flex gap-2"><button className="rounded-lg border border-white/20 px-3 py-2 text-xs" onClick={()=>saveCandidate(c)}>Save locally</button><a className="rounded-lg border border-white/20 px-3 py-2 text-xs" href={c.url} target="_blank" rel="noopener noreferrer">Full posting <ExternalLink size={12} className="inline"/></a></div></article>)}</section>}
+  {tab==="agents"&&<section className="grid gap-2 lg:grid-cols-2">{WORKFLOW.map(t=><article key={t.id} className={cls+" p-4"}><div className="flex items-center justify-between gap-2"><strong className="text-sm">{t.name}</strong><span className="text-[10px] text-[#b9ae85]">{t.state}</span></div><small className="text-emerald-200">{t.agent}</small><p className="mt-2 text-xs text-white/60">{t.detail}</p></article>)}</section>}
+  {tab==="approvals"&&<section className={cls+" p-4"}><h2 className="flex items-center gap-2 font-semibold"><CheckCircle2 size={18}/> Approval desk</h2><p className="mt-2 text-xs text-white/60">These are planning approvals stored only in this browser session. They do not authorize an Upwork submission.</p>{CANDIDATES.map(c=><label key={c.id} className="mt-3 flex items-center gap-3 rounded-xl border border-white/10 p-3 text-xs"><input type="checkbox" checked={!!approvals[c.id]} onChange={e=>setApprovals(s=>({...s,[c.id]:e.target.checked}))}/><span>Request a tailored proposal draft for: {c.title}</span></label>)}<button className="mt-4 rounded-xl border border-white/20 px-3 py-2 text-xs" onClick={()=>{const names=CANDIDATES.filter(c=>approvals[c.id]).map(c=>c.title); if(!names.length)return setMessage("Select at least one opportunity."); navigator.clipboard?.writeText("Draft and review only; do not submit. Jobs: "+names.join("; "));setMessage("Draft request copied. Paste into Sync Assist; no automated job was launched.");}}>Copy draft request</button></section>}
+  {message&&<p role="status" className="rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs">{message}</p>}
+  <footer className="mt-auto flex flex-wrap justify-between gap-2 border-t border-white/10 pt-3 text-[10px] text-white/50"><span>Snapshot at {new Date(SNAPSHOT_AT).toLocaleString()} · Live Upwork API not connected to SyncWorks</span><button className="underline" onClick={()=>nav("/customer/freelance/earnings")}>Open earnings ledger</button></footer>
+  {current&&<div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/75 p-3" onMouseDown={()=>setSelected(null)}><aside role="dialog" aria-modal="true" aria-label="Application detail" onMouseDown={e=>e.stopPropagation()} className="max-h-[90dvh] w-full max-w-lg overflow-auto rounded-2xl border border-[#b6aa80]/30 bg-[#151b15] p-5 shadow-2xl"><div className="flex justify-between"><span className="text-xs text-emerald-200">{current.stage}</span><button onClick={()=>setSelected(null)} aria-label="Close"><X size={19}/></button></div><h2 className="mt-2 text-lg font-semibold">{current.title}</h2><p className="mt-3 text-xs text-white/65">{current.details}</p><p className="mt-3 text-xs text-[#b6aa80]">{current.note}</p><p className="mt-4 text-xs">Assigned: {current.bot} · Proposal ID: {current.id}</p><p className="mt-2 text-xs text-white/50">Last verified November 25, 2026. Do not interpret local tracking as a current Upwork status.</p><div className="mt-5 flex gap-2"><a href={current.url} target="_blank" rel="noopener noreferrer" className="rounded-xl border border-white/20 px-3 py-2 text-xs">View Upwork record</a><button className="rounded-xl border border-white/20 px-3 py-2 text-xs" onClick={()=>{setSelected(null);nav("/sync/assist");}}>Ask Victoria</button></div></aside></div>}
+ </main>;
 }
