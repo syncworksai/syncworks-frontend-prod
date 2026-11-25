@@ -1924,9 +1924,7 @@ export default function ModeBar({
             <img src="/brands/syncworks-icon-192.png" alt="SyncWorks" className="h-12 w-12 shrink-0 rounded-2xl border border-cyan-500/30 bg-slate-950 object-contain object-center p-1.5"/>
             <div className="min-w-0 flex-1"><div className="truncate text-sm font-black uppercase tracking-[.14em] text-white sm:text-lg">SyncWorks</div><div className="truncate text-[11px] font-semibold text-cyan-200">{workspaceContext.name} · {workspacePage}</div></div>
             <div className="flex shrink-0 items-center gap-2">
-              <IconButton title="Support" onClick={goSupport} className="shrink-0">
-                <SupportIcon className="h-5 w-5" />
-              </IconButton>
+              <button type="button" title="Support" aria-label="Open Support" onClick={goSupport} className="sw-modebar-support flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-500/40 text-current transition hover:opacity-80"><SupportIcon className="h-5 w-5" /></button>
               <NotificationsBell inline />
               <button type="button" onClick={()=>setMobileMenuOpen(true)} title="Open SyncWorks menu" className="flex min-h-12 items-center gap-2 rounded-2xl border border-cyan-400/30 bg-cyan-400/10 px-3 text-sm font-black text-cyan-100"><MenuIcon className="h-5 w-5"/><span>Menu</span></button>
             </div>
@@ -2066,9 +2064,7 @@ export default function ModeBar({
                   <GearIcon className="h-5 w-5" />
                 </button>
               </div>
-              <IconButton title="Support" onClick={goSupport} className="shrink-0">
-                <SupportIcon className="h-5 w-5" />
-              </IconButton>
+              <button type="button" title="Support" aria-label="Open Support" onClick={goSupport} className="sw-modebar-support flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-500/40 text-current transition hover:opacity-80"><SupportIcon className="h-5 w-5" /></button>
               {isHealthRoute ? (
                 <button
                   type="button"
