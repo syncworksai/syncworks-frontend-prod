@@ -51,6 +51,21 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     finally{setScheduleBusy(false);}
   }
 
+  const autoPlanDate=useRef("");
+  useEffect(()=>{
+    if(!permitted||selected!=="executive-female"||panel!=="brief")return;
+    const today=new Date().toLocaleDateString("en-CA");
+    if(autoPlanDate.current===today||scheduleBusy)return;
+    autoPlanDate.current=today;
+    let alive=true;
+    setScheduleBusy(true);
+    api.post("/sync-ai/assist/pilot/chief/schedule/",{mode:"preview"},{timeout:45000}).then(({data})=>{
+      if(!alive)return;
+      setScheduleDraft(data);setScheduleKeys((data.proposed||[]).map(e=>e.key));
+      setScheduleNotice("Your next seven days are ready to review.");
+    }).catch(()=>{if(alive){autoPlanDate.current="";setScheduleNotice("Automatic plan unavailable. Use Build my schedule to retry.");}}).finally(()=>{if(alive)setScheduleBusy(false);});
+    return()=>{alive=false;autoPlanDate.current="";setScheduleBusy(false);};
+  },[permitted,selected,panel]);
   const [outlookRange,setOutlookRange]=useState("today");
   const [showPlan,setShowPlan]=useState(false);
   const [showArchive,setShowArchive]=useState(false);
@@ -139,6 +154,15 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const feedRef=useRef(null);
   const weather=weatherOverride||brief?.executive_context?.weather||{};
   const forecast=weather.current_period||{};
+  const dailyWeather=weather.daily_summary||{};
+  const tempLabel=v=>v==null?"Unavailable":Math.round(v)+"°F";
+  const rainLabel=dailyWeather.rain==null?"Unavailable":Math.round(dailyWeather.rain)+"%";
+  const weatherAdvice=()=>{
+    const cold=[dailyWeather.low,forecast.temperature].filter(v=>v!=null).some(v=>v<60);
+    const wet=(dailyWeather.rain!=null&&dailyWeather.rain>=40)||/rain|shower|storm/i.test(forecast.short_forecast||"");
+    return cold&&wet?"Take a jacket and an umbrella if you're heading out.":cold?"I'd bring a jacket if you're heading out.":wet?"I'd keep an umbrella handy.":"";
+  };
+
   const sections=brief?.sections||[];
   const sectionLinks={today:"/customer/projects",cases:"/sync/assist/chief",delegation:"/sync/assist/assignments",portfolio:"/pm/properties",sarah_correspondence:"/pm/properties",email:"/sync/assist/email",calendar:"/calendar",money:"/customer/finance",business:"/sbo",health:"/customer/health",scarlett_sales:"/sync/assist/growth",elizabeth_marketing:"/sync/assist/growth",customer_support:"/platform/support",production_project:"/customer/projects"};
   const safeRoute=value=>typeof value==="string"&&/^\/(?!\/)[a-zA-Z0-9/_?=&%-]+$/.test(value)?value:null;
@@ -157,7 +181,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     const now=new Date(context.local_time||brief.generated_at);
     const hour=Number.isNaN(now.getTime())?12:now.getHours();
     const paragraphs=[(hour<12?"Good morning":hour<18?"Good afternoon":"Good evening")+". Let's get your day organized."];
-    if(weather.available)paragraphs.push("The local weather is "+clean(forecast.short_forecast||"available")+(forecast.temperature!=null?", around "+forecast.temperature+" degrees":"")+".");
+    if(weather.available)paragraphs.push("Before you head out, "+(forecast.temperature!=null?"it is around "+Math.round(forecast.temperature)+" degrees with "+clean(forecast.short_forecast||"current conditions"):"here is your local outlook")+". "+(dailyWeather.high!=null&&dailyWeather.low!=null?"Expect a high of "+Math.round(dailyWeather.high)+" and a low of "+Math.round(dailyWeather.low)+" degrees. ":"")+(dailyWeather.rain!=null?"There is a "+Math.round(dailyWeather.rain)+" percent chance of precipitation today. ":"")+weatherAdvice());
     const calendar=context.calendar||{};
     const events=(calendar.events||[]).filter(e=>!e.metadata?.task_unscheduled).slice(0,3);
     const formatTime=value=>{const d=new Date(value);return Number.isNaN(d.getTime())?"time not confirmed":d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});};
@@ -189,7 +213,19 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
       const location=await getBrowserCurrentLocation({enableHighAccuracy:false,timeout:10000,maximumAge:300000});
       const data=await getLiveWeather(location);const current=data?.current||{};
       if(current.temp_f==null&&!current.description&&!current.condition)throw Error("No current weather returned");
-      setWeatherOverride({available:true,current_period:{temperature:current.temp_f,temperature_unit:"F",short_forecast:current.description||current.condition||"Current conditions"}});
+      const tz=data?.location?.timezone;
+      const localDate=d=>{try{return new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit"}).format(d);}catch{return null;}};
+      const day=(Array.isArray(data.daily)?data.daily:[]).find(row=>{
+        const stamp=row.timestamp??row.dt;
+        if(typeof row.date==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(row.date))return row.date===localDate(new Date());
+        if(stamp==null)return false;
+        const d=new Date(typeof stamp==="number"&&stamp<1e12?stamp*1000:stamp);
+        return !Number.isNaN(d.getTime())&&localDate(d)===localDate(new Date());
+      })||{};
+      const numeric=v=>v==null||v===""||!Number.isFinite(Number(v))?null:Number(v);
+      const rawRain=numeric(day.precip_probability);
+      const pop=numeric(day.pop);
+      setWeatherOverride({available:true,daily_summary:{high:numeric(day.high_f??day.temp_high_f??day.max_temp_f??day.temp?.max??day.temperature?.max),low:numeric(day.low_f??day.temp_low_f??day.min_temp_f??day.temp?.min??day.temperature?.min),rain:rawRain!=null&&rawRain>=0&&rawRain<=100?rawRain:pop!=null&&pop>=0&&pop<=1?pop*100:null},current_period:{temperature:numeric(current.temp_f),temperature_unit:"F",short_forecast:current.description||current.condition||"Current conditions"}});
     }catch(e){setWeatherError("Local weather unavailable. Check location permission and try again.");}finally{setWeatherLoading(false);}
   }
   useEffect(()=>{if(selected==="executive-female"&&panel==="brief"&&!weatherOverride)void loadWeather();},[selected,panel]);
@@ -464,6 +500,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           <button className="sw-ai-review-nav" type="button" aria-expanded={reviewOpen} onClick={()=>{setShowPlan(false);setReadBrief(false);setShowArchive(false);setTodoOpen(false);setReviewOpen(v=>!v)}}>Morning review & progress</button>
           </nav>
           <div className="sw-ai-conversation-feed sw-ai-command-content" ref={feedRef}>
+          {!scheduleOpen&&!readBrief&&!showPlan&&!showArchive&&!todoOpen&&!reviewOpen&&<section className="sw-ai-brief-story"><h3>Your daily operating plan</h3><p>{scheduleBusy?"Sydney is preparing your schedule…":scheduleNotice||"Your schedule will be prepared automatically when you open the briefing."}</p><button type="button" onClick={()=>{if(scheduleDraft)setScheduleOpen(true);else buildSchedule();}} disabled={scheduleBusy}>{scheduleDraft?"Review prepared schedule":"Build my schedule"}</button></section>}
           {scheduleOpen&&<section className="sw-ai-brief-story"><h3>Build my schedule · Next seven days</h3><p>Review the proposed calendar blocks. Existing appointments are not changed.</p>{scheduleNotice&&<p role="status">{scheduleNotice}</p>}{scheduleBusy&&<p role="status">Preparing your schedule…</p>}{scheduleDraft&&<><p>{scheduleDraft.proposed.length} proposed blocks · {scheduleDraft.existing.length} existing appointments · {scheduleDraft.skipped.length} conflicts skipped</p>{!scheduleDraft.workout_plan_recorded&&<button type="button" onClick={()=>goAction("/customer/health")}>Plan workout in Health</button>}{scheduleDraft.proposed.map(e=><label className="sw-ai-action-row" key={e.key}><input type="checkbox" checked={scheduleKeys.includes(e.key)} onChange={v=>setScheduleKeys(old=>v.target.checked?[...old,e.key]:old.filter(k=>k!==e.key))}/><span><strong>{e.title}</strong><br/>{new Date(e.start_at).toLocaleString()} – {new Date(e.end_at).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</span></label>)}<button type="button" disabled={scheduleBusy||!scheduleKeys.length} onClick={applySchedule}>Save {scheduleKeys.length} selected blocks</button><details><summary>Existing appointments and conflicts</summary>{scheduleDraft.existing.map(e=><p key={e.id}>{e.title} · {new Date(e.start_at).toLocaleString()}</p>)}{scheduleDraft.skipped.map((e,i)=><p key={i}>{e.date} · {e.title} — {e.reason}</p>)}</details><details><summary>Open tasks to review</summary>{scheduleDraft.tasks.map(t=><p key={t.id}>{t.title}{t.note?" — "+t.note:""}</p>)}</details></>}<button type="button" onClick={()=>goAction("/calendar")}>Open calendar</button></section>}
           {reviewOpen&&<section className="sw-ai-brief-evidence"><h3>Morning review &amp; progress</h3>
           {reviewBusy?<p>Reconciling your task list…</p>:reviewError?<p role="alert">{reviewError} <button type="button" onClick={()=>runDailyReview()}>Retry</button></p>:dailyReview?<><p>{dailyReview.created} new tasks added in this review.</p><h3>Completed since previous saved briefing</h3>{dailyReview.tasks.filter(t=>t.recently_completed).length?dailyReview.tasks.filter(t=>t.recently_completed).map(t=><p key={t.id}>✓ {t.title}</p>):<p>No recorded completions in this period.</p>}<h3>Still to do — have you completed any of these?</h3>{dailyReview.tasks.filter(t=>t.status==="OPEN").map(t=><div className="sw-ai-action-row" key={t.id}><span>{t.title}{t.due_date?" · "+t.due_date:""}</span><button type="button" disabled={reviewBusy} onClick={()=>runDailyReview([t.id])}>Done</button>{safeRoute(t.url)&&<button type="button" onClick={()=>goAction(t.url)}>Start</button>}{taskNotes(t)}</div>)}<button type="button" onClick={()=>runDailyReview()}>Refresh progress</button></>:<button type="button" onClick={()=>runDailyReview()}>Start daily review</button>}
@@ -474,7 +511,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           {showArchive&&<div className="sw-ai-brief-story">{archiveBusy?<p>Loading archive…</p>:archiveRows.length?archiveRows.map(row=><details key={row.id}><summary>{new Date(row.saved_at).toLocaleString()}</summary>{String(row.text||"").split("\n\n").map((part,i)=><p key={i}>{part}</p>)}</details>):<p>No saved briefings.</p>}</div>}
           {voiceNotice&&<p role="status">{voiceNotice}</p>}
           {briefError?<p role="alert">{briefError}</p>:!brief?<p><LoaderCircle size={15} className="animate-spin"/> Loading executive briefing…</p>:<>
-          <div className="sw-ai-brief-context"><strong>{brief.date} · {brief.executive_context?.local_time?new Date(brief.executive_context.local_time).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"Time unavailable"}</strong><p>{weather.available?[forecast.temperature!=null?forecast.temperature+"°"+(forecast.temperature_unit||"F"):"",forecast.short_forecast].filter(Boolean).join(" · "):"Local weather not connected"}</p>{!weather.available&&<button type="button" disabled={weatherLoading} onClick={loadWeather}>{weatherLoading?"Getting weather…":"Use my location for weather"}</button>}{weatherError&&<p role="status">{weatherError}</p>}</div>
+          <div className="sw-ai-brief-context"><strong>{brief.date} · {brief.executive_context?.local_time?new Date(brief.executive_context.local_time).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"Time unavailable"}</strong><p>{weather.available?[forecast.temperature!=null?forecast.temperature+"°"+(forecast.temperature_unit||"F"):"",forecast.short_forecast].filter(Boolean).join(" · "):"Local weather not connected"}</p>{weather.available&&<><p>High {tempLabel(dailyWeather.high)} · Low {tempLabel(dailyWeather.low)} · Rain {rainLabel}</p>{weatherAdvice()&&<p>{weatherAdvice()}</p>}</>}{!weather.available&&<button type="button" disabled={weatherLoading} onClick={loadWeather}>{weatherLoading?"Getting weather…":"Use my location for weather"}</button>}{weatherError&&<p role="status">{weatherError}</p>}</div>
 
           {showPlan&&<div className="sw-ai-brief-story"><div className="sw-ai-conversation-toolbar">{[["today","Today"],["week","Week"],["month","Month"]].map(([key,label])=><button key={key} type="button" aria-pressed={outlookRange===key} onClick={()=>setOutlookRange(key)}>{label}</button>)}</div><h3>Recorded schedule</h3>{(brief.schedule_outlook||[]).filter(e=>{const now=new Date(brief.generated_at),start=new Date(e.start_at);if(outlookRange==="today")return start.toDateString()===now.toDateString();const cutoff=new Date(now);cutoff.setDate(cutoff.getDate()+(outlookRange==="week"?7:30));return start>=now&&start<=cutoff;}).map(e=><p key={e.id}><strong>{e.title}</strong><br/>{new Date(e.start_at).toLocaleString()} · {e.status==="ENDED"?"Window ended":e.status==="IN_PROGRESS"?"In progress":e.minutes_until>=0&&e.minutes_until<=60?"Starts in "+e.minutes_until+" minutes":"Upcoming"}</p>)}<button type="button" onClick={()=>{setSelected(null);nav("/calendar")}}>Open calendar</button><h3>Active projects</h3>{(brief.project_progress||[]).filter(p=>p.status==="ACTIVE").map(p=><div key={p.id}><strong>{p.title}</strong><p>{p.done} of {p.total} recorded tasks completed</p>{p.next_tasks.map(t=><p key={t.id}>{t.title}</p>)}</div>)}<button type="button" onClick={()=>{setSelected(null);nav("/customer/projects")}}>Open projects & complete tasks</button></div>}
           {readBrief&&<><article className="sw-ai-brief-story">{narrative.map((paragraph,n)=><p key={n}>{paragraph}</p>)}</article><section className="sw-ai-brief-story"><h3>Recommended actions</h3>{suggestedActions.map(a=><div className="sw-ai-action-row" key={a.key}><span>{a.title}</span><button type="button" onClick={()=>goAction(a.url)}>Go to</button><button type="button" disabled={todoBusy} onClick={()=>saveAction(a)}>Add to list</button></div>)}</section>
