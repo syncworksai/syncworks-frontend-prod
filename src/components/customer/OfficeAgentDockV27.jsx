@@ -99,9 +99,11 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   useEffect(()=>{if(feedRef.current)feedRef.current.scrollTop=0;},[panel]);
 
   const audioRef=useRef(null);
+  const audioContextRef=useRef(null);
+  const audioBufferRef=useRef(null);
   const speechRun=useRef(0);
-  const stopVoice=()=>{speechRun.current++;if(audioRef.current){audioRef.current.pause();URL.revokeObjectURL(audioRef.current.src);audioRef.current=null;}setSpeaking(false);setVoiceLoading(false);setAudioReady(false);};
-  useEffect(()=>()=>{speechRun.current++;if(audioRef.current){audioRef.current.pause();URL.revokeObjectURL(audioRef.current.src);}},[]);
+  const stopVoice=()=>{speechRun.current++;if(audioRef.current){try{audioRef.current.onended=null;audioRef.current.stop();}catch{}audioRef.current=null;}audioBufferRef.current=null;setSpeaking(false);setVoiceLoading(false);setAudioReady(false);};
+  useEffect(()=>()=>{speechRun.current++;try{audioRef.current?.stop();}catch{};void audioContextRef.current?.close?.();},[]);
   useEffect(()=>{if(!selected){stopVoice();setShowPlan(false);setShowArchive(false);setReadBrief(false);setPanel("chat");if(placement==="launcher"&&openSignal)onDismiss?.();}},[selected]);
   useEffect(()=>{
     if(selected!=="executive-female"||panel!=="brief")return;
@@ -111,19 +113,30 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   },[selected,panel,workRefresh]);
   async function listenBrief(){
     if(voiceLoading||speaking){stopVoice();return;}
-    if(audioReady&&audioRef.current){try{await audioRef.current.play();setAudioReady(false);setSpeaking(true);setVoiceNotice("");}catch{setVoiceNotice("Audio is ready. Tap Play audio again to start playback.");}return;}
     if(!brief)return;
+    const AudioEngine=window.AudioContext||window.webkitAudioContext;
+    if(!AudioEngine){setVoiceNotice("Audio playback is unavailable in this browser. Written briefing remains available.");return;}
     const run=++speechRun.current;setVoiceLoading(true);setVoiceNotice("");
-    // Narrate a concise opening and priority updates, never cut a sentence mid-word.
-    const text=narrative.reduce((out,paragraph)=>out.length+paragraph.length+2<=1600?out+(out?"\n\n":"")+paragraph:out,"");
     try{
-      const response=await api.post("/sync-ai/voice/synthesize/",{role:"founder_chief",text},{responseType:"blob",timeout:90000});
+      // Resume Web Audio directly inside the original tap, before network work.
+      let context=audioContextRef.current;
+      if(!context||context.state==="closed"){context=new AudioEngine();audioContextRef.current=context;}
+      await context.resume();
       if(run!==speechRun.current)return;
-      if(!response.data?.size||!response.data.type?.startsWith("audio/"))throw Error("Invalid audio");
-      const player=new Audio(URL.createObjectURL(response.data));audioRef.current=player;player.onended=stopVoice;
-      player.onerror=()=>{if(run===speechRun.current){stopVoice();setVoiceNotice("Audio could not be played.");}};
-      try{await player.play();if(run===speechRun.current)setSpeaking(true);}catch{if(run===speechRun.current){setAudioReady(true);setVoiceNotice("Audio is ready. Tap Play audio to begin.");}}
-    }catch(e){if(run!==speechRun.current)return;stopVoice();setVoiceNotice("Premium voice unavailable"+(e?.response?.status?" (HTTP "+e.response.status+")":"")+". Written briefing remains available.");}
+      if(!audioBufferRef.current){
+        const text=narrative.reduce((out,paragraph)=>out.length+paragraph.length+2<=1600?out+(out?"\n\n":"")+paragraph:out,"");
+        const response=await api.post("/sync-ai/voice/synthesize/",{role:"founder_chief",text},{responseType:"arraybuffer",timeout:90000,headers:{Accept:"audio/mpeg"}});
+        if(run!==speechRun.current)return;
+        if(!response.data?.byteLength||!String(response.headers?.["content-type"]||"").includes("audio/"))throw Error("Invalid audio response");
+        const buffer=await context.decodeAudioData(response.data.slice(0));
+        if(run!==speechRun.current)return;
+        audioBufferRef.current=buffer;
+      }
+      if(context.state!=="running"){setAudioReady(true);setVoiceNotice("Audio is ready. Tap Play audio to start.");return;}
+      const source=context.createBufferSource();source.buffer=audioBufferRef.current;source.connect(context.destination);audioRef.current=source;
+      source.onended=()=>{if(run===speechRun.current)stopVoice();};
+      source.start(0);setAudioReady(false);setSpeaking(true);
+    }catch(e){if(run!==speechRun.current)return;stopVoice();setVoiceNotice("Premium audio unavailable"+(e?.response?.status?" (HTTP "+e.response.status+")":"")+". Written briefing remains available.");}
     finally{if(run===speechRun.current)setVoiceLoading(false);}
   }
 
