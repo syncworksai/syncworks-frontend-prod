@@ -181,3 +181,5 @@
 .sw-ai-action-row>span{flex:1;min-width:110px;font-size:13px;}
 .sw-ai-brief-story form{display:flex;gap:8px;flex-wrap:wrap;}
 .sw-ai-brief-story input{min-width:0;flex:1;background:transparent;border:1px solid color-mix(in srgb,currentColor 30%,transparent);border-radius:8px;padding:8px;color:inherit;}
+
+.sw-ai-task-note{flex:0 0 100%;font-size:12px}.sw-ai-task-note summary{cursor:pointer}.sw-ai-task-note textarea{display:block;width:100%;box-sizing:border-box;margin:8px 0;padding:8px;border:1px solid currentColor;border-radius:8px;background:transparent;color:inherit;resize:vertical}
