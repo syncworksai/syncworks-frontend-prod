@@ -79,7 +79,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     ...avatar,
     slotId,
     roleKey: employee?.role || (avatar.id==="accounting-female"?"FINANCE_MANAGER":({ "executive-female":"CHIEF_OF_STAFF", "executive-male":"SALES_MANAGER", "future-female":"MARKETING_MANAGER", "future-male":"RESEARCH_ANALYST","property-female":"PROPERTY_MANAGER"}[avatar.id])),
-    photo: employee?.photo || getAvatarPhotoForUser(avatar,user),
+    photo: avatar.id==="executive-female"?getAvatarPhotoForUser(avatar,user):employee?.photo || getAvatarPhotoForUser(avatar,user),
     name: employee?.name || avatar.name,
     configured: Boolean(employee),
   }}), [employees, user?.email]);
@@ -188,7 +188,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
             <button key={person.id} type="button" className="sw-office-agent"
               aria-label={`Open ${person.name}, ${person.role}`}
               onClick={() => selectEmployee(person)}>
-              {person.photo?<img src={person.photo} alt="" loading="lazy" />:<span className="grid h-full w-full place-items-center rounded-full border border-cyan-300/30 bg-cyan-500/15 text-lg font-bold text-cyan-100">{person.name?.charAt(0)||"AI"}</span>}
+              {person.photo?<img src={person.photo} onError={e=>{if(person.fallbackPhoto&&!e.currentTarget.src.endsWith(person.fallbackPhoto))e.currentTarget.src=person.fallbackPhoto;}} alt="" loading="lazy" />:<span className="grid h-full w-full place-items-center rounded-full border border-cyan-300/30 bg-cyan-500/15 text-lg font-bold text-cyan-100">{person.name?.charAt(0)||"AI"}</span>}
               {dockStatus[person.id]?.pending>0?<span className="sw-agent-review-badge" title={`${dockStatus[person.id].pending} awaiting review`}>{dockStatus[person.id].pending}</span>:dockStatus[person.id]?.reviewed?<span className="sw-agent-reviewed-badge" title="Acknowledged work; no assignments awaiting review">✓</span>:null}
               <span className="sw-office-agent-names"><strong>{person.name}</strong><small>{person.role}</small></span>
               <ChevronRight size={15} className="sw-office-agent-chevron" aria-hidden="true" />
@@ -208,7 +208,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
       <section className="sw-ai-conversation" style={dialogTheme} role="dialog" aria-modal="true" aria-labelledby="sw-ai-conversation-title" data-bubble-theme={theme}>
         <header className="sw-ai-conversation-header">
           <div className="sw-ai-conversation-identity">
-            <img className="sw-ai-conversation-photo" src={active.photo} alt={`${active.name}, ${active.role}`} />
+            <img className="sw-ai-conversation-photo" src={active.photo} onError={e=>{if(active.fallbackPhoto&&!e.currentTarget.src.endsWith(active.fallbackPhoto))e.currentTarget.src=active.fallbackPhoto;}} alt={`${active.name}, ${active.role}`} />
             <div className="sw-ai-conversation-identification">
               <span className="sw-ai-conversation-eyebrow"><Sparkles size={12}/> SYNCWORKS AI TEAM</span>
               <h2 id="sw-ai-conversation-title">{active.name}</h2>
@@ -238,16 +238,16 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
         </div>
         <div className="sw-ai-conversation-feed" role="log" aria-live="polite" aria-relevant="additions text">
           {!messages.length && <div className="sw-ai-conversation-intro">
-            <img src={active.photo} alt="" aria-hidden="true"/>
+            <img src={active.photo} onError={e=>{if(active.fallbackPhoto&&!e.currentTarget.src.endsWith(active.fallbackPhoto))e.currentTarget.src=active.fallbackPhoto;}} alt="" aria-hidden="true"/>
             <strong>Talk with {active.name}</strong>
             <p>Ask about {active.role.toLowerCase()} priorities, request a recommendation, or assign a real task using the button above.</p>
             <small>Responses use SYNC advisory chat with a role-focused prompt. This is not a separate autonomous employee session; no business actions run from chat.</small>
           </div>}
           {messages.map((message,index)=><div key={index} className={`sw-ai-conversation-message sw-ai-conversation-message--${message.by}`}>
-            {message.by==="assistant"&&<img src={active.photo} alt="" aria-hidden="true"/>}
+            {message.by==="assistant"&&<img src={active.photo} onError={e=>{if(active.fallbackPhoto&&!e.currentTarget.src.endsWith(active.fallbackPhoto))e.currentTarget.src=active.fallbackPhoto;}} alt="" aria-hidden="true"/>}
             <div><strong>{message.by==="assistant"?active.name:"You"}</strong><p>{message.text}</p></div>
           </div>)}
-          {chatBusy&&<div className="sw-ai-conversation-message sw-ai-conversation-message--assistant"><img src={active.photo} alt="" aria-hidden="true"/><div><strong>{active.name}</strong><p>Thinking…</p></div></div>}
+          {chatBusy&&<div className="sw-ai-conversation-message sw-ai-conversation-message--assistant"><img src={active.photo} onError={e=>{if(active.fallbackPhoto&&!e.currentTarget.src.endsWith(active.fallbackPhoto))e.currentTarget.src=active.fallbackPhoto;}} alt="" aria-hidden="true"/><div><strong>{active.name}</strong><p>Thinking…</p></div></div>}
           <div ref={chatEndRef}/>
         </div>
         {chatError&&<p role="alert" className="sw-ai-conversation-error">{chatError}</p>}
