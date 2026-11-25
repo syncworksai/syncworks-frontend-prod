@@ -21,12 +21,12 @@ export default function PMProperty360Snapshot({data,loading,error,property,openT
     if(key==="investors")return navigate("/pm/investors");
     return openTab(key);
   };
-  return <div className={`space-y-3 ${compact?"pm-overview-snapshot":""}`}>
-    <section className="rounded-2xl border border-cyan-400/20 bg-[linear-gradient(130deg,rgba(8,47,67,.86),rgba(7,17,31,.96)_60%,rgba(70,22,81,.18))] p-3 sm:p-4">
+  return <div className={`space-y-3 pm-property-360 ${compact?"pm-overview-snapshot":""}`}>
+    <section className="pm360-header rounded-2xl border p-3 sm:p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] font-black uppercase tracking-[.17em] text-cyan-300">Property 360</span>
+            <span className="pm360-eyebrow text-[10px] font-black uppercase tracking-[.17em]">Property 360</span>
             <span className={`rounded-md border px-2 py-0.5 text-[9px] font-black ${healthTone(p?.status)}`}>{String(p?.status||"REVIEW").replaceAll("_"," ")}</span>
           </div>
           <h1 className="mt-1 truncate text-lg font-black text-white sm:text-xl">{p?.name||"Property"}</h1>
@@ -34,7 +34,7 @@ export default function PMProperty360Snapshot({data,loading,error,property,openT
         </div>
         <div className="flex shrink-0 gap-1.5">
           <button type="button" onClick={reload} className="min-h-9 rounded-lg border border-slate-600 px-2.5 text-[11px] text-slate-200">Refresh</button>
-          <button type="button" onClick={onDetails} className="min-h-9 rounded-lg border border-cyan-400/35 bg-cyan-500/10 px-2.5 text-[11px] font-bold text-cyan-100">Edit</button>
+          <button type="button" onClick={onDetails} className="pm360-control min-h-9 rounded-lg border px-2.5 text-[11px] font-bold">Edit</button>
         </div>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -43,7 +43,7 @@ export default function PMProperty360Snapshot({data,loading,error,property,openT
           ["Tenant ledger",data?cash(data.accounting.posted_tenant_unpaid):"—","Posted unpaid only"],
           ["Assistance",data?cash(data.accounting.posted_assistance_unreconciled):"—","Unreconciled portion"],
           ["Open work",metrics?metrics.open_work:"—","Active work orders"]
-        ].map(([label,value,hint])=><div key={label} className="min-w-0 rounded-xl border border-white/10 bg-black/25 px-2.5 py-2.5">
+        ].map(([label,value,hint])=><div key={label} className="pm360-metric min-w-0 rounded-xl border px-2.5 py-2.5">
           <div className="text-[10px] text-slate-400">{label}</div><div className="mt-1 truncate text-lg font-black text-white">{value}</div><p className="text-[9px] text-slate-500">{hint}</p>
         </div>)}
       </div>
@@ -52,15 +52,15 @@ export default function PMProperty360Snapshot({data,loading,error,property,openT
     {error ? <div role="alert" className="rounded-xl border border-amber-400/30 bg-amber-500/5 p-3 text-xs text-amber-100">Detailed Property 360 data couldn't load: {error}. Existing property records remain accessible below.</div> : null}
     {loading ? <div role="status" className="rounded-xl border border-slate-700 px-3 py-4 text-xs text-slate-400">Checking linked records and outstanding actions…</div> : null}
     <div className="grid gap-3 lg:grid-cols-[1.1fr_.9fr]">
-      <section className="min-w-0 rounded-xl border border-slate-700 bg-[#07111f] p-3">
-        <div className="mb-2 flex items-center justify-between gap-2"><h2 className="text-sm font-black text-white">Needs attention</h2><button type="button" onClick={()=>navigate(`/pm/document-requests?property=${propertyId}`)} className="text-[11px] font-bold text-cyan-300">Requests <ArrowRight className="inline h-3 w-3"/></button></div>
+      <section className="pm360-section min-w-0 rounded-xl border p-3">
+        <div className="mb-2 flex items-center justify-between gap-2"><h2 className="text-sm font-black text-white">Needs attention</h2><button type="button" onClick={()=>navigate(`/pm/document-requests?property=${propertyId}`)} className="pm360-link text-[11px] font-bold">Requests <ArrowRight className="inline h-3 w-3"/></button></div>
         {data?.attention?.length?<div className="space-y-1.5">{data.attention.slice(0,6).map(item=><button type="button" key={item.key} onClick={()=>item.href?.startsWith("/pm/properties/") && item.href.includes("?tab=")?openTab(item.href.split("?tab=")[1]):navigate(item.href)} className="flex min-h-10 w-full items-center gap-2 rounded-lg border border-slate-700/70 bg-black/20 px-2.5 py-2 text-left hover:border-cyan-400/35"><span className={`h-2 w-2 shrink-0 rounded-full ${item.priority==="HIGH"?"bg-rose-400":item.priority==="REVIEW"?"bg-amber-300":"bg-cyan-300"}`}/><span className="min-w-0 flex-1 truncate text-xs text-slate-200">{item.title}</span><span className="font-black text-xs">{item.count}</span><ArrowRight className="h-3 w-3 shrink-0 text-slate-500"/></button>)}</div>:<div className="rounded-lg border border-dashed border-slate-700 p-3 text-xs text-slate-400">{data?"No flagged items in the current records.":"Awaiting property status…"}</div>}
         {data?.links?.legacy_tenant_ids?.length?<p className="mt-2 text-[10px] text-amber-200"><ShieldAlert className="mr-1 inline h-3 w-3"/>Some tenants match by legacy property name; verify each link before importing more records.</p>:null}
         {data?.handoff?.unresolved_balances>0?<button type="button" onClick={()=>action("handoff")} className="mt-2 w-full rounded-lg border border-amber-500/30 bg-amber-500/5 px-2.5 py-2 text-left text-[11px] text-amber-200"><AlertTriangle className="mr-1 inline h-3 w-3"/> {data.handoff.unresolved_balances} opening balance(s) need evidence</button>:null}
       </section>
-      <section className="min-w-0 rounded-xl border border-slate-700 bg-[#07111f] p-3">
+      <section className="pm360-section min-w-0 rounded-xl border p-3">
         <h2 className="mb-2 text-sm font-black text-white">Quick navigation</h2>
-        <div className={`grid gap-2 ${compact?"grid-cols-3":"grid-cols-2"}`}>{navTiles.map(({key,label,hint,icon:Icon})=><button key={key} type="button" onClick={()=>action(key)} className="min-w-0 rounded-lg border border-slate-700 bg-black/20 p-2 text-left hover:border-cyan-400/35"><Icon className="mb-1 h-4 w-4 text-cyan-300"/><div className="text-[11px] font-black text-white">{label}</div><p className="mt-0.5 text-[10px] leading-4 text-slate-500">{hint}</p></button>)}</div>
+        <div className={`grid gap-2 ${compact?"grid-cols-3":"grid-cols-2"}`}>{navTiles.map(({key,label,hint,icon:Icon})=><button key={key} type="button" onClick={()=>action(key)} className="pm360-nav-tile min-w-0 rounded-lg border p-2 text-left"><Icon className="pm360-nav-icon mb-1 h-4 w-4"/><div className="text-[11px] font-black text-white">{label}</div><p className="mt-0.5 text-[10px] leading-4 text-slate-500">{hint}</p></button>)}</div>
       </section>
     </div>
     {!compact && data ? <div className="grid gap-3 lg:grid-cols-2">
