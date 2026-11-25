@@ -47,3 +47,10 @@
 .sw-qual button:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:720px){.sw-freelance-wide-drawer:has(.sw-qual) .sw-upwork-drawer-scroll{padding:7px}.sw-qual-toolbar{padding:7px}.sw-qual-toolbar small{display:none}.sw-qual-tabs button{padding:8px 4px;font-size:10px}.sw-qual-workspace{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}.sw-qual-list{display:flex;flex-direction:column;padding:7px;gap:5px;border-right:0;border-bottom:1px solid var(--uw-border)}.sw-qual-list-items{overflow-x:auto;overflow-y:hidden;flex-direction:row;max-height:86px}.sw-qual-item{min-width:155px;padding:7px}.sw-qual-list-add{display:none}.sw-qual-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.sw-qual-detail{padding:9px;gap:7px}.sw-qual-metrics strong{font-size:12px}.sw-qual-metrics small{font-size:8px}.sw-qual-checklist{grid-template-columns:1fr}.sw-qual-detail-head h3{font-size:15px}}
 @media(max-height:640px){.sw-qual{gap:5px}.sw-qual-toolbar{padding:5px}.sw-qual-tabs button{padding:6px}.sw-qual-detail{gap:6px}.sw-qual-fields input,.sw-qual-fields select{padding:6px}.sw-qual-metrics>div{padding:6px}}
+
+/* Compact structured job import; manual confirmation, not a provider sync. */
+.sw-qual-import{display:flex;flex-direction:column;gap:7px;background:var(--uw-glass);border:1px solid var(--uw-border);padding:12px;border-radius:11px}
+.sw-qual-import strong{font-size:12px}.sw-qual-import p{font-size:10px;color:var(--uw-muted);line-height:1.5}
+.sw-qual-import textarea{background:var(--uw-inset);color:var(--uw-ink);border:1px solid var(--uw-border);border-radius:8px;min-height:80px;padding:9px;resize:vertical;font-size:11px;max-width:100%}
+.sw-qual-import button{padding:10px 12px;border-radius:9px;border:1px solid var(--uw-accent);background:color-mix(in srgb,var(--uw-accent) 17%,var(--uw-inset));color:var(--uw-ink);font-size:11px;cursor:pointer;font-weight:750}
+.sw-qual-import button:disabled{opacity:.45;cursor:not-allowed}
