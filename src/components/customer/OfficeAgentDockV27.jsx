@@ -250,7 +250,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           <button type="button" className="sw-ai-conversation-close" aria-label="Close employee conversation" onClick={()=>setSelected(null)}><X size={19}/></button>
         </header>
         <div className="sw-ai-conversation-toolbar">
-          <button type="button" onClick={()=>{setSelected(null);nav("/sync/assist/assignments")}}><BriefcaseBusiness size={15}/> Assign work</button>
+          <button type="button" onClick={()=>{setSelected(null);nav("/sync/assist/assignments?new=1&role="+encodeURIComponent(active.roleKey||"CHIEF_OF_STAFF"))}}><BriefcaseBusiness size={15}/> Assign work</button>
           <button type="button" onClick={()=>{if(active.id==="executive-female"){stopVoice();setPanel(v=>v==="brief"?"chat":"brief");}else{setSelected(null);openEmployee(active);}}}><Maximize2 size={15}/> {active.id==="executive-female"?(panel==="brief"?"Back to chat":"Daily briefing"):"Employee workspace"}</button>
         </div>
         <div className="sw-ai-work-summary">
