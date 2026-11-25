@@ -35,16 +35,39 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const weather=weatherOverride||brief?.executive_context?.weather||{};
   const forecast=weather.current_period||{};
   const sections=brief?.sections||[];
-  const narrative=brief?[
-    "Hello. Sydney here, your Chief of Staff. Let's review what needs your attention today.",
-    weather.available?("For your local weather, "+(forecast.short_forecast||"a forecast is available")+(forecast.temperature!=null?", with a temperature of "+forecast.temperature+" degrees "+(forecast.temperature_unit||"Fahrenheit"):"")+"."):"I don't have a verified local forecast yet. You can enable location in this briefing.",
-    ...sections.filter(s=>s.key!=="weather" && !(/^0 recorded assignments/.test(s.headline||""))).map(s=>{
-      const headline=String(s.headline||"No summary available").replace(/[.]+$/,"");
-      const items=(s.items||[]).slice(0,2).map(i=>[i.title,i.next_action].filter(Boolean).join(". ")).filter(Boolean);
-      return "For "+s.title+", "+headline.charAt(0).toLowerCase()+headline.slice(1)+"."+ (items.length?" Here is what to review: "+items.join(". ")+".":"");
-    }),
-    "I recommend we review the outstanding priorities before delegating further work."
-  ]:[];
+  const narrative=brief?(()=>{
+    const byKey=key=>sections.find(s=>s.key===key);
+    const clean=value=>String(value||"").trim().replace(/[.]+$/,"");
+    const context=brief.executive_context||{};
+    const now=new Date(context.local_time||brief.generated_at);
+    const hour=Number.isNaN(now.getTime())?12:now.getHours();
+    const paragraphs=[(hour<12?"Good morning":hour<18?"Good afternoon":"Good evening")+". Let's get your day organized."];
+    if(weather.available)paragraphs.push("The local weather is "+clean(forecast.short_forecast||"available")+(forecast.temperature!=null?", around "+forecast.temperature+" degrees":"")+".");
+    const calendar=context.calendar||{};
+    const events=(calendar.events||[]).filter(e=>!e.metadata?.task_unscheduled).slice(0,3);
+    const formatTime=value=>{const d=new Date(value);return Number.isNaN(d.getTime())?"time not confirmed":d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});};
+    paragraphs.push(calendar.available?(events.length?"Your calendar includes "+events.map(e=>clean(e.title)+" at "+formatTime(e.start_at)).join("; ")+". Let's plan your work around those commitments.":"There are no appointments in the connected calendar for today. We can use the available time for focused work."):"Your calendar needs a connection check before I can confirm your availability.");
+    const health=byKey("health");
+    paragraphs.push(health?.items?.length?"For your health routine, "+health.items.map(i=>clean(i.title)+": "+clean(i.next_action)).join("; ")+". Let's protect time for this.":"Let's reserve time for exercise, meals and recovery. I don't have a confirmed workout or meal plan to report yet.");
+    const properties=byKey("sarah_correspondence")?.items||[];
+    const activeProps=properties.filter(i=>/PAYMENT|INSPECTION|DOCUMENT/i.test(i.title||""));
+    if(activeProps.length)paragraphs.push("Sarah has property follow-ups that need attention. "+activeProps.slice(0,3).map(i=>clean(i.title)+": "+clean(i.next_action)).join(". ")+". These are verification tasks, not confirmed balances or completed inspections.");
+    const money=context.money||{};
+    const due=money.due_next_7_days||[];
+    if(due.length)paragraphs.push("On personal finances, let's review "+due.slice(0,3).map(i=>clean(i.name)+(i.amount!=null?" for "+i.amount+" dollars":"")+(i.due_date?" due "+i.due_date:"")).join("; ")+".");
+    else if(!money.available)paragraphs.push("I can't confirm your upcoming financial obligations from the available records.");
+    const project=byKey("production_project");
+    paragraphs.push(project?.items?.length?"For SyncWorks, "+clean(project.headline)+". Our next recorded step is "+clean(project.items[0].title)+".":"For SyncWorks, I recommend establishing the production readiness project and using verified task completion to guide our next build.");
+    const sales=byKey("scarlett_sales");
+    if(sales?.items?.length)paragraphs.push("Olivia has prospects to review, including "+sales.items.slice(0,3).map(i=>clean(i.title)).join(", ")+". She should qualify them before outreach.");
+    const support=brief.support;
+    if(support?.available)paragraphs.push(support.open||support.in_progress?"Rebecca has "+support.open+" open support requests and "+support.in_progress+" in progress. Let's review anything needing escalation.":"Rebecca has no open or in-progress support tickets.");
+    const pending=brief.counts?.ai_assignments_pending;
+    if(pending)paragraphs.push("There "+(pending===1?"is one employee assignment":"are "+pending+" employee assignments")+" awaiting your review.");
+    if(!weather.available)paragraphs.push("Local weather is not available yet; use the weather connection control when convenient.");
+    paragraphs.push("My recommendation is to protect your health routine, address verified urgent obligations, and reserve focused time for the next SyncWorks milestone. Review the detailed records before approving any action.");
+    return paragraphs;
+  })():[];
   async function loadWeather(){
     setWeatherLoading(true);setWeatherError("");
     try{
