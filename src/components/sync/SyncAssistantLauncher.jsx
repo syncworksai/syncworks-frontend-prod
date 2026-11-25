@@ -6,6 +6,7 @@ import { AVATARS, getAvatarPhotoForUser, getAvatarFallbackPhotoForUser } from ".
 import api from "../../api/client";
 import SyncAlertDrawer from "./SyncAlertDrawer";
 import OfficeAgentDock from "../customer/OfficeAgentDockV27";
+import {useWorkspaceAppearance} from "../customer/CustomerWorkspace";
 import BusinessAssistantDock from "./BusinessAssistantDock";
 import BusinessAgentQuickChat from "./BusinessAgentQuickChat";
 
@@ -23,6 +24,7 @@ const HIDDEN_PREFIXES = [
 
 export default function SyncAssistantLauncher() {
   const location = useLocation();
+  const [appearance] = useWorkspaceAppearance();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [commandOpen,setCommandOpen]=useState(false);
@@ -180,7 +182,7 @@ export default function SyncAssistantLauncher() {
       </div>
       {showBusinessDock&&<BusinessAssistantDock user={user} onVictoria={()=>setCommandOpen(true)}/>}
       {showChief&&businessAgentId&&!excludedVictoria&&<BusinessAgentQuickChat agentId={businessAgentId} user={user} onClose={()=>setBusinessAgentId(null)}/>}
-      {showChief && commandOpen && <OfficeAgentDock user={user} placement="launcher" openSignal={1} onDismiss={()=>setCommandOpen(false)}/>}
+      {showChief && commandOpen && <OfficeAgentDock user={user} placement="launcher" theme={appearance.theme} openSignal={1} onDismiss={()=>setCommandOpen(false)}/>}
       <SyncAlertDrawer open={alertsOpen} onClose={() => { setAlertsOpen(false); loadUnread(); }} onCountChange={setUnread} />
     </>
   );

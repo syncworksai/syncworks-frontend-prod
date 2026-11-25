@@ -95,6 +95,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
       setWeatherOverride({available:true,current_period:{temperature:current.temp_f,temperature_unit:"F",short_forecast:current.description||current.condition||"Current conditions"}});
     }catch(e){setWeatherError("Local weather unavailable. Check location permission and try again.");}finally{setWeatherLoading(false);}
   }
+  useEffect(()=>{if(selected==="executive-female"&&panel==="brief"&&!weatherOverride)void loadWeather();},[selected,panel]);
   useEffect(()=>{if(feedRef.current)feedRef.current.scrollTop=0;},[panel]);
 
   const audioRef=useRef(null);

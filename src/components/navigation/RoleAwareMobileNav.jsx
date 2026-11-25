@@ -314,7 +314,7 @@ export default function RoleAwareMobileNav() {
           <div className="sw-mobile-bots-people">
             {teamAgents.slice(0, 4).map((worker) => (
               <button type="button" key={worker.id} aria-label={`Open ${worker.name}, ${worker.role}`}
-                onClick={() => navigateAssistant(worker.role === "Chief of Staff" ? "/sync/assist/chief" : `/sync/assist/employee/${encodeURIComponent(worker.id)}`)}
+                onClick={() => {if(worker.role==="Chief of Staff"){setAiTeamOpen(false);window.dispatchEvent(new Event("syncworks:victoria-open"));}else navigateAssistant(`/sync/assist/employee/${encodeURIComponent(worker.id)}`);}}
                 title={`${worker.name} · ${worker.role}`}>
                 <img src={getAvatarPhotoForUser(worker, user)} alt="" loading="eager" />
                 <span>{worker.name}</span>

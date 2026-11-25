@@ -24,6 +24,8 @@ export default function SyncAssistDaily() {
   const [showAll,setShowAll] = useState(false);
   const [adding,setAdding] = useState(false);
   const [activeDrawer,setActiveDrawer] = useState(null);
+  const [propertyBrief,setPropertyBrief] = useState(null);
+  const [propertyBriefError,setPropertyBriefError] = useState("");
   const ticketPath=(item)=>{const match=/^ticket:(\d+):/.exec(String(item?.id||""));return match?`/tickets/${match[1]}`:null;};
   const [form,setForm] = useState({title:"",description:"",priority:"MEDIUM",category:"PERSONAL"});
 
@@ -37,7 +39,7 @@ export default function SyncAssistDaily() {
   async function showPropertyBrief(){
     setActiveDrawer("property-brief");setPropertyBriefError("");
     try{
-      const r=await api.get("https://syncworks-backend-prod.onrender.com/api/v1/sync-ai/assist/pilot/property-portfolio/brief/");
+      const r=await api.get("/sync-ai/assist/pilot/property-portfolio/brief/");
       setPropertyBrief(r.data);
     }catch(e){setPropertyBriefError(e?.response?.data?.detail||"Sarah's property correspondence brief is unavailable.")}
   }
@@ -86,12 +88,12 @@ export default function SyncAssistDaily() {
         <button type="submit" disabled={loading || !form.title.trim()} className="min-h-11 w-full rounded-xl bg-cyan-600 px-3 font-black disabled:opacity-40">Save to today's list</button>
       </form>}
 
-      <button type="button" onClick={()=>navigate("/sync/assist/chief")} className="sw-daily-link sw-assist-panel flex min-h-14 w-full items-center justify-between rounded-2xl border border-purple-400/30 bg-gradient-to-r from-purple-500/15 to-cyan-500/15 p-4 text-left font-black text-cyan-100"><span>Chief of Staff briefing<span className="block text-xs font-normal text-slate-400">Priorities · Unresolved issues · Business & property snapshot</span></span><span aria-hidden="true">→</span></button>
+      <button type="button" onClick={()=>window.dispatchEvent(new Event("syncworks:victoria-open"))} className="sw-daily-link sw-assist-panel flex min-h-14 w-full items-center justify-between rounded-2xl border border-purple-400/30 bg-gradient-to-r from-purple-500/15 to-cyan-500/15 p-4 text-left font-black text-cyan-100"><span>Chief of Staff briefing<span className="block text-xs font-normal text-slate-400">Priorities · Unresolved issues · Business & property snapshot</span></span><span aria-hidden="true">→</span></button>
       <button type="button" onClick={showPropertyBrief} className="sw-daily-link sw-assist-panel flex min-h-14 w-full items-center justify-between rounded-2xl border p-3 text-left font-black text-cyan-100"><span>Sarah · Property Briefing<span className="block text-xs font-normal text-slate-400">Portfolio correspondence · Outstanding reviews · Property timelines</span></span><span aria-hidden="true">→</span></button>
       <button type="button" onClick={()=>navigate("/sync/assist/email")} className="sw-daily-link sw-assist-panel flex min-h-14 w-full items-center justify-between rounded-2xl border border-cyan-400/30 bg-gradient-to-r from-cyan-500/15 to-violet-600/15 p-4 text-left font-black text-cyan-100"><span>SYNC Mail Desk<span className="block text-xs font-normal text-slate-400">Connect Outlook · Read inbox · Draft · Send with approval</span></span><span aria-hidden="true">→</span></button>
       <div className="sw-daily-actions"><button type="button" onClick={()=>setActiveDrawer("tasks")}><ListTodo size={17}/> View priorities</button><button type="button" onClick={()=>setActiveDrawer("connections")}><Settings2 size={17}/> Connections</button></div>
       <section className="sw-daily-property-brief mt-3 rounded-xl border p-3">
-        <div className="sw-daily-drawer-heading"><strong>Sarah → Victoria · Property Briefing</strong><button type="button" onClick={()=>setActiveDrawer(null)} aria-label="Close property briefing"><X size={18}/></button></div>
+        <div className="sw-daily-drawer-heading"><strong>Sarah → Sydney · Property Briefing</strong><button type="button" onClick={()=>setActiveDrawer(null)} aria-label="Close property briefing"><X size={18}/></button></div>
         {propertyBriefError&&<p role="alert" className="text-xs text-amber-200">{propertyBriefError}</p>}
         {!propertyBrief&&!propertyBriefError&&<p className="text-xs text-slate-300">Loading property correspondence summary…</p>}
         {propertyBrief&&<div className="space-y-2">
@@ -105,7 +107,7 @@ export default function SyncAssistDaily() {
           </div>
           <p className="text-xs text-amber-200">{propertyBrief.coverage_note}</p>
           <div className="max-h-[45vh] space-y-2 overflow-auto overscroll-contain">{(propertyBrief.properties||[]).map(p=><button key={p.id} type="button" onClick={()=>navigate(p.detail_url)} className="flex w-full items-center justify-between gap-2 rounded-lg border border-white/15 p-2 text-left text-xs"><span><strong className="block">{p.name}</strong><span className="text-slate-300">{p.correspondence_count} email references · {p.operations?.overdue_projects||0} overdue projects · {p.operations?.recorded_leases_ending_within_60_days||0} upcoming lease ends</span></span><ExternalLink size={14}/></button>)}</div>
-          <p className="text-xs text-slate-400">Sarah's reviewed correspondence is advisory. Victoria should escalate unresolved inspections, rent discrepancies, legal deadlines or emergency work orders only after the relevant records are verified.</p>
+          <p className="text-xs text-slate-400">Sarah's reviewed correspondence is advisory. Sydney should escalate unresolved inspections, rent discrepancies, legal deadlines or emergency work orders only after the relevant records are verified.</p>
         </div>}
       </section>
       <section className="sw-daily-connections mt-4 rounded-2xl border border-amber-400/20 bg-slate-900/50 p-3">
