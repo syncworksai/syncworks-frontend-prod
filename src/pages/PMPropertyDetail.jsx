@@ -217,12 +217,12 @@ export default function PMPropertyDetail() {
   if (loading) return <main className="pm-property-loading" role="status" aria-live="polite"><div className="pm-property-loading-indicator" aria-hidden="true"><span/></div><strong>Opening property</strong><p>Retrieving property records and linked activity…</p></main>;
   if (error || !property) return <main className="space-y-4 px-4 py-6 sm:px-6"><div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 text-rose-100">{error || "Property not found."}</div><div className="flex flex-wrap gap-2"><Button onClick={load}>Retry loading</Button><Button onClick={() => nav("/pm/properties")}>Back to Properties</Button></div></main>;
 
-  return <main className={`min-w-0 space-y-3 overflow-x-hidden px-3 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 ${["correspondence","overview"].includes(tab) ? `sarah-property-main ${tab === "overview"?"pm-overview-main":""}` : ""}`}>
+  return <main className={`min-w-0 space-y-3 overflow-x-hidden px-3 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 pm-property-theme ${["correspondence","overview"].includes(tab) ? `sarah-property-main ${tab === "overview"?"pm-overview-main":""}` : ""}`}>
     {notice ? <div className="rounded-2xl border border-cyan-400/25 bg-cyan-500/10 p-4 text-sm text-cyan-100">{notice}</div> : null}
     {tab !== "correspondence" && <PMProperty360Snapshot data={summary} loading={summaryLoading} error={summaryError} property={property} compact={tab === "overview"}
       reload={load} navigate={nav} openTab={(next) => { setTab(next); nav(`/pm/properties/${propertyId}?tab=${next}`); window.requestAnimationFrame(() => document.getElementById("pm-property-sections")?.scrollIntoView({ behavior: "smooth", block: "start" })); }}
       onDetails={() => setDetailsOpen(true)} />}
-    {tab !== "correspondence" && <section className="flex items-center justify-between gap-2 rounded-xl border border-slate-700/70 bg-[#07111f] px-3 py-2">
+    {tab !== "correspondence" && <section className="pm-property-status flex items-center justify-between gap-2 rounded-xl border px-3 py-2">
       <label htmlFor="pm-property-operational-status" className="text-[11px] text-slate-400">Operational status</label>
       <select id="pm-property-operational-status" value={property.status || "HEALTHY"} disabled={savingStatus}
         onChange={event => changeStatus(event.target.value)}
@@ -231,7 +231,7 @@ export default function PMPropertyDetail() {
       </select>
     </section>}
 
-    <nav id="pm-property-sections" aria-label="Property 360 sections" className={`sticky top-[max(4rem,env(safe-area-inset-top))] z-20 flex scroll-mt-24 gap-1.5 overflow-x-auto rounded-xl border border-cyan-500/15 bg-[#07111f]/95 p-1.5 backdrop-blur ${tab === "correspondence" ? "sarah-property-tabs" : ""}`}>{tabs.filter(item => item !== "tenantpreview" || isRoxanaPilotProperty(property)).map((item) => <button key={item} type="button" onClick={() => { setTab(item); nav(`/pm/properties/${propertyId}?tab=${item}`); }} className={`min-h-9 shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-black ${tab === item ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:bg-white/5 hover:text-white"} ${item === "correspondence" ? "sarah-property-briefings-tab" : ""} ${item === tab ? "sarah-tab-selected" : ""}`}>{tabLabels[item]}</button>)}</nav>
+    <nav id="pm-property-sections" aria-label="Property 360 sections" className={`pm-property-tabs sticky top-[max(4rem,env(safe-area-inset-top))] z-20 flex scroll-mt-24 gap-1.5 overflow-x-auto rounded-xl p-1.5 backdrop-blur ${tab === "correspondence" ? "sarah-property-tabs" : ""}`}>{tabs.filter(item => item !== "tenantpreview" || isRoxanaPilotProperty(property)).map((item) => <button key={item} type="button" onClick={() => { setTab(item); nav(`/pm/properties/${propertyId}?tab=${item}`); }} className={`pm-property-tab min-h-9 shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-black ${item === tab ? "sarah-tab-selected" : ""}`}>{tabLabels[item]}</button>)}</nav>
 
     {tab === "overview" ? <div className="pm-overview-actions">
       <div><strong>Property operations</strong><span>Manage details in their dedicated tabs; this overview shows only the key snapshot.</span></div>
