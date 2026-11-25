@@ -37,7 +37,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     if(speaking){stopVoice();return;}
     if(!brief)return;
     const run=++speechRun.current;setSpeaking(true);setVoiceNotice("");
-    const text=["Victoria, your Chief of Staff.",brief.date,...(brief.sections||[]).map(s=>[s.title,s.headline,...(s.items||[]).slice(0,2).map(i=>i.title+". "+(i.next_action||""))].join(". "))].join(". ").slice(0,2400);
+    const text=["Sydney, your Chief of Staff.",brief.date,...(brief.sections||[]).map(s=>[s.title,s.headline,...(s.items||[]).slice(0,2).map(i=>i.title+". "+(i.next_action||""))].join(". "))].join(". ").slice(0,2400);
     try{
       const response=await api.post("/sync-ai/voice/synthesize/",{role:"female_assistant",text},{responseType:"blob",timeout:90000});
       if(run!==speechRun.current)return;
@@ -109,8 +109,8 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     ...avatar,
     slotId,
     roleKey: employee?.role || (avatar.id==="accounting-female"?"FINANCE_MANAGER":({ "executive-female":"CHIEF_OF_STAFF", "executive-male":"SALES_MANAGER", "future-female":"MARKETING_MANAGER", "future-male":"RESEARCH_ANALYST","property-female":"PROPERTY_MANAGER","customer-service":"CUSTOMER_SERVICE"}[avatar.id])),
-    photo: ["executive-female","future-male","customer-service"].includes(avatar.id)?getAvatarPhotoForUser(avatar,user):employee?.photo || getAvatarPhotoForUser(avatar,user),
-    name: employee?.name || avatar.name,
+    photo: getAvatarPhotoForUser(avatar,user) || employee?.photo,
+    name: avatar.name || employee?.name,
     configured: Boolean(employee),
   }}), [employees, user?.email]);
 
@@ -226,7 +226,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
             </button>
           ))}
         </div>
-        {office && !active && <p className="sw-office-agents-hint">Select Victoria for her workspace and assigned duties.</p>}
+        {office && !active && <p className="sw-office-agents-hint">Select Sydney for her workspace and assigned duties.</p>}
         {!office && <div className="sw-office-agents-actions">
           <button type="button" aria-label="Manage AI team" title="Manage AI team" onClick={() => nav("/sync/assist/employees")}><BriefcaseBusiness size={16}/></button>
           <button type="button" aria-label="Refresh AI employee configuration" title="Refresh team" onClick={() => setVersion((v) => v + 1)}><RefreshCw size={15}/></button>
