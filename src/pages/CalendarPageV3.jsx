@@ -247,7 +247,8 @@ function eventDriveUrl(event) {
 }
 
 function eventDeepLink(event) {
-  if (event?.metadata?.deep_link) return event.metadata.deep_link;
+  const link = event?.metadata?.deep_link || event?.metadata?.action_url;
+  if (typeof link === "string" && /^\/(?!\/)[a-zA-Z0-9/_?=&%-]+$/.test(link)) return link;
   if (sourceKey(event) === "HEALTH") return "/customer/health";
   return "";
 }
@@ -560,6 +561,12 @@ export default function CalendarPageV3() {
     loadConnections();
     loadHealth();
   }, [loadEvents, loadConnections, loadHealth]);
+  useEffect(() => {
+    const refresh = () => loadEvents({silent:true});
+    window.addEventListener("syncworks:tasks-changed",refresh);
+    window.addEventListener("focus",refresh);
+    return () => {window.removeEventListener("syncworks:tasks-changed",refresh);window.removeEventListener("focus",refresh);};
+  }, [loadEvents]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
