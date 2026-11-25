@@ -108,7 +108,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     return {
     ...avatar,
     slotId,
-    roleKey: employee?.role || (avatar.id==="accounting-female"?"FINANCE_MANAGER":({ "executive-female":"CHIEF_OF_STAFF", "executive-male":"SALES_MANAGER", "future-female":"MARKETING_MANAGER", "future-male":"RESEARCH_ANALYST","property-female":"PROPERTY_MANAGER","customer-service":"CUSTOMER_SERVICE"}[avatar.id])),
+    roleKey: employee?.role || (avatar.id==="accounting-female"?"FINANCE_MANAGER":({ "executive-female":"CHIEF_OF_STAFF", "executive-male":"SALES_MANAGER", "future-female":"MARKETING_MANAGER", "future-male":"RESEARCH_ANALYST","property-female":"PROPERTY_MANAGER","customer-service":"CUSTOMER_SERVICE","executive-assistant":"EXECUTIVE_ASSISTANT","business-manager":"BUSINESS_MANAGER","technology-research":"TECHNOLOGY_RESEARCH","quality-assurance":"QUALITY_ASSURANCE"}[avatar.id])),
     photo: getAvatarPhotoForUser(avatar,user) || employee?.photo,
     name: avatar.name || employee?.name,
     configured: Boolean(employee),
@@ -128,7 +128,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     return()=>{alive=false;window.clearInterval(timer);};
   },[permitted,roster,version,workRefresh]);
   const office = placement === "office" || placement === "launcher";
-  const shown = office ? roster.filter((person) => person.id === "executive-female") : roster;
+  const shown = office ? roster.filter((person) => person.id === "executive-female") : roster.filter(person=>!["property-female","accounting-female"].includes(person.id));
   const active = roster.find((person) => person.id === selected);
   const messages = active ? (chatHistory[active.id] || []) : [];
   const currentWork = active ? employeeWork[active.id] : null;
