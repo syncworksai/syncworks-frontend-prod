@@ -38,7 +38,7 @@ export default function SyncAssistantLauncher() {
     return()=>window.removeEventListener("syncworks:business-agent-open",onOpen);
   },[]);
   useEffect(()=>{setBusinessAgentId(null);},[location.pathname]);
-  useEffect(()=>{const listener=()=>{setBusinessAgentId(null);openChief();};window.addEventListener("syncworks:victoria-open",listener);return()=>window.removeEventListener("syncworks:victoria-open",listener);},[]);
+
 
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   useEffect(() => {
@@ -67,6 +67,7 @@ export default function SyncAssistantLauncher() {
   // /sync already renders its own team dock; do not overlay Victoria on it.
   // Keep Victoria on specialist routes including Mail Desk and daily workday.
   const showChief = pilotFounder && eligibleVictoriaRoute && !excludedVictoria;
+  useEffect(()=>{const listener=event=>{if(!showChief)return;event.preventDefault();setBusinessAgentId(null);openChief();};window.addEventListener("syncworks:victoria-open",listener);return()=>window.removeEventListener("syncworks:victoria-open",listener);},[showChief]);
   // All SBO subpages share one persistent AI dock. The SBO landing already
   // has its header and mobile portrait row, so do not render duplicates there.
   const businessWorkspaceRoute=/^\/(?:sbo\/|pm(?:\/|$)|employee(?:\/|$)|team\/invites(?:\/|$)|ceo(?:\/|$))/.test(location.pathname);
