@@ -63,9 +63,9 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   useEffect(()=>{if(!selected){stopVoice();setReadBrief(false);setPanel("chat");if(placement==="launcher"&&openSignal)onDismiss?.();}},[selected]);
   useEffect(()=>{
     if(selected!=="executive-female"||panel!=="brief")return;
-    let alive=true;setBrief(null);setBriefError("");
-    api.get("/sync-ai/assist/pilot/chief/brief/",{timeout:45000}).then(({data})=>{if(alive)setBrief(data);}).catch(()=>{if(alive)setBriefError("Briefing unavailable. Refresh to retry.");});
-    return()=>{alive=false;};
+    let alive=true;const controller=new AbortController();setBrief(null);setBriefError("");
+    api.get("/sync-ai/assist/pilot/chief/brief/",{timeout:60000,signal:controller.signal}).then(({data})=>{if(alive)setBrief(data);}).catch(error=>{if(alive)setBriefError(error?.response?.status?"Briefing unavailable (HTTP "+error.response.status+"). Refresh to retry.":"Briefing request timed out or connection failed. Refresh to retry.");});
+    return()=>{alive=false;controller.abort();};
   },[selected,panel,workRefresh]);
   async function listenBrief(){
     if(voiceLoading||speaking){stopVoice();return;}
@@ -157,10 +157,15 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     if(!permitted)return;
     let alive=true;
     const refresh=async()=>{
-      const results=await Promise.all(roster.filter(p=>p.roleKey).map(async p=>{
-        try{const {data}=await api.get(`/sync-ai/assist/pilot/employees/${encodeURIComponent(p.roleKey)}/work/`,{timeout:15000});return [p.id,{pending:Number(data.pending_count)||0,reviewed:(data.assignments||[]).some(a=>a.state==="ACKNOWLEDGED")}];}catch{return [p.id,null];}
-      }));
-      if(alive)setDockStatus(Object.fromEntries(results));
+      try {
+        const {data}=await api.get("/sync-ai/assist/pilot/assignments/",{timeout:25000});
+        if(!Array.isArray(data?.assignments))throw Error("Invalid assignment response");
+        const tasks=data.assignments.filter(item=>item.kind==="TASK"&&!item.ticket_id);
+        if(alive)setDockStatus(Object.fromEntries(roster.filter(p=>p.roleKey).map(p=>{
+          const rows=tasks.filter(item=>item.role===p.roleKey);
+          return [p.id,{pending:rows.filter(item=>item.state==="AWAITING_REVIEW").length,reviewed:rows.some(item=>item.state==="ACKNOWLEDGED")}];
+        })));
+      }catch{if(alive)setDockStatus({});}
     };
     refresh();const timer=window.setInterval(refresh,60000);
     return()=>{alive=false;window.clearInterval(timer);};
@@ -180,7 +185,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
         const {data}=await api.get(`/sync-ai/assist/pilot/employees/${encodeURIComponent(person.roleKey)}/work/`,{timeout:15000});
         if(alive)setEmployeeWork(previous=>({...previous,[person.id]:{status:"ready",data}}));
       } catch(error) {
-        if(alive)setEmployeeWork(previous=>({...previous,[person.id]:{status:"error",message:error?.response?.data?.detail||"Could not load assigned work."}}));
+        if(alive)setEmployeeWork(previous=>({...previous,[person.id]:{status:"error",message:error?.response?.data?.detail||(error?.response?.status?"HTTP "+error.response.status:"Connection timed out or unavailable. Tap refresh.")}}));
       }
     };
     refresh();
@@ -259,7 +264,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
               aria-label={`Open ${person.name}, ${person.role}`}
               onClick={() => selectEmployee(person)}>
               {person.photo?<img src={person.photo} onError={e=>{if(person.fallbackPhoto&&!e.currentTarget.src.endsWith(person.fallbackPhoto))e.currentTarget.src=person.fallbackPhoto;}} alt="" loading="lazy" />:<span className="grid h-full w-full place-items-center rounded-full border border-cyan-300/30 bg-cyan-500/15 text-lg font-bold text-cyan-100">{person.name?.charAt(0)||"AI"}</span>}
-              {dockStatus[person.id]?.pending>0?<span className="sw-agent-review-badge" title={`${dockStatus[person.id].pending} awaiting review`}>{dockStatus[person.id].pending}</span>:dockStatus[person.id]?.reviewed?<span className="sw-agent-reviewed-badge" title="Acknowledged work; no assignments awaiting review">✓</span>:null}
+              {dockStatus[person.id]?.pending>0?<span className="sw-agent-review-badge" title={`${dockStatus[person.id].pending} personal tasks awaiting review`}>{dockStatus[person.id].pending}</span>:dockStatus[person.id]?.reviewed?<span className="sw-agent-reviewed-badge" title="Acknowledged work; no assignments awaiting review">✓</span>:null}
               <span className="sw-office-agent-names"><strong>{person.name}</strong><small>{person.role}</small></span>
               <ChevronRight size={15} className="sw-office-agent-chevron" aria-hidden="true" />
             </button>
