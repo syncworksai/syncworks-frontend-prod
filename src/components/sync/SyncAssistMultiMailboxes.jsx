@@ -21,6 +21,7 @@ export default function SyncAssistMultiMailboxes(){
  const [propertyForm,setPropertyForm]=useState({name:"",terms:"housing authority, section 8, rent, inspection",contacts:""});
  const [selectedProperty,setSelectedProperty]=useState("");
  const [historyDays,setHistoryDays]=useState(365);
+ const [historyPeople,setHistoryPeople]=useState("");
  const [historyReport,setHistoryReport]=useState(null);
  const [propertyDrawerOpen,setPropertyDrawerOpen]=useState(false);
  const [editingPropertyProfile,setEditingPropertyProfile]=useState(false);
@@ -98,7 +99,7 @@ export default function SyncAssistMultiMailboxes(){
   }catch(e){setError(mailboxError(e,"Linking portfolio"))}finally{setBusy(false)}
  };
  const chooseSearchProperty=async value=>{
-  if(!value.startsWith("pm:")){setSelectedProperty(value);setHistoryReport(null);setSelectedEvidenceIds([]);return;}
+  if(!value.startsWith("pm:")){setSelectedProperty(value);setHistoryReport(null);setSelectedEvidenceIds([]);setHistoryPeople("");return;}
   const pmId=value.slice(3);
   await linkAllProperties(pmId);
  };
@@ -121,10 +122,23 @@ export default function SyncAssistMultiMailboxes(){
   if(!active||!selectedProperty)return;
   setBusy(true);setError("");setHistoryReport(null);
   try{
+   const profile=propertyProfiles.find(p=>p.profile_id===selectedProperty);
+   if(!profile)throw new Error("Choose a linked property first.");
+   const extra=historyPeople.split(",").map(x=>x.trim()).filter(Boolean);
+   if(extra.length){
+    if(extra.some(x=>x.length<2||x.length>100))throw new Error("Names or phrases must be 2–100 characters each.");
+    const combined=[...new Set([...(profile.terms||[]),...extra].map(x=>x.trim().toLowerCase()))];
+    if(combined.length>15)throw new Error("This profile supports up to 15 search terms. Use Refine to remove unused terms first.");
+    const saved=await api.patch(BASE+encodeURIComponent(active.account_id)+"/property-profiles/",{
+     profile_id:selectedProperty,terms:combined});
+    setPropertyProfiles(prev=>prev.map(p=>p.profile_id===selectedProperty?saved.data.profile:p));
+    setHistoryPeople("");
+    setNotice("Search names saved for this property; no Outlook messages modified.");
+   }
    const r=await api.post(BASE+encodeURIComponent(active.account_id)+"/property-history/",{
     profile_id:selectedProperty,days:historyDays});
    setHistoryReport(r.data);
-  }catch(e){setError(mailboxError(e,"Historical property search"));}finally{setBusy(false);}
+  }catch(e){setError(e?.response?mailboxError(e,"Historical property search"):(e?.message||"Historical search failed."));}finally{setBusy(false);}
  };
  const linkSavedProperty=async()=>{
   if(!active||!selectedProperty||!formPmProperty)return;
@@ -199,6 +213,11 @@ export default function SyncAssistMultiMailboxes(){
        </select>
       </label>
     </div>
+    <label className="flex shrink-0 items-center gap-2 rounded-lg border border-white/15 bg-black/15 px-2 py-1.5 text-[11px]">
+     <span className="shrink-0 font-bold text-slate-200">Sender names / phrases</span>
+     <input aria-label="Sender names or phrases for property email search" value={historyPeople} onChange={e=>setHistoryPeople(e.target.value)} placeholder="Names, agencies, or addresses — comma-separated" className="min-w-0 flex-1 rounded-md border border-white/15 bg-slate-900/70 px-2 py-2 text-xs text-white placeholder:text-slate-500"/>
+     <span className="hidden text-slate-400 lg:inline">Saved on search</span>
+    </label>
     {propertyProfiles.find(p=>p.profile_id===selectedProperty&&!p.pm_property_id)&&pmProperties.length>0&&
      <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-lg border border-amber-400/30 px-2 py-1.5 text-xs">
       <span>Link this saved search to the existing PM property before attaching records.</span>
