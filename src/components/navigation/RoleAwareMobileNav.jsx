@@ -185,7 +185,7 @@ export default function RoleAwareMobileNav() {
   const [items, setItems] = useState(() => navMode ? readPreference(navMode, user) : []);
   const [unread, setUnread] = useState(0);
   const [aiTeamOpen, setAiTeamOpen] = useState(false);
-  const [mobileChiefOpen, setMobileChiefOpen] = useState(false);
+  const [mobileAgentId, setMobileAgentId] = useState(null);
   // The global dock is rendered outside the themed CustomerWorkspace root.
   // Keep its theme in sync with the user's saved appearance without changing
   // the appearance of non-Customer dashboards.
@@ -205,7 +205,7 @@ export default function RoleAwareMobileNav() {
       window.removeEventListener("storage", syncTheme);
     };
   }, []);
-  useEffect(() => {setAiTeamOpen(false);setMobileChiefOpen(false);}, [location.pathname, location.search]);
+  useEffect(() => {setAiTeamOpen(false);setMobileAgentId(null);}, [location.pathname, location.search]);
 
   const hidden = useMemo(() => {
     if (!navMode) return true;
@@ -290,7 +290,7 @@ export default function RoleAwareMobileNav() {
 
   return (
     <>
-      {founderPilot && mobileChiefOpen && pathname === "/customer" && <OfficeAgentDock user={user} placement="launcher" theme={customerTheme} openSignal={1} onDismiss={()=>setMobileChiefOpen(false)}/>}
+      {founderPilot && mobileAgentId && pathname === "/customer" && <OfficeAgentDock user={user} placement="launcher" theme={customerTheme} openSignal={1} initialAgentId={mobileAgentId} onDismiss={()=>setMobileAgentId(null)}/>}
       {aiTeamOpen && teamAgents.length > 0 && navMode === "CUSTOMER" && pathname === "/customer" && (
         <div className="sw-mobile-ai-team-shade lg:hidden" onClick={() => setAiTeamOpen(false)}>
           <section className="sw-mobile-ai-team-panel" role="dialog" aria-modal="true" aria-label="Your SYNC AI employees" onClick={(event) => event.stopPropagation()}>
@@ -300,7 +300,7 @@ export default function RoleAwareMobileNav() {
             </div>
             <div className="sw-mobile-ai-team-grid">
               {teamAgents.map((worker) => (
-                <button type="button" key={worker.id} onClick={() => {if(founderPilot&&worker.role==="Chief of Staff"){setAiTeamOpen(false);setMobileChiefOpen(true);}else navigateAssistant(worker.role === "Chief of Staff" ? "/sync/assist/chief" : `/sync/assist/employee/${encodeURIComponent(worker.id)}`);}} aria-label={`Open ${worker.name}, ${worker.role}`}>
+                <button type="button" key={worker.id} onClick={() => {setAiTeamOpen(false);setMobileAgentId(worker.id);}} aria-label={`Open ${worker.name}, ${worker.role}`}>
                   <img src={getAvatarPhotoForUser(worker, user)} alt="" loading="lazy" />
                   <strong>{worker.name}</strong>
                   <small>{worker.role}</small>
@@ -312,19 +312,19 @@ export default function RoleAwareMobileNav() {
         </div>
       )}
       {teamAgents.length > 0 && navMode === "CUSTOMER" && pathname === "/customer" && (
-        <div className={`sw-mobile-bots-dock lg:hidden ${founderPilot?"sw-mobile-bots-dock-compact":""}`} role="group" aria-label="Your docked AI employees">
-          <span className="sw-mobile-bots-label">AI TEAM</span>
+        <div className={`sw-mobile-bots-dock lg:hidden ${founderPilot?"sw-mobile-bots-dock-compact":""}`} data-sync-theme={customerTheme} role="group" aria-label="Your docked AI employees">
+          
           <div className="sw-mobile-bots-people">
             {teamAgents.slice(0, 4).map((worker) => (
               <button type="button" key={worker.id} aria-label={`Open ${worker.name}, ${worker.role}`}
-                onClick={() => {if(worker.role==="Chief of Staff"){setAiTeamOpen(false);setMobileChiefOpen(true);}else navigateAssistant(`/sync/assist/employee/${encodeURIComponent(worker.id)}`);}}
+                onClick={() => {setAiTeamOpen(false);setMobileAgentId(worker.id);}}
                 title={`${worker.name} · ${worker.role}`}>
                 <img src={getAvatarPhotoForUser(worker, user)} alt="" loading="eager" />
                 <span>{worker.name}</span>
               </button>
             ))}
           </div>
-          <button type="button" className="sw-mobile-bots-expand" onClick={() => setAiTeamOpen(true)} aria-label="View all AI employees">View all</button>
+          <button type="button" className="sw-mobile-bots-expand" onClick={() => setAiTeamOpen(true)} aria-label="View all AI employees"><span aria-hidden="true" className="sw-mobile-bots-more-icon">•••</span><span>More</span></button>
         </div>
       )}
       <nav className="sw-role-mobile-nav lg:hidden" aria-label="Mobile quick navigation" data-sync-theme={navMode === "CUSTOMER" ? customerTheme : undefined} data-forge-route={pathname === "/customer/forge" ? "true" : undefined}>
