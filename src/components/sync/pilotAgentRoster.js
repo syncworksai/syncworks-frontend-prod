@@ -6,7 +6,7 @@ export const PILOT_AGENTS = Object.freeze([
   { id: "future-female", name: "Naomi", role: "Marketing Manager", workerRole: "social_media_marketing", voiceName: "Laura", voiceId: "FGY2WhTYpPnrIDTdsKH5", photo: "/jarvis-avatars/naomi.png", fallbackPhoto: "/jarvis-avatars/Elizabeth.png" },
   { id: "executive-assistant", name: "Christy", role: "Executive Assistant", workerRole: "executive_assistant", photo: "/jarvis-avatars/christy2.png" },
   { id: "business-manager", name: "Whitney", role: "Business Operations", workerRole: "business_manager", photo: "/jarvis-avatars/Elizabeth.png" },
-  { id: "executive-male", name: "Olivia", role: "Sales Manager", workerRole: "sales_manager", voiceName: "Emily", voiceId: "uc7PdIi19FG6Iu2Iqkdc", photo: "/jarvis-avatars/Charlotte.png", fallbackPhoto: "/jarvis-avatars/Scarlett.png" },
+  { id: "executive-male", name: "Olivia", role: "Sales Manager", workerRole: "sales_manager", voiceName: "Katie - E-Learning & Podcast Host", voiceId: "YyRJWuwyhKdMZRRnm464", photo: "/jarvis-avatars/olivia.png", fallbackPhoto: "/jarvis-avatars/Scarlett.png" },
   { id: "customer-service", name: "Rebecca", role: "Customer Service", workerRole: "customer_service", photo: "/jarvis-avatars/customersupport1.png", fallbackPhoto: "/jarvis-avatars/Victoria.png" },
   { id: "quality-assurance", name: "Kylee", role: "Quality Assurance", workerRole: "quality_assurance", photo: "/jarvis-avatars/kylee.png" },
   { id: "future-male", name: "Sophia", role: "Strategic Research", workerRole: "research_analyst", voiceName: "Alice", voiceId: "Xb7hH8MSUJpSbSDYk0k2", photo: "/jarvis-avatars/newsophia.png", fallbackPhoto: "/jarvis-avatars/Sophia.png" },
