@@ -3,11 +3,11 @@
 .sw-mobile-route-stage {min-width:0;isolation:isolate;}
 .sw-mobile-route-stage[data-mobile-route-motion="fade-zoom"] > *:first-child {
   transform-origin:50% 28%;
-  animation:sw-route-enter .38s cubic-bezier(.16,.85,.25,1) both;
+  animation:sw-route-enter .45s cubic-bezier(.16,.85,.25,1) both;
 }
 .sw-mobile-route-stage[data-mobile-route-motion="hologram"] > *:first-child {
   transform-origin:50% 40%;
-  animation:sw-route-hologram-enter .46s cubic-bezier(.17,.82,.2,1) both;
+  animation:sw-route-hologram-enter .60s cubic-bezier(.17,.82,.2,1) both;
 }
 @keyframes sw-route-enter {
   0% {opacity:.18;transform:translate3d(0,22px,0) scale(.955);filter:blur(5px);}
@@ -33,7 +33,7 @@
 /* SBO-only pilot: short hierarchical navigation. The global dock/header stay
    outside this route stage, and mobile avoids transforms on fixed layout. */
 .sw-mobile-route-stage[data-mobile-route-motion^="sbo-"] > *:first-child {
-  animation:sw-sbo-route-peer 180ms cubic-bezier(.2,.8,.2,1) both;
+  animation:sw-sbo-route-peer 450ms cubic-bezier(.2,.8,.2,1) both;
 }
 @media(min-width:768px) {
   .sw-mobile-route-stage[data-mobile-route-motion="sbo-forward"] > *:first-child {
