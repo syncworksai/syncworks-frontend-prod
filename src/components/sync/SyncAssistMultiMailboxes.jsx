@@ -23,6 +23,7 @@ export default function SyncAssistMultiMailboxes(){
  const [historyDays,setHistoryDays]=useState(365);
  const [historyPeople,setHistoryPeople]=useState("");
  const [historyReport,setHistoryReport]=useState(null);
+ const [historyCategory,setHistoryCategory]=useState("ALL");
  const [propertyDrawerOpen,setPropertyDrawerOpen]=useState(false);
  const [editingPropertyProfile,setEditingPropertyProfile]=useState(false);
  const [routingReport,setRoutingReport]=useState(null);
@@ -137,7 +138,7 @@ export default function SyncAssistMultiMailboxes(){
    }
    const r=await api.post(BASE+encodeURIComponent(active.account_id)+"/property-history/",{
     profile_id:selectedProperty,days:historyDays});
-   setHistoryReport(r.data);
+   setHistoryReport(r.data);setHistoryCategory("ALL");
   }catch(e){setError(e?.response?mailboxError(e,"Historical property search"):(e?.message||"Historical search failed."));}finally{setBusy(false);}
  };
  const linkSavedProperty=async()=>{
@@ -160,6 +161,22 @@ export default function SyncAssistMultiMailboxes(){
    setReportSaved(r.data.report);
    setNotice("Reviewed correspondence attached to PM property. Outlook and ledger unchanged.");
   }catch(e){setError(mailboxError(e,"Saving reviewed correspondence"));}finally{setBusy(false)}
+ };
+ const excludeHistorySender=async sender=>{
+  const email=String(sender||"").trim().toLowerCase();
+  const profile=propertyProfiles.find(p=>p.profile_id===selectedProperty);
+  if(!active||!profile||!email.includes("@"))return;
+  const prior=profile.excluded_senders||[];
+  if(prior.includes(email))return;
+  setBusy(true);setError("");
+  try{
+   const r=await api.patch(BASE+encodeURIComponent(active.account_id)+"/property-profiles/",{
+    profile_id:selectedProperty,excluded_senders:[...prior,email]});
+   setPropertyProfiles(prev=>prev.map(p=>p.profile_id===selectedProperty?r.data.profile:p));
+   setHistoryReport(prev=>prev?{...prev,findings:(prev.findings||[]).filter(m=>String(m.sender||"").toLowerCase()!==email)}:prev);
+   setSelectedEvidenceIds(prev=>prev.filter(id=>!(historyReport?.findings||[]).some(m=>m.message_id===id&&String(m.sender||"").toLowerCase()===email)));
+   setNotice("Sender excluded from this property search. No Outlook mail modified.");
+  }catch(e){setError(mailboxError(e,"Excluding unrelated sender"));}finally{setBusy(false)}
  };
  const runSarah=async()=>{
    if(!active||active.category!=="PROPERTY")return;
@@ -223,6 +240,12 @@ export default function SyncAssistMultiMailboxes(){
       <span>Link this saved search to the existing PM property before attaching records.</span>
       <button type="button" onClick={()=>{setFormPmProperty("");setLinkDrawerOpen(true)}} className="rounded-md border border-amber-400/50 px-2 py-1 font-bold">Link PM property</button>
      </div>}
+    {historyReport&&propertyProfiles.find(p=>p.profile_id===selectedProperty)?.pm_property_id&&<div className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-white/25 bg-[#11191e] px-3 py-2" role="region" aria-label="Selected email actions">
+ <span className="text-xs font-bold">{selectedEvidenceIds.length} selected (max 20)</span>
+ <div className="flex gap-2">
+ {selectedEvidenceIds.length>0&&<button type="button" onClick={()=>setSelectedEvidenceIds([])} className="rounded-lg border border-white/25 px-2 py-2 text-xs">Clear</button>}
+ <button type="button" disabled={busy||!selectedEvidenceIds.length} onClick={saveReviewedEvidence} className="rounded-lg border border-emerald-300/50 bg-emerald-500/15 px-3 py-2 text-xs font-bold text-emerald-50 disabled:opacity-50">Attach selected to Briefings</button>
+ </div></div>}
     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-xl border border-white/15 bg-black/10 p-3">
       {!historyReport?<div className="flex h-full min-h-32 flex-col items-center justify-center gap-2 text-center">
        <strong className="text-sm">{propertyProfiles.length?"Select a property and press Search emails":"No property search saved yet"}</strong>
@@ -234,19 +257,18 @@ export default function SyncAssistMultiMailboxes(){
         <span className="text-[11px] text-slate-300">{historyReport.property?.name}{historyReport.partial?" · Partial results":""}</span>
        </div>
        <p className="text-[11px] text-amber-100">Keyword matches are candidates, not verified property records. Select only genuine property correspondence for review. Email previews do not verify money or inspections.</p>
-       {propertyProfiles.find(p=>p.profile_id===selectedProperty)?.pm_property_id&&<div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/20 p-2">
-        <span className="text-xs">{selectedEvidenceIds.length} selected (max 20)</span>
-        <button type="button" disabled={busy||!selectedEvidenceIds.length} onClick={saveReviewedEvidence} className="rounded-lg border border-cyan-300/60 px-3 py-2 text-xs font-bold disabled:opacity-50">Attach reviewed report</button>
-       </div>}
        {reportSaved&&<a className="text-xs underline" href={"/pm/properties/"+reportSaved.pm_property_id+"?tab=correspondence"}>Open PM property correspondence</a>}
-       <div className="flex flex-wrap gap-2">{Object.entries(historyReport.counts||{}).map(([k,n])=><span key={k} className="rounded-lg border border-white/20 px-2 py-1 text-xs">{k}: {n}</span>)}</div>
+       <div className="flex flex-wrap gap-2" role="group" aria-label="Filter email result category">
+ <button type="button" onClick={()=>setHistoryCategory("ALL")} className={`rounded-lg border px-2 py-1 text-xs ${historyCategory==="ALL"?"border-emerald-300/50 bg-white/15":"border-white/20"}`}>ALL: {historyReport.findings?.length||0}</button>
+ {Object.entries(historyReport.counts||{}).map(([k,n])=><button key={k} type="button" onClick={()=>setHistoryCategory(k)} className={`rounded-lg border px-2 py-1 text-xs ${historyCategory===k?"border-emerald-300/50 bg-white/15":"border-white/20"}`}>{k}: {n}</button>)}
+ </div>
        {(historyReport.findings||[]).length===0&&<p className="text-xs text-slate-300">No matching emails for these terms in this bounded search. Add sender names, exact email addresses, or agency names above and search again. A zero result does not prove correspondence is missing.</p>}
-       {(historyReport.findings||[]).map(m=><article key={m.message_id} className="rounded-lg border border-white/20 bg-black/10 p-3">
+       {(historyReport.findings||[]).filter(m=>historyCategory==="ALL"||m.category===historyCategory).map(m=><article key={m.message_id} className="rounded-lg border border-white/20 bg-black/10 p-3">
         <div className="flex flex-wrap items-center justify-between gap-2"><label className="flex min-w-0 items-center gap-2"><input type="checkbox" aria-label={"Include "+m.subject+" in reviewed report"} checked={selectedEvidenceIds.includes(m.message_id)} disabled={!propertyProfiles.find(p=>p.profile_id===selectedProperty)?.pm_property_id||(!selectedEvidenceIds.includes(m.message_id)&&selectedEvidenceIds.length>=20)} onChange={e=>setSelectedEvidenceIds(prev=>e.target.checked?[...prev,m.message_id]:prev.filter(id=>id!==m.message_id))}/><strong className="text-xs">{m.subject}</strong></label><span className="text-[11px]">{m.category} · {m.received_at?.slice(0,10)}</span></div>
         <p className="mt-1 text-[11px] text-slate-300">{m.sender}</p>
         <p className="mt-2 text-xs">{m.preview}</p>
         <p className="mt-1 text-[11px] text-cyan-200">{m.confidence==="STRONG"?"Property-specific match":"Manual verification needed"} · Matched: {m.matched_terms?.join(", ")}{m.has_attachments?" · Attachment present (not read)":""}</p>
-        {m.outlook_url&&<a href={m.outlook_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs underline">Open original in Outlook</a>}
+        <div className="mt-2 flex flex-wrap items-center gap-3">{m.outlook_url&&<a href={m.outlook_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs underline">Open original in Outlook</a>}<button type="button" disabled={busy||!m.sender} onClick={()=>excludeHistorySender(m.sender)} className="rounded-md border border-white/20 px-2 py-1 text-[11px] text-slate-300 hover:border-white/50 disabled:opacity-40">Exclude sender from property search</button></div>
        </article>)}
       </div>}
     </div>
