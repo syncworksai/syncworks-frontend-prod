@@ -502,3 +502,5 @@
  .sw-sbo-compact .sw-sbo-desktop-ai-agent img{width:34px!important;height:34px!important}
 }
 @media(min-width:768px) and (max-width:1140px){.sw-sbo-compact .sw-sbo-desktop-ai-agent{min-width:35px!important}.sw-sbo-compact .sw-sbo-desktop-ai-agent img{width:29px!important;height:29px!important}.sw-sbo-compact .sw-sbo-desktop-ai-agent span{font-size:8px!important}}
+
+@media(max-width:767px){.sw-sbo-compact .sw-sbo-ai-dock{background:none;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:2px 0;}.sw-sbo-compact .sw-sbo-ai-label{display:none;}.sw-sbo-compact .sw-sbo-ai-worker{min-height:44px;}.sw-sbo-compact .sw-sbo-ai-worker img{border-color:var(--sbo-border);box-shadow:0 3px 12px rgba(0,0,0,.35);}.sw-sbo-compact .sw-sbo-ai-worker span{text-shadow:0 1px 4px rgba(0,0,0,.65);}}
