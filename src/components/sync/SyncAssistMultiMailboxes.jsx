@@ -1,4 +1,5 @@
 import React,{useCallback,useEffect,useState} from "react";
+import {createPortal} from "react-dom";
 import {MailPlus,RefreshCw,Inbox,ShieldCheck,Trash2,ChevronLeft} from "lucide-react";
 import api from "../../api/client";
 // OAuth start, callback, and token storage must use the same Ohio service.
@@ -251,10 +252,10 @@ export default function SyncAssistMultiMailboxes(){
       {reportSaved&&<a className="text-xs underline" href={"/pm/properties/"+reportSaved.pm_property_id+"?tab=correspondence"}>Open Property Briefings</a>}
      </>:<><strong className="text-sm">Search property correspondence</strong><p className="text-xs text-slate-300">Results open in a larger review drawer with a fixed action bar.</p></>}
     </div>
-    {historyReviewOpen&&historyReport&&<div className="sw-property-overlay fixed inset-0 z-[120] flex items-center justify-center p-2 md:p-5" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setHistoryReviewOpen(false)}}>
-     <section role="dialog" aria-modal="true" aria-label="Review property emails" className="sw-property-dialog flex h-[90dvh] w-full max-w-[1350px] min-h-0 flex-col overflow-hidden rounded-xl border border-white/25 bg-[#11171c] shadow-2xl">
+    {historyReviewOpen&&historyReport&&createPortal(<div className="sw-property-overlay fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 p-2 md:p-4" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setHistoryReviewOpen(false)}}>
+     <section role="dialog" aria-modal="true" aria-label="Review property emails" className="sw-property-dialog flex h-[calc(100dvh-24px)] max-h-[980px] w-full max-w-[1500px] min-h-0 flex-col overflow-hidden rounded-xl border border-white/25 bg-[#11171c] shadow-2xl md:h-[calc(100dvh-40px)]">
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-white/20 p-3 md:px-5">
-       <div className="min-w-0"><strong className="block truncate text-base">Sarah · Review {historyReport.property?.name} emails</strong><span className="text-xs text-slate-300">{historyReport.findings?.length||0} candidates · Select only verified property correspondence</span></div>
+       <div className="min-w-0"><strong className="block truncate text-base">Sarah · Review {historyReport.property?.name} emails</strong><span className="text-xs text-slate-300">{historyReport.findings?.length||0} candidates · Select only verified property correspondence · Limit 20 per report</span></div>
        <button type="button" className="rounded-lg border border-white/25 px-3 py-2 text-xs" onClick={()=>setHistoryReviewOpen(false)}>Close ✕</button>
       </header>
       <nav className="flex shrink-0 flex-wrap gap-1.5 border-b border-white/15 p-2 md:px-5" aria-label="Filter correspondence">
@@ -264,7 +265,7 @@ export default function SyncAssistMultiMailboxes(){
       <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(250px,38%)_minmax(0,1fr)]">
        <div className="min-h-0 overflow-y-auto overscroll-contain border-b border-white/20 p-2 md:border-b-0 md:border-r" aria-label="Correspondence list">
         {(historyReport.findings||[]).filter(m=>historyCategory==="ALL"||m.category===historyCategory).map(m=><div key={m.message_id} className={`mb-1 flex gap-2 rounded-lg border p-2 ${historyActiveId===m.message_id?"border-emerald-300/50 bg-white/10":"border-white/10"}`}>
-         <input type="checkbox" className="mt-1 shrink-0" aria-label={"Include "+m.subject} checked={selectedEvidenceIds.includes(m.message_id)} disabled={!propertyProfiles.find(p=>p.profile_id===selectedProperty)?.pm_property_id||(!selectedEvidenceIds.includes(m.message_id)&&selectedEvidenceIds.length>=20)} onChange={e=>setSelectedEvidenceIds(prev=>e.target.checked?[...prev,m.message_id]:prev.filter(id=>id!==m.message_id))}/>
+         <input type="checkbox" className="mt-1 shrink-0" aria-label={"Include "+m.subject} checked={selectedEvidenceIds.includes(m.message_id)} title={selectedEvidenceIds.length>=20&&!selectedEvidenceIds.includes(m.message_id)?"Maximum 20 selected. Attach this batch or clear selections first.":undefined} disabled={!propertyProfiles.find(p=>p.profile_id===selectedProperty)?.pm_property_id||(!selectedEvidenceIds.includes(m.message_id)&&selectedEvidenceIds.length>=20)} onChange={e=>setSelectedEvidenceIds(prev=>e.target.checked?[...prev,m.message_id]:prev.filter(id=>id!==m.message_id))}/>
          <button type="button" className="min-w-0 flex-1 text-left" onClick={()=>setHistoryActiveId(m.message_id)}><strong className="block truncate text-xs">{m.subject}</strong><span className="block truncate text-[11px] text-slate-300">{m.sender}</span><span className="text-[10px] text-slate-400">{m.received_at?.slice(0,10)} · {m.category}</span></button>
         </div>)}
        </div>
@@ -283,7 +284,7 @@ export default function SyncAssistMultiMailboxes(){
        </div>
       </div>
       <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-white/20 bg-[#151d21] p-3 md:px-5">
-       <strong className="text-xs">{selectedEvidenceIds.length} selected (max 20)</strong>
+       <div className="flex flex-col gap-0.5"><strong className="text-xs">{selectedEvidenceIds.length} of 20 selected</strong>{selectedEvidenceIds.length>=20&&<span className="text-[11px] text-amber-200">Limit reached — attach this batch or clear some selections</span>}</div>
        <div className="flex gap-2">{selectedEvidenceIds.length>0&&<button type="button" onClick={()=>setSelectedEvidenceIds([])} className="rounded-md border border-white/25 px-3 py-2 text-xs">Clear</button>}
         <button type="button" disabled={busy||!selectedEvidenceIds.length} onClick={saveReviewedEvidence} className="rounded-md border border-emerald-300/50 bg-emerald-500/15 px-3 py-2 text-xs font-bold disabled:opacity-50">{busy?"Saving…":"Attach selected to Briefings"}</button></div>
       </footer>
