@@ -134,3 +134,6 @@
 @media(prefers-reduced-motion:reduce){
  .sw-workspace-root:not([data-workspace-theme="legacy"]) .sw-customer-nav-entry{transition:none!important}
 }
+
+/* Keep the support shortcut visible alongside Menu in compact personal headers. */
+.sw-workspace-root .sw-modebar button.sw-modebar-support{display:inline-flex!important;visibility:visible!important;opacity:1!important;flex:0 0 40px!important;width:40px!important;height:40px!important;color:var(--sw-room-header-ink,var(--sw-ui-text,#e2e8f0))!important;border:1px solid var(--sw-room-header-line,#64748b)!important;background:var(--sw-room-detail,rgba(100,116,139,.15))!important;align-items:center;justify-content:center;}
