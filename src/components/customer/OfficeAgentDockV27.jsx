@@ -39,7 +39,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     const run=++speechRun.current;setSpeaking(true);setVoiceNotice("");
     const text=["Sydney, your Chief of Staff.",brief.date,...(brief.sections||[]).map(s=>[s.title,s.headline,...(s.items||[]).slice(0,2).map(i=>i.title+". "+(i.next_action||""))].join(". "))].join(". ").slice(0,2400);
     try{
-      const response=await api.post("/sync-ai/voice/synthesize/",{role:"female_assistant",text},{responseType:"blob",timeout:90000});
+      const response=await api.post("/sync-ai/voice/synthesize/",{role:"founder_chief",text},{responseType:"blob",timeout:90000});
       if(run!==speechRun.current)return;
       if(!response.data?.size||!response.data.type?.startsWith("audio/"))throw Error("Invalid audio");
       const player=new Audio(URL.createObjectURL(response.data));audioRef.current=player;player.onended=stopVoice;await player.play();
