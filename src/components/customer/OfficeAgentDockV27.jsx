@@ -78,8 +78,8 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     return {
     ...avatar,
     slotId,
-    roleKey: employee?.role || (avatar.id==="accounting-female"?"FINANCE_MANAGER":({ "executive-female":"CHIEF_OF_STAFF", "executive-male":"SALES_MANAGER", "future-female":"MARKETING_MANAGER", "future-male":"RESEARCH_ANALYST","property-female":"PROPERTY_MANAGER"}[avatar.id])),
-    photo: avatar.id==="executive-female"?getAvatarPhotoForUser(avatar,user):employee?.photo || getAvatarPhotoForUser(avatar,user),
+    roleKey: employee?.role || (avatar.id==="accounting-female"?"FINANCE_MANAGER":({ "executive-female":"CHIEF_OF_STAFF", "executive-male":"SALES_MANAGER", "future-female":"MARKETING_MANAGER", "future-male":"RESEARCH_ANALYST","property-female":"PROPERTY_MANAGER","customer-service":"CUSTOMER_SERVICE"}[avatar.id])),
+    photo: ["executive-female","future-male","customer-service"].includes(avatar.id)?getAvatarPhotoForUser(avatar,user):employee?.photo || getAvatarPhotoForUser(avatar,user),
     name: employee?.name || avatar.name,
     configured: Boolean(employee),
   }}), [employees, user?.email]);
