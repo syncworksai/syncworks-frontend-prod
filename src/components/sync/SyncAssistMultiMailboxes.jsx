@@ -176,6 +176,7 @@ export default function SyncAssistMultiMailboxes(){
     profile_id:selectedProperty,excluded_senders:[...prior,email]});
    setPropertyProfiles(prev=>prev.map(p=>p.profile_id===selectedProperty?r.data.profile:p));
    setHistoryReport(prev=>prev?{...prev,findings:(prev.findings||[]).filter(m=>String(m.sender||"").toLowerCase()!==email)}:prev);
+   setHistoryActiveId(prev=>(historyReport?.findings||[]).some(m=>m.message_id===prev&&String(m.sender||"").toLowerCase()===email)?((historyReport?.findings||[]).find(m=>String(m.sender||"").toLowerCase()!==email)?.message_id||null):prev);
    setSelectedEvidenceIds(prev=>prev.filter(id=>!(historyReport?.findings||[]).some(m=>m.message_id===id&&String(m.sender||"").toLowerCase()===email)));
    setNotice("Sender excluded from this property search. No Outlook mail modified.");
   }catch(e){setError(mailboxError(e,"Excluding unrelated sender"));}finally{setBusy(false)}
@@ -257,7 +258,7 @@ export default function SyncAssistMultiMailboxes(){
        <button type="button" className="rounded-lg border border-white/25 px-3 py-2 text-xs" onClick={()=>setHistoryReviewOpen(false)}>Close ✕</button>
       </header>
       <nav className="flex shrink-0 flex-wrap gap-1.5 border-b border-white/15 p-2 md:px-5" aria-label="Filter correspondence">
-       <button type="button" onClick={()=>setHistoryCategory("ALL")} className={`rounded-md border px-2 py-1.5 text-xs ${historyCategory==="ALL"?"border-emerald-300/60 bg-white/10":"border-white/20"}`}>All ({historyReport.findings?.length||0})</button>
+       <button type="button" onClick={()=>{setHistoryCategory("ALL");setHistoryActiveId(historyReport.findings?.[0]?.message_id||null)}} className={`rounded-md border px-2 py-1.5 text-xs ${historyCategory==="ALL"?"border-emerald-300/60 bg-white/10":"border-white/20"}`}>All ({historyReport.findings?.length||0})</button>
        {Object.entries(historyReport.counts||{}).map(([k,n])=><button key={k} type="button" onClick={()=>{setHistoryCategory(k);setHistoryActiveId((historyReport.findings||[]).find(m=>m.category===k)?.message_id||null)}} className={`rounded-md border px-2 py-1.5 text-xs ${historyCategory===k?"border-emerald-300/60 bg-white/10":"border-white/20"}`}>{k} ({n})</button>)}
       </nav>
       <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(250px,38%)_minmax(0,1fr)]">
