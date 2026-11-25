@@ -5,7 +5,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { AVATARS, getAvatarPhotoForUser, getAvatarFallbackPhotoForUser } from "./JarvisAvatar";
 import api from "../../api/client";
 import SyncAlertDrawer from "./SyncAlertDrawer";
-import VictoriaCommandCenter from "./VictoriaCommandCenter";
+import OfficeAgentDock from "../customer/OfficeAgentDockV27";
 import BusinessAssistantDock from "./BusinessAssistantDock";
 import BusinessAgentQuickChat from "./BusinessAgentQuickChat";
 
@@ -180,7 +180,7 @@ export default function SyncAssistantLauncher() {
       </div>
       {showBusinessDock&&<BusinessAssistantDock user={user} onVictoria={()=>setCommandOpen(true)}/>}
       {showChief&&businessAgentId&&!excludedVictoria&&<BusinessAgentQuickChat agentId={businessAgentId} user={user} onClose={()=>setBusinessAgentId(null)}/>}
-      {showChief && <VictoriaCommandCenter open={commandOpen} onClose={()=>setCommandOpen(false)}/>}
+      {showChief && commandOpen && <OfficeAgentDock user={user} placement="launcher" openSignal={1} onDismiss={()=>setCommandOpen(false)}/>}
       <SyncAlertDrawer open={alertsOpen} onClose={() => { setAlertsOpen(false); loadUnread(); }} onCountChange={setUnread} />
     </>
   );
