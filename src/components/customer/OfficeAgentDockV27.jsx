@@ -21,6 +21,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   useEffect(()=>{if(placement==="launcher"&&openSignal)setSelected("executive-female");},[placement,openSignal]);
   const [workRefresh, setWorkRefresh] = useState(0);
   const [panel,setPanel]=useState("chat");
+  const [readBrief,setReadBrief]=useState(false);
   const [brief,setBrief]=useState(null);
   const [briefError,setBriefError]=useState("");
   const [voiceNotice,setVoiceNotice]=useState("");
@@ -59,7 +60,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const speechRun=useRef(0);
   const stopVoice=()=>{speechRun.current++;if(audioRef.current){audioRef.current.pause();URL.revokeObjectURL(audioRef.current.src);audioRef.current=null;}setSpeaking(false);setVoiceLoading(false);setAudioReady(false);};
   useEffect(()=>()=>{speechRun.current++;if(audioRef.current){audioRef.current.pause();URL.revokeObjectURL(audioRef.current.src);}},[]);
-  useEffect(()=>{if(!selected){stopVoice();setPanel("chat");if(placement==="launcher"&&openSignal)onDismiss?.();}},[selected]);
+  useEffect(()=>{if(!selected){stopVoice();setReadBrief(false);setPanel("chat");if(placement==="launcher"&&openSignal)onDismiss?.();}},[selected]);
   useEffect(()=>{
     if(selected!=="executive-female"||panel!=="brief")return;
     let alive=true;setBrief(null);setBriefError("");
@@ -203,6 +204,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
       setDialogTheme(Object.fromEntries(vars.map(key=>[key,computed.getPropertyValue(key).trim()]).filter(([,value])=>value)));
     }
     setChatError("");
+    setReadBrief(false);
     setPanel("chat");
     setSelected(current=>current===person.id?null:person.id);
   };
@@ -288,7 +290,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
         </header>
         <div className="sw-ai-conversation-toolbar">
           <button type="button" onClick={()=>{setSelected(null);nav("/sync/assist/assignments?new=1&role="+encodeURIComponent(active.roleKey||"CHIEF_OF_STAFF"))}}><BriefcaseBusiness size={15}/> Assign work</button>
-          <button type="button" onClick={()=>{if(active.id==="executive-female"){stopVoice();setPanel(v=>v==="brief"?"chat":"brief");}else{setSelected(null);openEmployee(active);}}}><Maximize2 size={15}/> {active.id==="executive-female"?(panel==="brief"?"Back to chat":"Daily briefing"):"Employee workspace"}</button>
+          <button type="button" onClick={()=>{if(active.id==="executive-female"){stopVoice();setReadBrief(false);setPanel(v=>v==="brief"?"chat":"brief");}else{setSelected(null);openEmployee(active);}}}><Maximize2 size={15}/> {active.id==="executive-female"?(panel==="brief"?"Back to chat":"Daily briefing"):"Employee workspace"}</button>
         </div>
         <div className="sw-ai-work-summary">
           <div className="sw-ai-work-summary-head"><strong>Assigned work</strong><span>{currentWork?.status==="ready"?`${currentWork.data.pending_count} awaiting review`:"Review-only pilot"}</span>
@@ -305,12 +307,12 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
            <p>Loading this employee's task inbox…</p>}
         </div>
         {panel==="brief"?<div className="sw-ai-conversation-feed" ref={feedRef}>
-          <div className="sw-ai-brief-controls sw-ai-conversation-toolbar"><button type="button" onClick={listenBrief} disabled={!brief} aria-busy={voiceLoading}>{voiceLoading?<><LoaderCircle size={15} className="animate-spin"/> Preparing audio… (cancel)</>:speaking?"Stop audio":audioReady?"Play audio":"Listen to briefing"}</button><button type="button" onClick={()=>{stopVoice();setWorkRefresh(v=>v+1)}}>Refresh</button></div>
+          <div className="sw-ai-brief-controls sw-ai-conversation-toolbar"><button type="button" onClick={listenBrief} disabled={!brief} aria-busy={voiceLoading}>{voiceLoading?<><LoaderCircle size={15} className="animate-spin"/> Preparing audio… (cancel)</>:speaking?"Stop audio":audioReady?"Play audio":"Listen to briefing"}</button><button type="button" onClick={()=>setReadBrief(v=>!v)} disabled={!brief} aria-expanded={readBrief}>{readBrief?"Hide briefing":"Read briefing"}</button><button type="button" title="Refresh briefing" aria-label="Refresh briefing" onClick={()=>{stopVoice();setWorkRefresh(v=>v+1)}}><RefreshCw size={15}/></button></div>
           {voiceNotice&&<p role="status">{voiceNotice}</p>}
           {briefError?<p role="alert">{briefError}</p>:!brief?<p><LoaderCircle size={15} className="animate-spin"/> Loading executive briefing…</p>:<>
           <div className="sw-ai-brief-context"><strong>{brief.date} · {brief.executive_context?.local_time?new Date(brief.executive_context.local_time).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"Time unavailable"}</strong><p>{weather.available?[forecast.temperature!=null?forecast.temperature+"°"+(forecast.temperature_unit||"F"):"",forecast.short_forecast].filter(Boolean).join(" · "):"Local weather not connected"}</p>{!weather.available&&<button type="button" disabled={weatherLoading} onClick={loadWeather}>{weatherLoading?"Getting weather…":"Use my location for weather"}</button>}{weatherError&&<p role="status">{weatherError}</p>}</div>
-          <article className="sw-ai-brief-story">{narrative.map((paragraph,n)=><p key={n}>{paragraph}</p>)}</article>
-          <details className="sw-ai-brief-evidence"><summary>Detailed records & employee reports</summary>{sections.map(s=><details key={s.key}><summary>{s.title} — {s.headline}</summary>{(s.items||[]).map((i,n)=><p key={n}>{i.title} · {i.next_action}</p>)}</details>)}</details>
+          {readBrief&&<><article className="sw-ai-brief-story">{narrative.map((paragraph,n)=><p key={n}>{paragraph}</p>)}</article>
+          <details className="sw-ai-brief-evidence"><summary>Detailed records & employee reports</summary>{sections.map(s=><details key={s.key}><summary>{s.title} — {s.headline}</summary>{(s.items||[]).map((i,n)=><p key={n}>{i.title} · {i.next_action}</p>)}</details>)}</details></>}
           </>}</div>:<><div className="sw-ai-conversation-feed" role="log" aria-live="polite" aria-relevant="additions text">
           {!messages.length && <div className="sw-ai-conversation-intro">
             <img src={active.photo} onError={e=>{if(active.fallbackPhoto&&!e.currentTarget.src.endsWith(active.fallbackPhoto))e.currentTarget.src=active.fallbackPhoto;}} alt="" aria-hidden="true"/>
