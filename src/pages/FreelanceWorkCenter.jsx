@@ -34,17 +34,30 @@ const VERIFIED_FIRST_PROPOSAL = Object.freeze({
   submittedAt:"2026-11-23T22:27:40.691Z",
   source:"Upwork submission verified in ChatGPT on 2026-11-23; snapshot, not live status",
 });
+// Confirmed in the user's Upwork account on 2026-11-25. Dated status,
+ // not an Upwork sync. Hourly proposals do not establish any revenue.
+const VERIFIED_INVITATION = Object.freeze({
+ id:"upwork-proposal-2125302184257974793",
+ title:"AI Research Assistant (Remote, Part-Time) — UpForward",
+ platform:"Upwork",url:"https://www.upwork.com/jobs/~022125160830223473195",
+ type:"Hourly",budget:0,status:"Applied",
+ proposalId:"2125302184257974793",upworkJobId:"2125160830223473195",
+ hourlyBid:30,connectsSpent:0,submittedAt:"2026-11-25T17:22:43.945Z",
+ notes:"Invitation accepted, not hired. Client had not viewed at last check. Terms include scheduled 15% raise every 3 months; review before accepting any future contract.",
+ source:"Upwork invitation accepted; verified in ChatGPT 2026-11-25. Static snapshot, not live status"
+});
 function initialState(){ return { opportunities: [], updatedAt: null, firstProposalImported: false }; }
 function loadState(userId) {
-  try {
-    const saved = JSON.parse(window.localStorage.getItem(storageKey(userId)) || "null");
-    const state = saved && Array.isArray(saved.opportunities) ? saved : initialState();
-    if(state.firstProposalImported) return state;
-    const duplicate = state.opportunities.some(j=>j.proposalId===VERIFIED_FIRST_PROPOSAL.proposalId || j.upworkJobId===VERIFIED_FIRST_PROPOSAL.upworkJobId);
-    return {...state, firstProposalImported:true, opportunities:duplicate?state.opportunities:[VERIFIED_FIRST_PROPOSAL,...state.opportunities]};
-  } catch {
-    return {...initialState(), firstProposalImported:true, opportunities:[VERIFIED_FIRST_PROPOSAL]};
-  }
+ const pinned=[VERIFIED_FIRST_PROPOSAL,VERIFIED_INVITATION];
+ try {
+  const saved=JSON.parse(window.localStorage.getItem(storageKey(userId))||"null");
+  const state=saved&&Array.isArray(saved.opportunities)?saved:initialState();
+  const existing=Array.isArray(state.opportunities)?state.opportunities:[];
+  const missing=pinned.filter(p=>!existing.some(j=>j.proposalId===p.proposalId||j.upworkJobId===p.upworkJobId));
+  return {...state,firstProposalImported:true,opportunities:[...missing,...existing]};
+ } catch {
+  return {...initialState(),firstProposalImported:true,opportunities:pinned};
+ }
 }
 const panelClass = "rounded-2xl border border-white/10 bg-slate-900/80 p-5";
 const inputClass = "w-full min-w-0 rounded-xl border border-white/20 bg-slate-950/90 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none";
