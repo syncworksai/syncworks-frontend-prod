@@ -73,17 +73,30 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   }, [permitted, version]);
 
   const roster = useMemo(() => getPilotAgentsForUser(user,AVATARS).map((avatar) => {
-    const slotId=avatar.id==="accounting-female"?"finance-manager":avatar.id;
+    const slotId=avatar.id==="accounting-female"?"finance-manager":avatar.id==="property-female"?"property-manager":avatar.id;
     const employee=employees.find(worker=>worker.id===slotId);
     return {
     ...avatar,
     slotId,
-    roleKey: employee?.role || (avatar.id==="accounting-female"?"FINANCE_MANAGER":({ "executive-female":"CHIEF_OF_STAFF", "executive-male":"SALES_MANAGER", "future-female":"MARKETING_MANAGER", "future-male":"RESEARCH_ANALYST"}[avatar.id])),
+    roleKey: employee?.role || (avatar.id==="accounting-female"?"FINANCE_MANAGER":({ "executive-female":"CHIEF_OF_STAFF", "executive-male":"SALES_MANAGER", "future-female":"MARKETING_MANAGER", "future-male":"RESEARCH_ANALYST","property-female":"PROPERTY_MANAGER"}[avatar.id])),
     photo: employee?.photo || getAvatarPhotoForUser(avatar,user),
     name: employee?.name || avatar.name,
     configured: Boolean(employee),
   }}), [employees, user?.email]);
 
+  const [dockStatus,setDockStatus]=useState({});
+  useEffect(()=>{
+    if(!permitted)return;
+    let alive=true;
+    const refresh=async()=>{
+      const results=await Promise.all(roster.filter(p=>p.roleKey).map(async p=>{
+        try{const {data}=await api.get(`/sync-ai/assist/pilot/employees/${encodeURIComponent(p.roleKey)}/work/`,{timeout:15000});return [p.id,{pending:Number(data.pending_count)||0,reviewed:(data.assignments||[]).some(a=>a.state==="ACKNOWLEDGED")}];}catch{return [p.id,null];}
+      }));
+      if(alive)setDockStatus(Object.fromEntries(results));
+    };
+    refresh();const timer=window.setInterval(refresh,60000);
+    return()=>{alive=false;window.clearInterval(timer);};
+  },[permitted,roster,version,workRefresh]);
   const office = placement === "office";
   const shown = office ? roster.filter((person) => person.id === "executive-female") : roster;
   const active = roster.find((person) => person.id === selected);
@@ -147,14 +160,14 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
       setChatError(err?.response?.data?.detail || "SYNC chat is unavailable. Your message was not processed; please try again.");
     } finally { setChatBusy(false); }
   };
-  const openEmployee = (person) => nav(person.configured
+  const openEmployee = (person) => nav(person.id==="executive-female"?"/sync/assist/chief":person.configured
     ? `/sync/assist/employee/${encodeURIComponent(person.slotId)}`
     : "/sync/assist");
 
   if (!permitted) return null;
   const dock = (
     <section data-bubble-theme={theme} ref={dockRef} style={moveable ? {"--sw-team-x": offset.x + "px", "--sw-team-y": offset.y + "px"} : undefined} className={`sw-office-agents sw-office-agents--${placement} ${moveable ? "sw-office-agents--bubbles" : ""}`} aria-label={office ? "Chief of Staff" : "My AI team"}>
-      <div className="sw-office-agents-head">
+      {!moveable&&<div className="sw-office-agents-head">
         <span className="sw-office-agents-heading"><Users size={16} aria-hidden="true" /> {office ? "CHIEF OF STAFF" : "MY AI TEAM"}</span>
         <span className="sw-office-agents-state">
           {fetchState === "loading" ? "Checking team…" :
@@ -162,7 +175,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
            office ? (shown[0]?.configured ? "Configured" : "Not configured") :
            `${shown.filter(person=>person.configured).length} profiles · review-only pilot`}
         </span>
-      </div>
+      </div>}
       {moveable && <div className="sw-office-bubbles-controls">
         <button type="button" className="sw-office-bubbles-grip" aria-label="Drag to move AI team dock" title="Drag to reposition AI team"
           onPointerDown={dragBegin} onPointerMove={dragMove} onPointerUp={dragEnd} onPointerCancel={dragEnd}><Grip size={19}/></button>
@@ -176,6 +189,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
               aria-label={`Open ${person.name}, ${person.role}`}
               onClick={() => selectEmployee(person)}>
               {person.photo?<img src={person.photo} alt="" loading="lazy" />:<span className="grid h-full w-full place-items-center rounded-full border border-cyan-300/30 bg-cyan-500/15 text-lg font-bold text-cyan-100">{person.name?.charAt(0)||"AI"}</span>}
+              {dockStatus[person.id]?.pending>0?<span className="sw-agent-review-badge" title={`${dockStatus[person.id].pending} awaiting review`}>{dockStatus[person.id].pending}</span>:dockStatus[person.id]?.reviewed?<span className="sw-agent-reviewed-badge" title="Acknowledged work; no assignments awaiting review">✓</span>:null}
               <span className="sw-office-agent-names"><strong>{person.name}</strong><small>{person.role}</small></span>
               <ChevronRight size={15} className="sw-office-agent-chevron" aria-hidden="true" />
             </button>
@@ -183,8 +197,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
         </div>
         {office && !active && <p className="sw-office-agents-hint">Select Victoria for her workspace and assigned duties.</p>}
         {!office && <div className="sw-office-agents-actions">
-          <button type="button" onClick={() => nav("/sync/assist/assignments")}><MessageCircle size={15}/> Assign task</button>
-          <button type="button" onClick={() => nav("/sync/assist/employees")}><BriefcaseBusiness size={15}/> Manage team</button>
+          <button type="button" aria-label="Manage AI team" title="Manage AI team" onClick={() => nav("/sync/assist/employees")}><BriefcaseBusiness size={16}/></button>
           <button type="button" aria-label="Refresh AI employee configuration" title="Refresh team" onClick={() => setVersion((v) => v + 1)}><RefreshCw size={15}/></button>
         </div>}
       </div>
@@ -207,7 +220,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
         </header>
         <div className="sw-ai-conversation-toolbar">
           <button type="button" onClick={()=>{setSelected(null);nav("/sync/assist/assignments")}}><BriefcaseBusiness size={15}/> Assign work</button>
-          <button type="button" onClick={()=>{setSelected(null);openEmployee(active)}}><Maximize2 size={15}/> Employee workspace</button>
+          <button type="button" onClick={()=>{setSelected(null);openEmployee(active)}}><Maximize2 size={15}/> {active.id==="executive-female"?"Daily briefing":"Employee workspace"}</button>
         </div>
         <div className="sw-ai-work-summary">
           <div className="sw-ai-work-summary-head"><strong>Assigned work</strong><span>{currentWork?.status==="ready"?`${currentWork.data.pending_count} awaiting review`:"Review-only pilot"}</span>
