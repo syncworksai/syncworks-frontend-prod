@@ -22,6 +22,24 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const [workRefresh, setWorkRefresh] = useState(0);
   const [panel,setPanel]=useState("chat");
   const [readBrief,setReadBrief]=useState(false);
+  const [outlookRange,setOutlookRange]=useState("today");
+  const [showPlan,setShowPlan]=useState(false);
+  const [showArchive,setShowArchive]=useState(false);
+  const [archiveRows,setArchiveRows]=useState([]);
+  const [archiveNotice,setArchiveNotice]=useState("");
+  const [archiveBusy,setArchiveBusy]=useState(false);
+  async function archiveBrief(){
+    if(!brief||archiveBusy)return;
+    setArchiveBusy(true);setArchiveNotice("");
+    try{await api.post("/sync-ai/assist/pilot/chief/archive/",{generated_at:brief.generated_at,text:narrative.join("\n\n")});setArchiveNotice("Briefing saved.");if(showArchive){const {data}=await api.get("/sync-ai/assist/pilot/chief/archive/");setArchiveRows(data.briefings||[]);}}
+    catch{setArchiveNotice("Unable to save briefing. Please retry.");}finally{setArchiveBusy(false);}
+  }
+  async function openArchive(){
+    if(showArchive){setShowArchive(false);return;}
+    setShowArchive(true);setArchiveBusy(true);setArchiveNotice("");
+    try{const {data}=await api.get("/sync-ai/assist/pilot/chief/archive/");setArchiveRows(data.briefings||[]);}catch{setArchiveNotice("Archive unavailable.");}finally{setArchiveBusy(false);}
+  }
+
   const [brief,setBrief]=useState(null);
   const [briefError,setBriefError]=useState("");
   const [voiceNotice,setVoiceNotice]=useState("");
@@ -83,7 +101,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const speechRun=useRef(0);
   const stopVoice=()=>{speechRun.current++;if(audioRef.current){audioRef.current.pause();URL.revokeObjectURL(audioRef.current.src);audioRef.current=null;}setSpeaking(false);setVoiceLoading(false);setAudioReady(false);};
   useEffect(()=>()=>{speechRun.current++;if(audioRef.current){audioRef.current.pause();URL.revokeObjectURL(audioRef.current.src);}},[]);
-  useEffect(()=>{if(!selected){stopVoice();setReadBrief(false);setPanel("chat");if(placement==="launcher"&&openSignal)onDismiss?.();}},[selected]);
+  useEffect(()=>{if(!selected){stopVoice();setShowPlan(false);setShowArchive(false);setReadBrief(false);setPanel("chat");if(placement==="launcher"&&openSignal)onDismiss?.();}},[selected]);
   useEffect(()=>{
     if(selected!=="executive-female"||panel!=="brief")return;
     let alive=true;const controller=new AbortController();setBrief(null);setBriefError("");
@@ -339,6 +357,10 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           {voiceNotice&&<p role="status">{voiceNotice}</p>}
           {briefError?<p role="alert">{briefError}</p>:!brief?<p><LoaderCircle size={15} className="animate-spin"/> Loading executive briefing…</p>:<>
           <div className="sw-ai-brief-context"><strong>{brief.date} · {brief.executive_context?.local_time?new Date(brief.executive_context.local_time).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"Time unavailable"}</strong><p>{weather.available?[forecast.temperature!=null?forecast.temperature+"°"+(forecast.temperature_unit||"F"):"",forecast.short_forecast].filter(Boolean).join(" · "):"Local weather not connected"}</p>{!weather.available&&<button type="button" disabled={weatherLoading} onClick={loadWeather}>{weatherLoading?"Getting weather…":"Use my location for weather"}</button>}{weatherError&&<p role="status">{weatherError}</p>}</div>
+          <div className="sw-ai-conversation-toolbar"><button type="button" aria-expanded={showPlan} onClick={()=>setShowPlan(v=>!v)}>{showPlan?"Hide plan":"My plan"}</button><button type="button" onClick={archiveBrief} disabled={archiveBusy}>Save briefing</button><button type="button" aria-expanded={showArchive} onClick={openArchive}>Archive</button></div>
+          {archiveNotice&&<p role="status">{archiveNotice}</p>}
+          {showArchive&&<div className="sw-ai-brief-story">{archiveBusy?<p>Loading archive…</p>:archiveRows.length?archiveRows.map(row=><details key={row.id}><summary>{new Date(row.saved_at).toLocaleString()}</summary>{String(row.text||"").split("\n\n").map((part,i)=><p key={i}>{part}</p>)}</details>):<p>No saved briefings.</p>}</div>}
+          {showPlan&&<div className="sw-ai-brief-story"><div className="sw-ai-conversation-toolbar">{[["today","Today"],["week","Week"],["month","Month"]].map(([key,label])=><button key={key} type="button" aria-pressed={outlookRange===key} onClick={()=>setOutlookRange(key)}>{label}</button>)}</div><h3>Recorded schedule</h3>{(brief.schedule_outlook||[]).filter(e=>{const now=new Date(brief.generated_at),start=new Date(e.start_at);if(outlookRange==="today")return start.toDateString()===now.toDateString();const cutoff=new Date(now);cutoff.setDate(cutoff.getDate()+(outlookRange==="week"?7:30));return start>=now&&start<=cutoff;}).map(e=><p key={e.id}><strong>{e.title}</strong><br/>{new Date(e.start_at).toLocaleString()} · {e.status==="ENDED"?"Window ended":e.status==="IN_PROGRESS"?"In progress":e.minutes_until>=0&&e.minutes_until<=60?"Starts in "+e.minutes_until+" minutes":"Upcoming"}</p>)}<button type="button" onClick={()=>{setSelected(null);nav("/calendar")}}>Open calendar</button><h3>Active projects</h3>{(brief.project_progress||[]).filter(p=>p.status==="ACTIVE").map(p=><div key={p.id}><strong>{p.title}</strong><p>{p.done} of {p.total} recorded tasks completed</p>{p.next_tasks.map(t=><p key={t.id}>{t.title}</p>)}</div>)}<button type="button" onClick={()=>{setSelected(null);nav("/customer/projects")}}>Open projects & complete tasks</button></div>}
           {readBrief&&<><article className="sw-ai-brief-story">{narrative.map((paragraph,n)=><p key={n}>{paragraph}</p>)}</article>
           <details className="sw-ai-brief-evidence"><summary>Detailed records & employee reports</summary>{sections.map(s=><details key={s.key}><summary>{s.title} — {s.headline}</summary>{(s.items||[]).map((i,n)=><p key={n}>{i.title} · {i.next_action}</p>)}</details>)}</details></>}
           </>}</div>:<><div className="sw-ai-conversation-feed" role="log" aria-live="polite" aria-relevant="additions text">
