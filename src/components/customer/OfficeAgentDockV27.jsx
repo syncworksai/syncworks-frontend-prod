@@ -254,23 +254,47 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   useEffect(()=>{
     if(selected==="executive-female"&&panel==="brief")runDailyReview();
   },[selected,panel]);
-  async function listenBrief(){
-    if(voiceLoading||speaking){stopVoice();return;}
-    if(audioReady&&audioRef.current){try{await audioRef.current.play();setAudioReady(false);setSpeaking(true);setVoiceNotice("");}catch{setVoiceNotice("Audio is ready. Tap Play audio again to start playback.");}return;}
-    if(!brief)return;
-    const run=++speechRun.current;setVoiceLoading(true);setVoiceNotice("");
-    // Narrate a concise opening and priority updates, never cut a sentence mid-word.
-    const text=narrative.reduce((out,paragraph)=>out.length+paragraph.length+2<=1600?out+(out?"\n\n":"")+paragraph:out,"");
-    try{
-      const response=await api.post("/sync-ai/voice/synthesize/",{role:"founder_chief",text},{responseType:"blob",timeout:90000});
+  const [spokenKey,setSpokenKey]=useState("");
+  const [autoSpeak,setAutoSpeak]=useState(true);
+  async function speakText(raw,key){
+    if(spokenKey===key&&audioReady&&audioRef.current){
+      try{await audioRef.current.play();setAudioReady(false);setSpeaking(true);setVoiceNotice("");}catch{setVoiceNotice("Tap Play again to start audio.");}return;
+    }
+    if(spokenKey===key&&(voiceLoading||speaking)){stopVoice();return;}
+    stopVoice();setSpokenKey(key);
+    const run=++speechRun.current;
+    const cleaned=String(raw||"").replace(/^[#]+\s*/gm,"").replace(/\*\*/g,"").replace(/^[-•]\s+/gm,"").trim();
+    if(!cleaned)return;
+    // Split at natural boundaries, preserving all response content and requesting one chunk at a time.
+    const chunks=[];
+    let remaining=cleaned;
+    while(remaining.length>1800){
+      let cut=remaining.lastIndexOf("\n",1800);
+      if(cut<900)cut=remaining.lastIndexOf(". ",1800)+1;
+      if(cut<900)cut=remaining.lastIndexOf(" ",1800);
+      if(cut<1)cut=1800;
+      chunks.push(remaining.slice(0,cut).trim());remaining=remaining.slice(cut).trim();
+    }
+    if(remaining)chunks.push(remaining);
+    async function playChunk(index){
       if(run!==speechRun.current)return;
-      if(!response.data?.size||!response.data.type?.startsWith("audio/"))throw Error("Invalid audio");
-      const player=new Audio(URL.createObjectURL(response.data));audioRef.current=player;player.onended=stopVoice;
-      player.onerror=()=>{if(run===speechRun.current){stopVoice();setVoiceNotice("Audio could not be played.");}};
-      try{await player.play();if(run===speechRun.current)setSpeaking(true);}catch{if(run===speechRun.current){setAudioReady(true);setVoiceNotice("Audio is ready. Tap Play audio to begin.");}}
-    }catch(e){if(run!==speechRun.current)return;stopVoice();setVoiceNotice("Premium voice unavailable"+(e?.response?.status?" (HTTP "+e.response.status+")":"")+". Written briefing remains available.");}
-    finally{if(run===speechRun.current)setVoiceLoading(false);}
+      if(index>=chunks.length){stopVoice();return;}
+      setVoiceLoading(true);setVoiceNotice("");setSpeaking(false);
+      try{
+        const response=await api.post("/sync-ai/voice/synthesize/",{role:"founder_chief",text:chunks[index]},{responseType:"blob",timeout:90000});
+        if(run!==speechRun.current)return;
+        if(!response.data?.size||!response.data.type?.startsWith("audio/"))throw Error("Invalid audio");
+        if(audioRef.current){audioRef.current.pause();URL.revokeObjectURL(audioRef.current.src);}
+        const player=new Audio(URL.createObjectURL(response.data));audioRef.current=player;
+        player.onended=()=>{if(run===speechRun.current)void playChunk(index+1);};
+        player.onerror=()=>{if(run===speechRun.current){stopVoice();setVoiceNotice("Audio could not be played.");}};
+        try{await player.play();if(run===speechRun.current){setSpeaking(true);setAudioReady(false);}}catch{if(run===speechRun.current){setAudioReady(true);setVoiceNotice("Audio ready. Tap Play audio to begin.");}}
+      }catch(e){if(run===speechRun.current){stopVoice();setVoiceNotice("Voice unavailable. Your written response remains available.");}}
+      finally{if(run===speechRun.current)setVoiceLoading(false);}
+    }
+    await playChunk(0);
   }
+  async function listenBrief(){if(brief)await speakText(narrative.join("\n\n"),"brief");}
 
   const [chatDraft, setChatDraft] = useState("");
   const [chatHistory, setChatHistory] = useState({});
@@ -417,9 +441,12 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
       // role-context conversations, NOT autonomous workers or permissions to act.
       const {data} = await api.post("/sync-ai/chat/",{
         workspace:"personal",
-        message:`You are helping inside the SyncWorks employee discussion panel for ${person.name}, whose fixed specialist role is ${person.role}. Answer this request as a role-focused advisory conversation. Do not claim actions occurred, do not fabricate system access, do not make changes, and clearly distinguish proposals from executed work. User request: ${question}`,
+        message:`You are ${person.name}, the owner’s ${person.role}. Speak directly to the human owner in natural, concise paragraphs suitable for spoken narration. The owner is the person whose health, calendar and tasks you manage; never treat the employee persona as the subject of a personal plan. Statements such as “health plan built” are progress updates, not requests to invent a new plan. Acknowledge them and explain any verification still needed. Prefer existing SyncWorks workspaces over external spreadsheets or new pages. Do not claim actions occurred, do not fabricate system access, do not make changes, and clearly distinguish proposals from executed work. User request: ${question}`,
       },{timeout:40000});
-      setChatHistory(previous => ({...previous,[id]:[...(previous[id]||[]),{by:"assistant",text:String(data?.message||"No response returned.")}]}));
+      const answer=String(data?.message||"No response returned.");
+      const voiceKey="chat:"+id+":"+Date.now();
+      setChatHistory(previous => ({...previous,[id]:[...(previous[id]||[]),{by:"assistant",text:answer,voiceKey}]}));
+      if(id==="executive-female"&&autoSpeak&&data?.message)void speakText(answer,voiceKey);
     } catch(err) {
       setChatError(err?.response?.data?.detail || "SYNC chat is unavailable. Your message was not processed; please try again.");
     } finally { setChatBusy(false); }
@@ -535,12 +562,13 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           </div>}
           {messages.map((message,index)=><div key={index} className={`sw-ai-conversation-message sw-ai-conversation-message--${message.by}`}>
             {message.by==="assistant"&&<img src={active.photo} onError={e=>{if(active.fallbackPhoto&&!e.currentTarget.src.endsWith(active.fallbackPhoto))e.currentTarget.src=active.fallbackPhoto;}} alt="" aria-hidden="true"/>}
-            <div><strong>{message.by==="assistant"?active.name:"You"}</strong><p>{message.text}</p></div>
+            <div><strong>{message.by==="assistant"?active.name:"You"}</strong><p>{message.text}</p>{active.id==="executive-female"&&message.by==="assistant"&&<button type="button" className="sw-ai-review-nav" onClick={()=>speakText(message.text,message.voiceKey||"chat:old:"+index)}>{spokenKey===(message.voiceKey||"chat:old:"+index)?voiceLoading?"Preparing audio… (stop)":speaking?"Stop audio":audioReady?"Play audio":"Listen":"Listen"}</button>}</div>
           </div>)}
           {chatBusy&&<div className="sw-ai-conversation-message sw-ai-conversation-message--assistant"><img src={active.photo} onError={e=>{if(active.fallbackPhoto&&!e.currentTarget.src.endsWith(active.fallbackPhoto))e.currentTarget.src=active.fallbackPhoto;}} alt="" aria-hidden="true"/><div><strong>{active.name}</strong><p>Thinking…</p></div></div>}
           <div ref={chatEndRef}/>
         </div>
         {chatError&&<p role="alert" className="sw-ai-conversation-error">{chatError}</p>}
+        {active.id==="executive-female"&&<div className="sw-ai-chat-audio"><label><input type="checkbox" checked={autoSpeak} onChange={e=>{setAutoSpeak(e.target.checked);if(!e.target.checked)stopVoice();}}/> Speak replies automatically</label>{voiceNotice&&<span role="status">{voiceNotice}</span>}</div>}
         <form className="sw-ai-conversation-compose" onSubmit={sendMessage}>
           <label htmlFor="sw-ai-chat-message" className="sr-only">Message {active.name}</label>
           <textarea id="sw-ai-chat-message" ref={chatFieldRef} rows={2} maxLength={4000} value={chatDraft} onChange={event=>setChatDraft(event.target.value)}
