@@ -222,3 +222,6 @@
 .sw-agent-review-badge,.sw-agent-reviewed-badge{position:absolute;top:0;right:8%;z-index:2;display:grid;place-items:center;min-width:19px;height:19px;padding:0 4px;border-radius:999px;border:2px solid #17212c;background:#b91c1c;color:#fff;font-size:10px;font-weight:800;line-height:1;box-shadow:0 2px 6px #0005;}
 .sw-agent-reviewed-badge{background:#15803d;}
 @media(min-width:768px){body > .sw-office-agents--bubbles .sw-office-agents-actions{padding:3px!important;gap:3px!important;background:transparent!important;border:0!important;}body > .sw-office-agents--bubbles .sw-office-agents-actions button{width:34px!important;min-width:34px!important;height:34px!important;padding:0!important;display:grid!important;place-items:center!important;}}
+
+/* Nine core employees fit the reserved desktop dock at compact widths. */
+@media(min-width:768px){body > .sw-office-agents--bubbles .sw-office-agents-portraits{gap:clamp(4px,1vw,16px)!important;min-width:0;}body > .sw-office-agents--bubbles .sw-office-agent{width:clamp(43px,5.2vw,76px)!important;}body > .sw-office-agents--bubbles .sw-office-agent img{width:clamp(34px,3.5vw,48px)!important;height:clamp(34px,3.5vw,48px)!important;}}
