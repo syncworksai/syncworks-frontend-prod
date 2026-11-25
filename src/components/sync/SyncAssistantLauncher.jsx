@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import { AVATARS, getAvatarPhotoForUser, getAvatarFallbackPhotoForUser } from "./JarvisAvatar";
 import api from "../../api/client";
+import {getWorkspaceRecords,itemType} from "../../api/syncWorkspaceRecords";
 import SyncAlertDrawer from "./SyncAlertDrawer";
 import OfficeAgentDock from "../customer/OfficeAgentDockV27";
 import {useWorkspaceAppearance} from "../customer/CustomerWorkspace";
@@ -70,6 +71,36 @@ export default function SyncAssistantLauncher() {
   // has its header and mobile portrait row, so do not render duplicates there.
   const businessWorkspaceRoute=/^\/(?:sbo\/|pm(?:\/|$)|employee(?:\/|$)|team\/invites(?:\/|$)|ceo(?:\/|$))/.test(location.pathname);
   const showBusinessDock=pilotFounder && businessWorkspaceRoute && !taskDialogOpen;
+  const [progress,setProgress]=useState(null);
+  const [activeTaskId,setActiveTaskId]=useState(null);
+  const [progressStale,setProgressStale]=useState(false);
+  useEffect(()=>{
+    if(!pilotFounder){setProgress(null);setActiveTaskId(null);return;}
+    let alive=true, running=false, queued=false;
+    const refresh=async()=>{
+      if(running){queued=true;return;}
+      running=true;
+      try{
+        const rows=await getWorkspaceRecords();
+        const today=new Date().toDateString();
+        const tasks=rows.filter(t=>itemType(t)==="TASK"&&!t.metadata?.project_id);
+        const done=t=>String(t.metadata?.task_status||"OPEN").toUpperCase()==="DONE";
+        const completed=tasks.filter(t=>done(t)&&new Date(t.metadata?.completed_at||t.updated_at).toDateString()===today);
+        const open=tasks.filter(t=>String(t.metadata?.task_status||"OPEN").toUpperCase()==="OPEN");
+        if(alive){setProgress({open,completed:completed.length,total:open.length+completed.length});setProgressStale(false);}
+      }catch{if(alive)setProgressStale(true);}
+      finally{running=false;if(queued&&alive){queued=false;refresh();}}
+    };
+    const select=e=>setActiveTaskId(e.detail?.id??null);
+    refresh();
+    window.addEventListener("syncworks:tasks-changed",refresh);
+    window.addEventListener("syncworks:sydney-task",select);
+    window.addEventListener("focus",refresh);
+    const timer=window.setInterval(refresh,120000);
+    return()=>{alive=false;window.clearInterval(timer);window.removeEventListener("syncworks:tasks-changed",refresh);window.removeEventListener("syncworks:sydney-task",select);window.removeEventListener("focus",refresh);};
+  },[pilotFounder,user?.id]);
+  const currentTask=progress?.open.find(t=>String(t.id)===String(activeTaskId));
+  const progressPercent=progress?.total?Math.round(100*progress.completed/progress.total):0;
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [unread, setUnread] = useState(0);
 
@@ -157,7 +188,7 @@ export default function SyncAssistantLauncher() {
   return (
     <>
       <div className={`fixed bottom-24 right-4 z-[260] flex flex-col items-end gap-3 lg:bottom-6 lg:right-6 ${taskDialogOpen && showChief ? "hidden" : mobileVisible ? "" : "hidden lg:flex"}`}>
-        {showChief && location.pathname !== "/sync" && !isCustomerHome && !showBusinessDock && location.pathname !== "/platform" && (
+        {showChief && !commandOpen && (
           <>
             <button type="button" aria-haspopup="dialog" aria-label="Open Sydney Chief of Staff briefing" title="Sydney — Chief of Staff" onClick={openChief}
               className="group flex min-h-12 items-center gap-2 rounded-full border border-cyan-300/45 bg-[#061327]/95 py-1 pl-1 pr-2 text-left text-white shadow-[0_0_26px_rgba(34,211,238,.22)] transition hover:border-cyan-300">
@@ -165,7 +196,7 @@ export default function SyncAssistantLauncher() {
                 {workdayStatus.available && workdayStatus.unread > 0 && <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white ring-2 ring-slate-950" aria-label={`${workdayStatus.unread} new workday results`}>{workdayStatus.unread > 99 ? "99+" : workdayStatus.unread}</span>}
                 {workdayStatus.available && workdayStatus.completed > 0 && <span className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-white ring-2 ring-slate-950" title="Owner-attested completion"><Check size={13} strokeWidth={3} /></span>}
               </span>
-              <span className="hidden pr-1 sm:block"><span className="block text-[10px] font-black uppercase tracking-wide text-cyan-300">Sydney — Chief of Staff</span><span className="block text-[11px] text-slate-300">{workdayStatus.available && workdayStatus.pending ? `${workdayStatus.pending} awaiting review` : "Open briefing"}</span></span>
+              <span className="block min-w-0 w-[132px] sm:w-[190px] pr-1"><span className="block text-[10px] font-black uppercase tracking-wide text-cyan-300">Sydney · Chief of Staff</span><span className="block truncate text-[11px] text-slate-300">{currentTask?"Current: "+currentTask.title:"Resume daily plan"}</span>{progress&&<><span role="progressbar" aria-label="Personal task progress" aria-valuenow={progressPercent} aria-valuemin={0} aria-valuemax={100} className="block h-1 rounded-full bg-white/15 mt-1 overflow-hidden"><span className="block h-full bg-emerald-400 rounded-full" style={{width:progressPercent+"%"}}/></span><span className="block text-[10px] text-slate-300">{progress.completed}/{progress.total} tasks · {progressStale?"last known":"today & carryover"}</span></>}{!progress&&<span className="block text-[10px] text-slate-300">{progressStale?"Progress unavailable":"Loading progress…"}</span>}</span>
             </button>
           </>
         )}
