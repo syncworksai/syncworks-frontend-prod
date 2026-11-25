@@ -253,7 +253,7 @@ export default function SyncAssistMultiMailboxes(){
      </>:<><strong className="text-sm">Search property correspondence</strong><p className="text-xs text-slate-300">Results open in a larger review drawer with a fixed action bar.</p></>}
     </div>
     {historyReviewOpen&&historyReport&&createPortal(<div className="sw-property-overlay fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 p-2 md:p-4" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setHistoryReviewOpen(false)}}>
-     <section role="dialog" aria-modal="true" aria-label="Review property emails" className="sw-property-dialog flex h-[calc(100dvh-24px)] max-h-[980px] w-full max-w-[1500px] min-h-0 flex-col overflow-hidden rounded-xl border border-white/25 bg-[#11171c] shadow-2xl md:h-[calc(100dvh-40px)]">
+     <section role="dialog" aria-modal="true" aria-label="Review property emails" className="sw-property-dialog flex h-[calc(100dvh-24px)] max-h-[980px] w-full max-w-[1500px] min-h-0 flex-col overflow-hidden rounded-xl border border-white/25 bg-[#11171c] text-slate-100 shadow-2xl md:h-[calc(100dvh-40px)]" style={{color:"#f1f5f9",colorScheme:"dark"}}>
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-white/20 p-3 md:px-5">
        <div className="min-w-0"><strong className="block truncate text-base">Sarah · Review {historyReport.property?.name} emails</strong><span className="text-xs text-slate-300">{historyReport.findings?.length||0} candidates · Select only verified property correspondence · Limit 20 per report</span></div>
        <button type="button" className="rounded-lg border border-white/25 px-3 py-2 text-xs" onClick={()=>setHistoryReviewOpen(false)}>Close ✕</button>
@@ -266,7 +266,7 @@ export default function SyncAssistMultiMailboxes(){
        <div className="min-h-0 overflow-y-auto overscroll-contain border-b border-white/20 p-2 md:border-b-0 md:border-r" aria-label="Correspondence list">
         {(historyReport.findings||[]).filter(m=>historyCategory==="ALL"||m.category===historyCategory).map(m=><div key={m.message_id} className={`mb-1 flex gap-2 rounded-lg border p-2 ${historyActiveId===m.message_id?"border-emerald-300/50 bg-white/10":"border-white/10"}`}>
          <input type="checkbox" className="mt-1 shrink-0" aria-label={"Include "+m.subject} checked={selectedEvidenceIds.includes(m.message_id)} title={selectedEvidenceIds.length>=20&&!selectedEvidenceIds.includes(m.message_id)?"Maximum 20 selected. Attach this batch or clear selections first.":undefined} disabled={!propertyProfiles.find(p=>p.profile_id===selectedProperty)?.pm_property_id||(!selectedEvidenceIds.includes(m.message_id)&&selectedEvidenceIds.length>=20)} onChange={e=>setSelectedEvidenceIds(prev=>e.target.checked?[...prev,m.message_id]:prev.filter(id=>id!==m.message_id))}/>
-         <button type="button" className="min-w-0 flex-1 text-left" onClick={()=>setHistoryActiveId(m.message_id)}><strong className="block truncate text-xs">{m.subject}</strong><span className="block truncate text-[11px] text-slate-300">{m.sender}</span><span className="text-[10px] text-slate-400">{m.received_at?.slice(0,10)} · {m.category}</span></button>
+         <button type="button" className="min-w-0 flex-1 text-left text-slate-100" onClick={()=>setHistoryActiveId(m.message_id)}><strong className="block truncate text-xs">{m.subject}</strong><span className="block truncate text-[11px] text-slate-300">{m.sender}</span><span className="text-[10px] text-slate-400">{m.received_at?.slice(0,10)} · {m.category}</span></button>
         </div>)}
        </div>
        <div className="min-h-0 overflow-y-auto overscroll-contain p-3 md:p-5" aria-label="Selected email details">
@@ -274,10 +274,10 @@ export default function SyncAssistMultiMailboxes(){
          <span className="text-xs text-slate-400">{m.category} · {m.received_at?.slice(0,10)}</span>
          <h3 className="text-lg font-bold">{m.subject}</h3>
          <p className="break-all text-xs text-slate-300">From: {m.sender}</p>
-         <div className="whitespace-pre-wrap rounded-lg border border-white/15 bg-black/20 p-3 text-sm leading-relaxed">{m.preview||"No preview available. Open original to verify."}</div>
+         <div className="whitespace-pre-wrap rounded-lg border border-white/15 bg-black/20 p-3 text-sm leading-relaxed text-slate-100">{m.preview||"No preview available. Open original to verify."}</div>
          <p className="text-xs text-slate-300">{m.confidence==="STRONG"?"Property-specific match":"Manual verification required"} · Matched: {m.matched_terms?.join(", ")}{m.has_attachments?" · Has attachment (not read)":""}</p>
-         <div className="flex flex-wrap gap-2">{m.outlook_url&&<a href={m.outlook_url} target="_blank" rel="noopener noreferrer" className="rounded-md border border-white/25 px-3 py-2 text-xs underline">Open in Outlook</a>}
-          <button type="button" disabled={busy||!m.sender} onClick={()=>excludeHistorySender(m.sender)} className="rounded-md border border-white/25 px-3 py-2 text-xs disabled:opacity-40">Exclude sender from property search</button></div>
+         <div className="flex flex-wrap gap-2">{m.outlook_url&&<a href={m.outlook_url} target="_blank" rel="noopener noreferrer" className="rounded-md border border-white/25 px-3 py-2 text-xs text-slate-100 underline">Open in Outlook</a>}
+          <button type="button" disabled={busy||!m.sender} onClick={()=>excludeHistorySender(m.sender)} className="rounded-md border border-white/25 px-3 py-2 text-xs text-slate-100 disabled:opacity-40">Exclude sender from property search</button></div>
          <p className="text-[11px] text-amber-200">Email previews are not verification of funds, inspections, or signed records.</p>
         </article>)}
         {!(historyReport.findings||[]).some(m=>historyCategory==="ALL"||m.category===historyCategory)&&<p className="text-xs text-slate-300">No messages in this filter.</p>}
@@ -286,7 +286,7 @@ export default function SyncAssistMultiMailboxes(){
       <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-white/20 bg-[#151d21] p-3 md:px-5">
        <div className="flex flex-col gap-0.5"><strong className="text-xs">{selectedEvidenceIds.length} of 20 selected</strong>{selectedEvidenceIds.length>=20&&<span className="text-[11px] text-amber-200">Limit reached — attach this batch or clear some selections</span>}</div>
        <div className="flex gap-2">{selectedEvidenceIds.length>0&&<button type="button" onClick={()=>setSelectedEvidenceIds([])} className="rounded-md border border-white/25 px-3 py-2 text-xs">Clear</button>}
-        <button type="button" disabled={busy||!selectedEvidenceIds.length} onClick={saveReviewedEvidence} className="rounded-md border border-emerald-300/50 bg-emerald-500/15 px-3 py-2 text-xs font-bold disabled:opacity-50">{busy?"Saving…":"Attach selected to Briefings"}</button></div>
+        <button type="button" disabled={busy||!selectedEvidenceIds.length} onClick={saveReviewedEvidence} className="rounded-md border border-emerald-300/50 bg-emerald-500/15 px-3 py-2 text-xs font-bold text-emerald-50 disabled:opacity-50">{busy?"Saving…":"Attach selected to Briefings"}</button></div>
       </footer>
      </section>
     </div>,document.body)}
