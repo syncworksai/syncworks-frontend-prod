@@ -136,10 +136,10 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
       frame=window.requestAnimationFrame(()=>{
         const header=document.querySelector(".sw-modebar");
         const dock=document.querySelector(".sw-role-mobile-nav");
-        const headH=header?.getBoundingClientRect().height||0;
-        const dockH=dock?.getBoundingClientRect().height||0;
+        const headH=header?.getBoundingClientRect().bottom||0;
+        const dockH=dock ? Math.max(0, window.innerHeight-dock.getBoundingClientRect().top) : 0;
         body.style.setProperty("--sw-sbo-header-height",headH+"px");
-        body.style.setProperty("--sw-sbo-dock-reserve",(dockH+18)+"px");
+        body.style.setProperty("--sw-sbo-dock-reserve",(dockH+8)+"px");
       });
     };
     const observer=typeof ResizeObserver!=="undefined"?new ResizeObserver(update):null;
@@ -287,6 +287,7 @@ export default function SboCompactOffice({businessName,loading,err,ticketRows=[]
           <button className={tile} onClick={()=>go("/sbo/leads")}><BarChart3 className="mb-2 text-cyan-200" size={23}/><div className="font-semibold">Leads</div><p className="text-xs text-slate-300">Sales opportunities</p></button>
         </div>
         <button type="button" className="sw-sbo-growth-link flex shrink-0 md:hidden items-center justify-between gap-3 rounded-xl border border-cyan-300/25 bg-slate-900/45 px-3 py-2 text-left" onClick={()=>go("/sbo/growth")}><span className="flex min-w-0 items-center gap-2"><Megaphone size={19} className="shrink-0 text-cyan-200"/><span className="min-w-0"><strong className="block text-sm">Growth & Marketing</strong><span className="block truncate text-xs text-slate-300">Social, campaigns & outreach</span></span></span><ChevronRight size={17} className="shrink-0 text-cyan-200"/></button>
+        <div className="sw-sbo-mobile-utilities grid shrink-0 grid-cols-3 gap-2 md:hidden"><button className="sw-sbo-stat rounded-xl p-2 text-xs" onClick={()=>go("/sbo/settings/workforce")}>HR &amp; Timeclock</button><button className="sw-sbo-stat rounded-xl p-2 text-xs" onClick={()=>go("/sbo/finance")}>Finance</button><button className="sw-sbo-stat rounded-xl p-2 text-xs" onClick={event=>openPanel("more",event)}>More tools</button></div>
         {isPilot&&<div className="sw-sbo-ai-dock shrink-0 md:hidden" role="group" aria-label="Business AI assistants">
           <span className="sw-sbo-ai-label">AI TEAM</span>
           {agents.map(agent=><button type="button" key={agent.id} className="sw-sbo-ai-worker" title={agent.name+" · "+agent.role} aria-label={"Open "+agent.name+", "+agent.role} onClick={()=>openAgent(agent)}>

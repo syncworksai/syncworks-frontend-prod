@@ -502,3 +502,16 @@
  .sw-sbo-compact .sw-sbo-desktop-ai-agent img{width:34px!important;height:34px!important}
 }
 @media(min-width:768px) and (max-width:1140px){.sw-sbo-compact .sw-sbo-desktop-ai-agent{min-width:35px!important}.sw-sbo-compact .sw-sbo-desktop-ai-agent img{width:29px!important;height:29px!important}.sw-sbo-compact .sw-sbo-desktop-ai-agent span{font-size:8px!important}}
+
+/* Mobile Sterling parity: theme surfaces and compact, reachable controls. */
+@media(max-width:767px){
+ body.sw-sbo-mobile-locked .sw-sbo-compact{bottom:var(--sw-sbo-dock-reserve,100px);}
+ .sw-sbo-compact .sw-sbo-office-canvas{gap:8px;}
+ .sw-sbo-compact :is(.sw-sbo-topbar,.sw-sbo-briefing,.sw-sbo-stat,.sw-sbo-glass-tile){background:var(--sbo-glass-strong);}
+ .sw-sbo-compact .sw-sbo-glass-tile::before{display:none;}
+ .sw-sbo-compact .sw-sbo-action-grid{min-height:0;}
+ .sw-sbo-compact .sw-sbo-glass-tile{padding:10px;}
+ .sw-sbo-mobile-utilities button{min-height:40px;}
+ .sw-sbo-compact .sw-sbo-drawer{animation-duration:450ms;}
+}
+@media(prefers-reduced-motion:reduce){.sw-sbo-compact .sw-sbo-drawer{animation:none!important;}}

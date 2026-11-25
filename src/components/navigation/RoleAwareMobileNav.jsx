@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { AVATARS, getAvatarPhotoForUser } from "../sync/JarvisAvatar";
+import { getPilotAgentsForUser } from "../sync/pilotAgentRoster";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   CalendarDays,
@@ -177,6 +178,7 @@ export default function RoleAwareMobileNav() {
   const navigate = useNavigate();
   const { user, mode } = useAuth();
   const founderPilot = String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com";
+  const teamAgents = getPilotAgentsForUser(user, []);
   const pathname = String(location.pathname || "").toLowerCase();
   const navMode = navModeFromPath(pathname, mode, location.search);
   const [items, setItems] = useState(() => navMode ? readPreference(navMode, user) : []);
@@ -286,7 +288,7 @@ export default function RoleAwareMobileNav() {
 
   return (
     <>
-      {aiTeamOpen && navMode === "CUSTOMER" && pathname === "/customer" && (
+      {aiTeamOpen && teamAgents.length > 0 && navMode === "CUSTOMER" && pathname === "/customer" && (
         <div className="sw-mobile-ai-team-shade lg:hidden" onClick={() => setAiTeamOpen(false)}>
           <section className="sw-mobile-ai-team-panel" role="dialog" aria-modal="true" aria-label="Your SYNC AI employees" onClick={(event) => event.stopPropagation()}>
             <div className="sw-mobile-ai-team-head">
@@ -294,7 +296,7 @@ export default function RoleAwareMobileNav() {
               <button type="button" onClick={() => setAiTeamOpen(false)} aria-label="Close AI employee menu">✕</button>
             </div>
             <div className="sw-mobile-ai-team-grid">
-              {AVATARS.map((worker) => (
+              {teamAgents.map((worker) => (
                 <button type="button" key={worker.id} onClick={() => {if(founderPilot&&worker.role==="Chief of Staff")window.dispatchEvent(new Event("syncworks:victoria-open"));else navigateAssistant(worker.role === "Chief of Staff" ? "/sync/assist/chief" : "/sync/assist");}} aria-label={`Open ${worker.name}, ${worker.role}`}>
                   <img src={getAvatarPhotoForUser(worker, user)} alt="" loading="lazy" />
                   <strong>{worker.name}</strong>
@@ -306,11 +308,11 @@ export default function RoleAwareMobileNav() {
           </section>
         </div>
       )}
-      {navMode === "CUSTOMER" && pathname === "/customer" && (
+      {teamAgents.length > 0 && navMode === "CUSTOMER" && pathname === "/customer" && (
         <div className={`sw-mobile-bots-dock lg:hidden ${founderPilot?"sw-mobile-bots-dock-compact":""}`} role="group" aria-label="Your docked AI employees">
           <span className="sw-mobile-bots-label">AI TEAM</span>
           <div className="sw-mobile-bots-people">
-            {AVATARS.map((worker) => (
+            {teamAgents.map((worker) => (
               <button type="button" key={worker.id} aria-label={`Open ${worker.name}, ${worker.role}`}
                 onClick={() => navigateAssistant(worker.role === "Chief of Staff" ? "/sync/assist/chief" : "/sync/assist")}
                 title={`${worker.name} · ${worker.role}`}>
@@ -319,7 +321,7 @@ export default function RoleAwareMobileNav() {
               </button>
             ))}
           </div>
-          <button type="button" className="sw-mobile-bots-expand" onClick={() => setAiTeamOpen(true)} aria-label="Expand AI team">View all</button>
+          <button type="button" className="sw-mobile-bots-expand" onClick={() => navigateAssistant("/sync/assist/employees")} aria-label="Manage AI team">Manage</button>
         </div>
       )}
       <nav className="sw-role-mobile-nav lg:hidden" aria-label="Mobile quick navigation" data-sync-theme={navMode === "CUSTOMER" ? customerTheme : undefined} data-forge-route={pathname === "/customer/forge" ? "true" : undefined}>
