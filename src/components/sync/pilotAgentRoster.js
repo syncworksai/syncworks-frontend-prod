@@ -12,7 +12,7 @@ export const PILOT_AGENTS = Object.freeze([
   { id: "future-male", name: "Sophia", role: "Strategic Research", workerRole: "research_analyst", voiceName: "Alice", voiceId: "Xb7hH8MSUJpSbSDYk0k2", photo: "/jarvis-avatars/newsophia.png", fallbackPhoto: "/jarvis-avatars/Sophia.png" },
   { id: "property-female", name: "Sarah", role: "Property Assistant", workerRole: "property_manager", voiceName: "Tiffany - Warm, Conversational Narrator", voiceId: "6fLd3vCll0LutxnciLI8", photo: "/jarvis-avatars/Sarah.png", fallbackPhoto: "/jarvis-avatars/Victoria.png" },
   { id: "accounting-female", name: "Finance", role: "Accounting & Finance", workerRole: "accounting_finance", voiceName: "Mel", voiceId: "S4nguEX1VTAu3fNbnGzT", photo: "/jarvis-avatars/Charlotte.png", fallbackPhoto: "/jarvis-avatars/elizabeth.jpeg" },
-  { id: "trading-strategy", name: "Bobby", role: "Trading & Market Strategy", workerRole: "trading_strategy", voiceName: "John - Real Estate Agent", voiceId: "CqwRTo1yvjqk6u1iJp1j", photo: "/jarvis-avatars/bobby.png" },
+  { id: "trading-strategy", name: "Axe", role: "Trading & Market Strategy", workerRole: "trading_strategy", voiceName: "John - Real Estate Agent", voiceId: "CqwRTo1yvjqk6u1iJp1j", photo: "/jarvis-avatars/bobby.png" },
 ]);
 export const isFounderPilot = (user) => String(user?.email || "").trim().toLowerCase() === PILOT_EMAIL;
 export const getPilotAgentsForUser = (user, defaultAgents) => isFounderPilot(user) ? PILOT_AGENTS : defaultAgents;
