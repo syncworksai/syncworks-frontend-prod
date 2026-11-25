@@ -153,3 +153,15 @@
 .sw-ai-work-summary-items button>strong{font-size:11px;line-height:1.4;font-weight:700;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .sw-ai-work-summary-items button>em{font-size:10px;line-height:1.3;display:block;color:#ffdc8f;font-style:normal;margin-top:4px}
 .sw-ai-work-summary-items button:focus-visible{outline:2px solid var(--sw-workspace-accent,#35d8f6);outline-offset:2px}
+
+/* Executive briefing: readable paragraphs, anchored playback and independent scroll. */
+.sw-ai-brief-controls{position:sticky;top:0;z-index:3;padding:4px 0 9px;background:var(--sw-ai-glass,#141b23);flex-shrink:0;}
+.sw-ai-brief-context{border:1px solid color-mix(in srgb,currentColor 22%,transparent);padding:12px;border-radius:12px;flex-shrink:0;font-size:13px;line-height:1.6;}
+.sw-ai-brief-context p{margin:5px 0;}
+.sw-ai-brief-context button{border:1px solid currentColor;border-radius:8px;padding:7px 12px;font-size:12px;}
+.sw-ai-brief-story{font-size:14px;line-height:1.75;flex-shrink:0;overflow-wrap:anywhere;}
+.sw-ai-brief-story p{margin:0 0 17px;white-space:pre-wrap;}
+.sw-ai-brief-evidence{font-size:12px;line-height:1.6;flex-shrink:0;border-top:1px solid color-mix(in srgb,currentColor 20%,transparent);padding-top:12px;}
+.sw-ai-brief-evidence summary{cursor:pointer;padding:8px 0;font-weight:650;}
+.sw-ai-brief-evidence details{padding-left:10px;}
+.sw-ai-brief-evidence p{margin:7px 0;}
