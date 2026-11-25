@@ -49,7 +49,7 @@ export default function FreelanceQualificationDesk({items=[],addJob,updateJob}){
  const copy=async value=>{try{await navigator.clipboard.writeText(value);setMessage("Copied to clipboard. No external message was sent.");}catch{setMessage("Clipboard unavailable; select and copy the text manually.");}};
  const prepare=()=>{
   if(!chosen)return;
-  const proposal="Hello,\n\nI'm interested in helping with "+chosen.title+". Based on your posting, I understand the work involves "+(chosen.description?.trim()?chosen.description.trim().slice(0,230):"[confirm the deliverables with the client]")+".\n\nBefore committing to a deadline, I'd confirm the exact scope, expected format, and any tools you require or prohibit. I can provide a clearly organized deliverable and check it against the agreed requirements.\n\nPlease share any examples or constraints I should follow.\n\nThank you.");
+  const proposal="Hello,\n\nI'm interested in helping with "+chosen.title+". Based on your posting, I understand the work involves "+(chosen.description?.trim()?chosen.description.trim().slice(0,230):"[confirm the deliverables with the client]")+".\n\nBefore committing to a deadline, I'd confirm the exact scope, expected format, and any tools you require or prohibit. I can provide a clearly organized deliverable and check it against the agreed requirements.\n\nPlease share any examples or constraints I should follow.\n\nThank you.";
   updateJob(chosen.id,{reviewProposalDraft:proposal,status:chosen.status==="Saved"?"Proposal drafted":chosen.status});
   setTab("proposal");setMessage("Editable draft saved in this browser. Nothing was sent to Upwork.");
  };
