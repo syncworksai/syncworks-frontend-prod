@@ -289,7 +289,7 @@ export default function SyncAssistMultiMailboxes(){
         <button type="button" disabled={busy||!selectedEvidenceIds.length} onClick={saveReviewedEvidence} className="rounded-md border border-emerald-300/50 bg-emerald-500/15 px-3 py-2 text-xs font-bold disabled:opacity-50">{busy?"Saving…":"Attach selected to Briefings"}</button></div>
       </footer>
      </section>
-    </div>}
+    </div>,document.body)}
     {linkDrawerOpen&&<div className="sw-property-overlay fixed inset-0 z-[100] flex items-center justify-center p-3" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setLinkDrawerOpen(false)}}>
       <section role="dialog" aria-modal="true" aria-label="Link saved property" className="sw-property-dialog w-full max-w-md rounded-xl border p-3">
         <div className="flex items-center justify-between gap-2"><strong className="text-sm">Link to Property Management</strong><button type="button" onClick={()=>setLinkDrawerOpen(false)}>✕</button></div>
