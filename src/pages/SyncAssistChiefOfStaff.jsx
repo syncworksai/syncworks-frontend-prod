@@ -25,7 +25,7 @@ export default function SyncAssistChiefOfStaff(){
     try {const saved=window.localStorage.getItem("sw-assist-chief-theme");return THEMES[saved]?saved:"future";}catch{return "future";}
   });
   const [themeOpen,setThemeOpen]=useState(false);
-  const avatarId = "executive-female"; // Victoria is permanently assigned to Chief of Staff.
+  const avatarId = "executive-female"; // Sydney is permanently assigned to Chief of Staff.
   const [avatarTalking,setAvatarTalking]=useState(false);
   const voiceContext=React.useRef(null);
   const voiceSource=React.useRef(null);
@@ -67,8 +67,8 @@ export default function SyncAssistChiefOfStaff(){
       await context.resume();
       // Request audio directly: a separate status check can time out on a cold server.
       const response=await api.post("/sync-ai/voice/synthesize/",{
-        role:"female_assistant",
-        text:(brief?["I am Victoria, your SyncWorks chief of staff.",`Your briefing for ${brief.date}.`,...((brief.sections||[]).map(s=>`${s.title}. ${s.headline}. ${(s.items||[]).slice(0,2).map(i=>`${i.title}. ${i.next_action||""}`).join(" ")}`))].join(" ").slice(0,2400):"Your briefing is not loaded yet. Refresh to review your priorities.")
+        role:"founder_chief",
+        text:(brief?["I am Sydney, your SyncWorks chief of staff.",`Your briefing for ${brief.date}.`,...((brief.sections||[]).map(s=>`${s.title}. ${s.headline}. ${(s.items||[]).slice(0,2).map(i=>`${i.title}. ${i.next_action||""}`).join(" ")}`))].join(" ").slice(0,2400):"Your briefing is not loaded yet. Refresh to review your priorities.")
       },{responseType:"arraybuffer",timeout:90000,headers:{"Accept":"audio/mpeg"}});
       if(request!==voiceRequest.current)return;
       const mime=String(response.headers?.["content-type"]||"").toLowerCase();
@@ -152,7 +152,7 @@ export default function SyncAssistChiefOfStaff(){
       <JarvisAvatar id={avatarId} state={avatarTalking?"speaking":"idle"} size="hero"/>
       <div className="w-full max-w-md space-y-2">
         <p className={`text-[11px] font-black uppercase tracking-widest ${isLight?"text-slate-700":design.accent}`}>Your Chief of Staff</p>
-        <p className={`text-sm font-bold ${textColor}`}>Victoria — Chief of Staff</p>
+        <p className={`text-sm font-bold ${textColor}`}>Sydney — Chief of Staff</p>
         <button type="button" onClick={previewAssistant} aria-busy={voiceLoading} className={`sw-chief-voice-button min-h-11 w-full rounded-xl border px-4 text-xs font-black ${isLight?"border-slate-400 bg-white text-slate-900":"border-cyan-400/40 bg-cyan-500/10 text-cyan-100"}`}>{avatarTalking||voiceLoading?"Stop":"Listen to briefing"}</button>
         <button type="button" onClick={()=>setReadingBrief(true)} className="sw-chief-read-button min-h-10 w-full rounded-xl border border-white/20 px-3 text-xs font-bold"><BookOpen size={16}/> Read Briefing</button>
         {voiceError&&<p role="status" className="sw-chief-voice-error text-[11px]">Voice unavailable. You can read the briefing instead.</p>}
