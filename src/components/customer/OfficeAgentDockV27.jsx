@@ -9,13 +9,14 @@ import "./OfficeAgentDockV27.css";
 
 // One source of truth for the private-pilot employees. Membership is NOT live
 // activity or proof that an agent is currently executing a task.
-export default function OfficeAgentDock({ user, placement = "home", theme = "future" }) {
+export default function OfficeAgentDock({ user, placement = "home", theme = "future", openSignal = 0, onDismiss }) {
   const nav = useNavigate();
   const permitted = String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com";
   const [employees, setEmployees] = useState([]);
   const [fetchState, setFetchState] = useState("loading");
   const [version, setVersion] = useState(0);
   const [selected, setSelected] = useState(null);
+  useEffect(()=>{if(placement==="launcher"&&openSignal)setSelected("executive-female");},[placement,openSignal]);
   const [panel,setPanel]=useState("chat");
   const [brief,setBrief]=useState(null);
   const [briefError,setBriefError]=useState("");
@@ -25,7 +26,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const speechRun=useRef(0);
   const stopVoice=()=>{speechRun.current++;if(audioRef.current){audioRef.current.pause();URL.revokeObjectURL(audioRef.current.src);audioRef.current=null;}setSpeaking(false);};
   useEffect(()=>()=>{speechRun.current++;if(audioRef.current){audioRef.current.pause();URL.revokeObjectURL(audioRef.current.src);}},[]);
-  useEffect(()=>{if(!selected){stopVoice();setPanel("chat");}},[selected]);
+  useEffect(()=>{if(!selected){stopVoice();setPanel("chat");if(placement==="launcher"&&openSignal)onDismiss?.();}},[selected]);
   useEffect(()=>{
     if(selected!=="executive-female"||panel!=="brief")return;
     let alive=true;setBrief(null);setBriefError("");
@@ -126,7 +127,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     refresh();const timer=window.setInterval(refresh,60000);
     return()=>{alive=false;window.clearInterval(timer);};
   },[permitted,roster,version,workRefresh]);
-  const office = placement === "office";
+  const office = placement === "office" || placement === "launcher";
   const shown = office ? roster.filter((person) => person.id === "executive-female") : roster;
   const active = roster.find((person) => person.id === selected);
   const messages = active ? (chatHistory[active.id] || []) : [];
@@ -293,5 +294,5 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
       </section>
     </div>,document.body
   ) : null;
-  return <>{moveable ? <><div className="sw-desktop-bubble-placeholder" aria-hidden="true" />{createPortal(dock, document.body)}</> : dock}{conversation}</>;
+  return <>{placement==="launcher"?null:moveable ? <><div className="sw-desktop-bubble-placeholder" aria-hidden="true" />{createPortal(dock, document.body)}</> : dock}{conversation}</>;
 }
