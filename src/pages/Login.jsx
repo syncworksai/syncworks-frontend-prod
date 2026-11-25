@@ -1,3 +1,4 @@
+import CommercialPricing from "../components/CommercialPricing";
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
@@ -212,11 +213,13 @@ export default function Login({ backgroundOnly = false }) {
           <nav aria-label="Learn about SyncWorks" className="hidden items-center gap-5 text-sm text-slate-300 md:flex">
             <a href="#roles" className="hover:text-white">Who it helps</a>
             <a href="#platform" className="hover:text-white">What it does</a>
+            <a href="#pricing" className="hover:text-white">Pricing</a>
             <a href="#story" className="hover:text-white">About SyncWorks</a>
           </nav>
           <div className="flex items-center gap-2">
             <Link to="/register?role=business" className="hidden rounded-xl border border-cyan-400/25 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-400/50 lg:inline-flex">Service business onboarding</Link>
             <Link to={signupPath === "/get-started" ? "/register?role=personal" : signupPath} className="hidden rounded-xl border border-slate-600/60 bg-[#111827] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-sky-400/50 hover:bg-[#192638] sm:inline-flex">Get started</Link>
+            <a href="#pricing" className="rounded-xl border border-white/15 px-3 py-2 text-sm md:hidden">Pricing</a>
             <button onClick={() => setSignInOpen(true)} type="button" className="rounded-xl border border-cyan-300/40 bg-cyan-400/10 px-4 py-2 text-sm font-bold text-cyan-100 transition hover:border-cyan-300/70 hover:bg-cyan-400/20">Sign in</button>
           </div>
         </div>
@@ -272,6 +275,7 @@ export default function Login({ backgroundOnly = false }) {
           </div>
         </section>
 
+        <div id="pricing" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-8 sm:px-6 lg:px-8"><CommercialPricing publicView /></div>
         <section id="roles" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
           <div className="max-w-3xl">
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-300">Choose your role</p>
