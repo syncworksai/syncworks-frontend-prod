@@ -26,6 +26,7 @@ export function qualify(job){
  if(!job.reviewDeadline)required.push("Verify deadline before bidding");
  if(job.reviewConnectCost==null||job.reviewConnectCost==="")required.push("Enter the real cost per Connect (or zero if already owned)");
  if(job.reviewRisk!=="low")required.push("Review confidentiality, scope and delivery risks");
+ const provisional=!hours||job.reviewConnects==null||job.reviewConnects===""||job.reviewConnectCost==null||job.reviewConnectCost===""||job.reviewPaymentVerified!=="yes";
  const points=(verified?15:0)+(history?10:0)+(knownScope?20:0)+(automation?15:job.reviewAutomation==="medium"?7:0)+(permission?15:0)+(risk==="low"?15:risk==="medium"?5:0)+(effectiveHourly!==null&&effectiveHourly>=25?10:effectiveHourly!==null&&effectiveHourly>=15?5:0);
  const flags=[];
  if(risk==="high")flags.push("High scope or compliance risk");
@@ -33,7 +34,7 @@ export function qualify(job){
  if(effectiveHourly!==null&&effectiveHourly<12)flags.push("Low estimated net hourly return");
  const blocked=flags.some(x=>x.includes("not permitted"))||risk==="high";
  const grade=blocked?"Hold":required.length?"Needs verification":points>=75?"Promising":"Review carefully";
- return {budget,hours,fees,expense,projectedNet,effectiveHourly,points,grade,required,flags,blocked,connects,feePct,automationReady:automation&&permission};
+ return {budget,hours,fees,expense,projectedNet,effectiveHourly,points,grade,required,flags,blocked,connects,feePct,provisional,automationReady:automation&&permission};
 }
 export function createReviewBrief(job,assessment){
  return [

@@ -85,7 +85,7 @@ export default function FreelanceWorkCenter(){
  useEffect(()=>{if(enabled)setData(loadState(key));},[enabled,key]);
  useEffect(()=>{if(enabled){try{window.localStorage.setItem(storageKey(key),JSON.stringify(data));}catch{/* storage unavailable */}}},[enabled,key,data]);
  const items=data.opportunities||[];
- const addJob=form=>setData(d=>({...d,updatedAt:new Date().toISOString(),opportunities:[{...form,id:crypto.randomUUID(),budget:Math.max(0,Number(form.budget)||0),status:form.status||"Saved"},...d.opportunities]}));
+ const addJob=form=>{const id=crypto.randomUUID();setData(d=>({...d,updatedAt:new Date().toISOString(),opportunities:[{...form,id,budget:Math.max(0,Number(form.budget)||0),status:form.status||"Saved"},...d.opportunities]}));return id;};
  const updateJob=(id,changes)=>setData(d=>({...d,updatedAt:new Date().toISOString(),opportunities:d.opportunities.map(j=>j.id===id?{...j,...changes}:j)}));
  const deleteJob=id=>setData(d=>({...d,updatedAt:new Date().toISOString(),opportunities:d.opportunities.filter(j=>j.id!==id)}));
  const totals=useMemo(()=>({saved:items.length,active:items.filter(j=>["Contracted","In progress","Submitted"].includes(j.status)).length,paid:items.filter(j=>j.status==="Paid").reduce((s,j)=>s+Number(j.budget||0),0),pipeline:items.filter(j=>!["Paid","Declined"].includes(j.status)).reduce((s,j)=>s+Number(j.budget||0),0)}),[items]);
