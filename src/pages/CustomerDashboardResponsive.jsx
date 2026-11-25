@@ -124,6 +124,28 @@ export default function CustomerDashboardResponsive() {
 
   useEffect(() => { load(); }, []);
   useEffect(() => {
+    if (String(user?.email||"").trim().toLowerCase() !== "jacoblord7@outlook.com") return;
+    let active=true;
+    let lastRun="";
+    let inFlight=false;
+    const prepare=async()=>{
+      const day=new Date().toLocaleDateString("en-CA");
+      if(inFlight||lastRun===day)return;
+      inFlight=true;
+      try{
+        await api.post("/sync-ai/assist/pilot/chief/schedule/",{mode:"auto"},{timeout:45000});
+        if(!active)return;
+        lastRun=day;
+        window.dispatchEvent(new Event("syncworks:tasks-changed"));
+      }catch(err){if(active)console.warn("Sydney calendar preparation unavailable",err?.response?.status||"connection");}
+      finally{inFlight=false;}
+    };
+    prepare();
+    window.addEventListener("focus",prepare);
+    const timer=window.setInterval(prepare,15*60*1000);
+    return()=>{active=false;window.clearInterval(timer);window.removeEventListener("focus",prepare);};
+  }, [user?.email]);
+  useEffect(() => {
     const refreshCalendar = () => { fetchPersonalCalendarEvents().then(setCalendarEvents).catch(() => {}); };
     window.addEventListener("focus", refreshCalendar);
     window.addEventListener("syncworks:tasks-changed",refreshCalendar);
