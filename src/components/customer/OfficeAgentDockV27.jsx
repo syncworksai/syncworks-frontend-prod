@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { BriefcaseBusiness, ChevronRight, Grip, MessageCircle, RefreshCw, RotateCcw, Users, Send, X, Sparkles, Maximize2, LoaderCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
+import {getWorkspaceRecords,addVictoriaTask,markWorkspaceTask,itemType} from "../../api/syncWorkspaceRecords";
 import {getLiveWeather} from "../../api/liveContext";
 import {getBrowserCurrentLocation} from "../../api/locationContext";
 import { AVATARS, getAvatarPhotoForUser } from "../sync/JarvisAvatar";
@@ -40,6 +41,35 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
     try{const {data}=await api.get("/sync-ai/assist/pilot/chief/archive/");setArchiveRows(data.briefings||[]);}catch{setArchiveNotice("Archive unavailable.");}finally{setArchiveBusy(false);}
   }
 
+  const [todoRows,setTodoRows]=useState([]);
+  const [todoReady,setTodoReady]=useState(false);
+  const [todoBusy,setTodoBusy]=useState(false);
+  const [todoNotice,setTodoNotice]=useState("");
+  const [todoDraft,setTodoDraft]=useState("");
+  const [todoOpen,setTodoOpen]=useState(false);
+  async function loadTodos(){
+    setTodoBusy(true);setTodoNotice("");
+    try{setTodoRows((await getWorkspaceRecords()).filter(t=>itemType(t)==="TASK"));setTodoReady(true);}
+    catch{setTodoReady(false);setTodoNotice("Task records unavailable. Retry before adding tasks.");}
+    finally{setTodoBusy(false);}
+  }
+  async function saveAction(action){
+    if(todoBusy||!action.title)return;
+    setTodoBusy(true);setTodoNotice("");
+    try{
+      const fresh=(await getWorkspaceRecords()).filter(t=>itemType(t)==="TASK");
+      const existing=fresh.find(t=>t.metadata?.sydney_action_key===action.key&&t.metadata?.task_status!=="DONE");
+      if(existing){setTodoRows(fresh);setTodoReady(true);setTodoNotice("Already on your task list.");return;}
+      const row=await addVictoriaTask(action.title.slice(0,180),{description:action.detail||"",metadata:{sydney_action_key:action.key,action_url:action.url}});
+      setTodoRows([...fresh,row]);setTodoReady(true);setTodoOpen(true);setTodoDraft("");setTodoNotice("Task saved.");
+    }catch{setTodoNotice("Unable to confirm task save. Refresh before retrying.");}
+    finally{setTodoBusy(false);}
+  }
+  async function finishTodo(row,status){
+    setTodoBusy(true);setTodoNotice("");
+    try{await markWorkspaceTask(row,status);setTodoRows(old=>old.map(t=>t.id===row.id?{...t,metadata:{...t.metadata,task_status:status}}:t));}
+    catch{setTodoNotice("Unable to save task status.");}finally{setTodoBusy(false);}
+  }
   const [brief,setBrief]=useState(null);
   const [briefError,setBriefError]=useState("");
   const [voiceNotice,setVoiceNotice]=useState("");
@@ -53,6 +83,16 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const weather=weatherOverride||brief?.executive_context?.weather||{};
   const forecast=weather.current_period||{};
   const sections=brief?.sections||[];
+  const sectionLinks={today:"/customer/projects",cases:"/sync/assist/chief",delegation:"/sync/assist/assignments",portfolio:"/pm/properties",sarah_correspondence:"/pm/properties",email:"/sync/assist/email",calendar:"/calendar",money:"/customer/finance",business:"/sbo",health:"/customer/health",scarlett_sales:"/sync/assist/growth",elizabeth_marketing:"/sync/assist/growth",customer_support:"/platform/support",production_project:"/customer/projects"};
+  const safeRoute=value=>typeof value==="string"&&/^\/(?!\/)[a-zA-Z0-9/_?=&%-]+$/.test(value)?value:null;
+  const goAction=url=>{if(safeRoute(url)){setSelected(null);nav(url);}};
+  const suggestedActions=brief?[
+    ...(sections.find(s=>s.key==="sarah_correspondence")?.items||[]).filter(i=>/PAYMENT|INSPECTION|DOCUMENT/i.test(i.title||"")).map(i=>({key:"property:"+i.title,title:i.title,detail:i.next_action,url:safeRoute(i.detail_url)||"/pm/properties"})),
+    {key:"launch:review",title:"Review SyncWorks launch milestones",detail:"Open the production readiness project and select the next verified milestone.",url:"/customer/projects"},
+    {key:"health:plan:"+brief.date,title:"Review today's workout and nutrition plan",url:"/customer/health"},
+    ...(sections.find(s=>s.key==="scarlett_sales")?.items||[]).map(i=>({key:"sales:"+i.title,title:"Qualify prospect: "+i.title,detail:i.next_action,url:"/sync/assist/growth"})),
+    ...(brief.counts?.ai_assignments_pending?[{key:"assignments:review",title:"Review pending employee assignments",url:"/sync/assist/assignments"}]:[])
+  ]:[];
   const narrative=brief?(()=>{
     const byKey=key=>sections.find(s=>s.key===key);
     const clean=value=>String(value||"").trim().replace(/[.]+$/,"");
@@ -356,6 +396,9 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
         {panel==="brief"?<div className="sw-ai-conversation-feed" ref={feedRef}>
           <div className="sw-ai-brief-controls sw-ai-conversation-toolbar"><button type="button" onClick={listenBrief} disabled={!brief} aria-busy={voiceLoading}>{voiceLoading?<><LoaderCircle size={15} className="animate-spin"/> Preparing audio… (cancel)</>:speaking?"Stop audio":audioReady?"Play audio":"Listen to briefing"}</button><button type="button" onClick={()=>setReadBrief(v=>!v)} disabled={!brief} aria-expanded={readBrief}>{readBrief?"Hide briefing":"Read briefing"}</button><button type="button" title="Refresh briefing" aria-label="Refresh briefing" onClick={()=>{stopVoice();setWorkRefresh(v=>v+1)}}><RefreshCw size={15}/></button></div>
           <div className="sw-ai-conversation-toolbar"><button type="button" aria-expanded={showPlan} disabled={!brief} onClick={()=>{setShowArchive(false);setReadBrief(false);setShowPlan(v=>!v)}}>{showPlan?"Hide plan":"My plan"}</button><button type="button" onClick={archiveBrief} disabled={!brief||archiveBusy}>Save briefing</button><button type="button" aria-expanded={showArchive} onClick={openArchive}>Archive</button></div>
+          <div className="sw-ai-conversation-toolbar"><button type="button" onClick={()=>{setTodoOpen(v=>!v);if(!todoOpen)loadTodos();}}>{todoOpen?"Hide tasks":"My to-do list"}</button><button type="button" onClick={()=>goAction("/calendar")}>Edit schedule</button><button type="button" onClick={()=>goAction("/customer/projects")}>Projects</button></div>
+          {todoNotice&&<p role="status">{todoNotice}</p>}
+          {todoOpen&&<div className="sw-ai-brief-story"><h3>My tasks</h3>{todoBusy?<p>Updating tasks…</p>:!todoReady?<button type="button" onClick={loadTodos}>Retry task list</button>:todoRows.filter(t=>!t.metadata?.project_id&&["OPEN","DONE"].includes(t.metadata?.task_status||"OPEN")).map(t=><div key={t.id} className="sw-ai-action-row"><span>{t.title}</span><button type="button" disabled={todoBusy} onClick={()=>finishTodo(t,t.metadata?.task_status==="DONE"?"OPEN":"DONE")}>{t.metadata?.task_status==="DONE"?"Reopen":"Complete"}</button>{safeRoute(t.metadata?.action_url)&&<button type="button" onClick={()=>goAction(t.metadata.action_url)}>Go to</button>}</div>)}<form onSubmit={e=>{e.preventDefault();saveAction({key:"manual:"+todoDraft.trim(),title:todoDraft.trim()});}}><input aria-label="New task" maxLength={180} value={todoDraft} onChange={e=>setTodoDraft(e.target.value)} placeholder="Add a task"/><button disabled={todoBusy||!todoDraft.trim()} type="submit">Add</button></form></div>}
           {archiveNotice&&<p role="status">{archiveNotice}</p>}
           {showArchive&&<div className="sw-ai-brief-story">{archiveBusy?<p>Loading archive…</p>:archiveRows.length?archiveRows.map(row=><details key={row.id}><summary>{new Date(row.saved_at).toLocaleString()}</summary>{String(row.text||"").split("\n\n").map((part,i)=><p key={i}>{part}</p>)}</details>):<p>No saved briefings.</p>}</div>}
           {voiceNotice&&<p role="status">{voiceNotice}</p>}
@@ -363,8 +406,8 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           <div className="sw-ai-brief-context"><strong>{brief.date} · {brief.executive_context?.local_time?new Date(brief.executive_context.local_time).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}):"Time unavailable"}</strong><p>{weather.available?[forecast.temperature!=null?forecast.temperature+"°"+(forecast.temperature_unit||"F"):"",forecast.short_forecast].filter(Boolean).join(" · "):"Local weather not connected"}</p>{!weather.available&&<button type="button" disabled={weatherLoading} onClick={loadWeather}>{weatherLoading?"Getting weather…":"Use my location for weather"}</button>}{weatherError&&<p role="status">{weatherError}</p>}</div>
 
           {showPlan&&<div className="sw-ai-brief-story"><div className="sw-ai-conversation-toolbar">{[["today","Today"],["week","Week"],["month","Month"]].map(([key,label])=><button key={key} type="button" aria-pressed={outlookRange===key} onClick={()=>setOutlookRange(key)}>{label}</button>)}</div><h3>Recorded schedule</h3>{(brief.schedule_outlook||[]).filter(e=>{const now=new Date(brief.generated_at),start=new Date(e.start_at);if(outlookRange==="today")return start.toDateString()===now.toDateString();const cutoff=new Date(now);cutoff.setDate(cutoff.getDate()+(outlookRange==="week"?7:30));return start>=now&&start<=cutoff;}).map(e=><p key={e.id}><strong>{e.title}</strong><br/>{new Date(e.start_at).toLocaleString()} · {e.status==="ENDED"?"Window ended":e.status==="IN_PROGRESS"?"In progress":e.minutes_until>=0&&e.minutes_until<=60?"Starts in "+e.minutes_until+" minutes":"Upcoming"}</p>)}<button type="button" onClick={()=>{setSelected(null);nav("/calendar")}}>Open calendar</button><h3>Active projects</h3>{(brief.project_progress||[]).filter(p=>p.status==="ACTIVE").map(p=><div key={p.id}><strong>{p.title}</strong><p>{p.done} of {p.total} recorded tasks completed</p>{p.next_tasks.map(t=><p key={t.id}>{t.title}</p>)}</div>)}<button type="button" onClick={()=>{setSelected(null);nav("/customer/projects")}}>Open projects & complete tasks</button></div>}
-          {readBrief&&<><article className="sw-ai-brief-story">{narrative.map((paragraph,n)=><p key={n}>{paragraph}</p>)}</article>
-          <details className="sw-ai-brief-evidence"><summary>Detailed records & employee reports</summary>{sections.map(s=><details key={s.key}><summary>{s.title} — {s.headline}</summary>{(s.items||[]).map((i,n)=><p key={n}>{i.title} · {i.next_action}</p>)}</details>)}</details></>}
+          {readBrief&&<><article className="sw-ai-brief-story">{narrative.map((paragraph,n)=><p key={n}>{paragraph}</p>)}</article><section className="sw-ai-brief-story"><h3>Recommended actions</h3>{suggestedActions.map(a=><div className="sw-ai-action-row" key={a.key}><span>{a.title}</span><button type="button" onClick={()=>goAction(a.url)}>Go to</button><button type="button" disabled={todoBusy} onClick={()=>saveAction(a)}>Add to list</button></div>)}</section>
+          <details className="sw-ai-brief-evidence"><summary>Detailed records & employee reports</summary>{sections.map(s=><details key={s.key}><summary>{s.title} — {s.headline}</summary>{safeRoute(sectionLinks[s.key])&&<button type="button" onClick={()=>goAction(sectionLinks[s.key])}>Open workspace</button>}{(s.items||[]).map((i,n)=><p key={n}>{i.title} · {i.next_action} {safeRoute(i.detail_url)&&<button type="button" onClick={()=>goAction(i.detail_url)}>Go to record</button>}</p>)}</details>)}</details></>}
           </>}</div>:<><div className="sw-ai-conversation-feed" role="log" aria-live="polite" aria-relevant="additions text">
           {!messages.length && <div className="sw-ai-conversation-intro">
             <img src={active.photo} onError={e=>{if(active.fallbackPhoto&&!e.currentTarget.src.endsWith(active.fallbackPhoto))e.currentTarget.src=active.fallbackPhoto;}} alt="" aria-hidden="true"/>
