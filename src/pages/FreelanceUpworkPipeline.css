@@ -43,3 +43,15 @@
  .sw-upwork-pipeline .sw-pipe-card{padding:11px}
  .sw-upwork-pipeline .sw-pipe-modal{max-height:85dvh;overflow-y:auto}
 }
+
+/* Sydney dock is fixed above the lower-right corner; reserve its footprint
+   without relocating or modifying the shared launcher. */
+@media(min-width:900px){
+ .sw-upwork-pipeline .sw-pipe-next{padding-right:320px;min-height:54px;}
+ .sw-upwork-pipeline .sw-pipe-next > div{min-width:0;max-width:700px;}
+ .sw-upwork-pipeline .sw-pipe-next .sw-pipe-primary{align-self:center;}
+}
+@media(max-width:899px){
+ .sw-upwork-pipeline .sw-pipe-next{padding-bottom:90px;}
+}
+.sw-upwork-pipeline .sw-pipe-connection{display:inline-flex;align-items:center;color:var(--uw-muted);background:var(--uw-inset)}
