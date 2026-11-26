@@ -22,7 +22,7 @@ const CANDIDATES=[
 const WORKFLOW=[
  {id:"screen",name:"Screen job opportunities",agent:"Research Agent",state:"Suggested",detail:"Check client history, scope, pay and competition; reject misleading or low-value work."},
  {id:"draft",name:"Prepare two tailored proposals",agent:"Proposal Agent",state:"Awaiting build",detail:"Draft against the complete postings and genuine portfolio, then place in approval queue."},
- {id:"monitor",name:"Check existing proposal status",agent:"Victoria",state:"Awaiting connection",detail:"Read Upwork statuses once server-side authorization is available; do not auto-advance."},
+ {id:"monitor",name:"Check existing proposal status",agent:"Sydney",state:"Awaiting connection",detail:"Read Upwork statuses once server-side authorization is available; do not auto-advance."},
  {id:"deliver",name:"Prepare work deliverables",agent:"Operations Agent",state:"Awaiting contract",detail:"Only after an actual contract and permission for AI assistance; require QA approval."}
 ];
 const stages=["Discovered","Qualified","Drafted","Approval","Submitted","Viewed","Interview","Offer","Contract","Delivery","Paid"];
@@ -35,7 +35,6 @@ export default function FreelanceUpworkDesk({items=[],addJob,updateJob}){
  const [selected,setSelected]=useState(null);
  const [message,setMessage]=useState("");
  const [approvals,setApprovals]=useState({});
- const [paused,setPaused]=useState(true);
  const stored=useMemo(()=>CONFIRMED.map(p=>({...p,local:items.find(x=>x.proposalId===p.id||x.upworkJobId===p.jobId)})),[items]);
  const imported=stored.filter(p=>p.local).length;
  const saveCandidate=c=>{if(items.some(x=>x.upworkJobId===c.id)){setMessage("Already recorded locally.");return;}
@@ -52,7 +51,7 @@ export default function FreelanceUpworkDesk({items=[],addJob,updateJob}){
  return <main className="sw-upwork-stage sw-upwork-pipeline relative flex flex-col gap-3 overflow-hidden rounded-3xl p-3 sm:p-5" data-upwork-theme={appearance.theme||"legacy"} aria-label="Upwork AI pipeline">
   <header className="flex flex-wrap items-center justify-between gap-3">
    <div><div className="text-[10px] font-bold uppercase tracking-[.19em] sw-pipe-accent">SyncWorks / AI Workforce / Founder pilot</div><h1 className="text-2xl font-semibold">Upwork <span className="sw-pipe-accent">Income Pipeline</span></h1><p className="text-xs sw-pipe-muted">Static account snapshot · November 25, 2026 · Browser-local changes, no site sync</p></div>
-   <div className="flex flex-wrap gap-2"><button className="sw-pipe-control rounded-xl border px-3 py-2 text-xs" onClick={()=>nav("/sync/assist")}> <Bot size={14} className="inline"/> Victoria / Sync Assist</button><button className="rounded-xl border sw-pipe-line px-3 py-2 text-xs" onClick={()=>setPaused(v=>!v)} aria-pressed={!paused}>{paused?"Automation paused":"Preview only · not live"}</button></div>
+   <div className="flex flex-wrap gap-2"><button className="sw-pipe-control rounded-xl border px-3 py-2 text-xs" onClick={()=>nav("/sync/assist")}> <Bot size={14} className="inline"/> Sydney / Sync Assist</button><span className="sw-pipe-connection rounded-xl border sw-pipe-line px-3 py-2 text-xs" role="status">Automation not connected</span></div>
   </header>
   <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
    {[["Verified proposals","2","Both require follow-up"],["Saved locally",String(imported)+"/2","Confirmed snapshot imported"],["Connects snapshot","138","Not live balance"],["Verified active contracts","0","No income recorded"]].map(([label,value,description])=><section key={label} className={cls+" p-3"}><p className="text-[11px] sw-pipe-muted">{label}</p><strong className="block text-2xl">{value}</strong><small className="text-[10px] sw-pipe-muted">{description}</small></section>)}
@@ -67,7 +66,7 @@ export default function FreelanceUpworkDesk({items=[],addJob,updateJob}){
      <h2 className="text-sm font-semibold">{p.title}</h2><p className="mt-2 text-xs sw-pipe-muted">{p.details}</p><p className="mt-1 text-[11px] sw-pipe-accent">{p.note}</p>
      <div className="mt-4 flex flex-wrap gap-2"><button onClick={()=>select(p)} className="sw-pipe-control rounded-lg border px-3 py-2 text-xs">Details & actions</button><button className="rounded-lg border sw-pipe-line px-3 py-2 text-xs" onClick={()=>saveKnown(p)}>{p.local?"Tracked locally":"Track locally"}</button><a className="rounded-lg border sw-pipe-line px-3 py-2 text-xs" href={p.url} target="_blank" rel="noopener noreferrer">Upwork <ExternalLink size={12} className="inline"/></a></div>
     </article>)}</section>
-    {card(<div className="flex flex-wrap justify-between gap-2"><div><p className="text-sm font-semibold">Victoria's next decision</p><p className="text-xs sw-pipe-muted">Review the new shortlist, then queue only the best-fitting applications. No current automated application sending.</p></div><button className="sw-pipe-primary rounded-xl px-3 py-2 text-xs font-bold" onClick={()=>setTab("discover")}>Review candidates</button></div>,"p-4")}
+    {card(<div className="sw-pipe-next flex flex-wrap justify-between gap-2"><div><p className="text-sm font-semibold">Sydney's next decision</p><p className="text-xs sw-pipe-muted">Review the new shortlist, then queue only the best-fitting applications. No current automated application sending.</p></div><button className="sw-pipe-primary rounded-xl px-3 py-2 text-xs font-bold" onClick={()=>setTab("discover")}>Review candidates</button></div>,"p-4")}
    </div>}
   {tab==="discover"&&<section className="grid gap-3 lg:grid-cols-2">{CANDIDATES.map(c=><article key={c.id} className={cls+" p-4"}><div className="flex items-center justify-between"><span className="text-xs sw-pipe-accent">Review first · score {c.score}/100</span><strong className="text-sm">{c.price}</strong></div><h2 className="mt-2 text-base font-semibold">{c.title}</h2><p className="mt-2 text-xs sw-pipe-muted">{c.reason}</p><p className="mt-2 text-xs sw-pipe-warning"><ShieldAlert size={13} className="inline"/> {c.risk}</p><div className="mt-4 flex gap-2"><button className="rounded-lg border sw-pipe-line px-3 py-2 text-xs" onClick={()=>saveCandidate(c)}>Save locally</button><a className="rounded-lg border sw-pipe-line px-3 py-2 text-xs" href={c.url} target="_blank" rel="noopener noreferrer">Full posting <ExternalLink size={12} className="inline"/></a></div></article>)}</section>}
   {tab==="agents"&&<section className="grid gap-2 lg:grid-cols-2">{WORKFLOW.map(t=><article key={t.id} className={cls+" p-4"}><div className="flex items-center justify-between gap-2"><strong className="text-sm">{t.name}</strong><span className="text-[10px] sw-pipe-accent">{t.state}</span></div><small className="sw-pipe-accent">{t.agent}</small><p className="mt-2 text-xs sw-pipe-muted">{t.detail}</p></article>)}</section>}
