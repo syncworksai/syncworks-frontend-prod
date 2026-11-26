@@ -208,3 +208,22 @@ body .sw-ai-conversation--command{width:min(1120px,100%);height:min(790px,calc(1
 @media(min-width:701px){.sw-ai-command-nav{gap:4px;padding:8px 10px}.sw-ai-command-nav .sw-ai-conversation-toolbar{gap:4px;padding:0 0 3px}.sw-ai-command-nav button{min-height:28px;padding:5px 7px;font-size:11px;line-height:1.25}.sw-ai-conversation--command .sw-ai-conversation-header{padding:8px 14px}.sw-ai-conversation--command>.sw-ai-conversation-toolbar{padding:7px 14px}.sw-ai-conversation--command .sw-ai-work-summary{padding:4px 14px}}
 
 .sw-ai-chat-audio{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:6px 16px;font-size:12px;color:inherit;flex-shrink:0}.sw-ai-chat-audio label{display:flex;align-items:center;gap:7px}.sw-ai-conversation-message .sw-ai-review-nav{padding:6px 12px;margin-top:6px;font-size:12px}.sw-ai-conversation-message p{line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* Shared employee modal: keep all header controls outside iOS system chrome. */
+@media (max-width:700px), (hover:none) and (pointer:coarse) and (max-height:600px){
+ body .sw-ai-conversation-overlay{
+  --sw-agent-safe-top:max(48px,env(safe-area-inset-top,0px));
+  --sw-agent-safe-bottom:max(8px,env(safe-area-inset-bottom,0px));
+  padding:calc(var(--sw-agent-safe-top) + 8px) max(8px,env(safe-area-inset-right,0px)) var(--sw-agent-safe-bottom) max(8px,env(safe-area-inset-left,0px));
+  align-items:center;justify-content:center;
+ }
+ body .sw-ai-conversation,body .sw-ai-conversation--command{
+  height:calc(100dvh - var(--sw-agent-safe-top) - 8px - var(--sw-agent-safe-bottom));
+  max-height:100%;min-height:0;width:100%;
+ }
+ body .sw-ai-conversation-header{flex-shrink:0;}
+ body .sw-ai-conversation-close{width:44px;height:44px;min-width:44px;min-height:44px;align-self:flex-start;touch-action:manipulation;position:relative;z-index:2;}
+}
+@media (orientation:landscape) and (hover:none) and (pointer:coarse) and (max-height:600px){
+ body .sw-ai-conversation-overlay{--sw-agent-safe-top:max(12px,env(safe-area-inset-top,0px));}
+}
