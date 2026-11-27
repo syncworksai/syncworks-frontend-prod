@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { BriefcaseBusiness, ChevronRight, Grip, MessageCircle, RefreshCw, RotateCcw, Users, Send, X, Sparkles, Maximize2, LoaderCircle } from "lucide-react";
+import { BriefcaseBusiness, ChevronRight, Grip, MessageCircle, RefreshCw, RotateCcw, Users, Send, X, Sparkles, Maximize2, LoaderCircle, Settings, SquarePen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import {getWorkspaceRecords,addVictoriaTask,markWorkspaceTask,itemType} from "../../api/syncWorkspaceRecords";
@@ -258,6 +258,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const [autoSpeak,setAutoSpeak]=useState(true);
   const [rememberConversation,setRememberConversation]=useState(()=>{try{return localStorage.getItem("sw_sydney_memory_opt_in_v1")==="yes";}catch{return false;}});
   const [showAssignedWork,setShowAssignedWork]=useState(false);
+  const [showChatSettings,setShowChatSettings]=useState(false);
   const [memoryNotice,setMemoryNotice]=useState("");
   const memoryEndpoint="/sync-ai/assist/pilot/chief/agent/";
   async function saveConversationTurn(question,answer){
@@ -575,17 +576,18 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
               <span className="sw-ai-conversation-status">{chatBusy ? "Preparing a response…" : active.id==="executive-female"?"Executive assistant · private pilot":"Role-focused advisory chat"}</span>
             </div>
           </div>
-          <button type="button" className="sw-ai-conversation-close" aria-label="Close employee conversation" onClick={()=>placement==="launcher"?onDismiss?.():setSelected(null)}><X size={19}/></button>
+          <div className="sw-ai-header-actions">{active.id==="executive-female"&&<><button type="button" title="New conversation" aria-label="New conversation" disabled={chatBusy} onClick={()=>{stopVoice();setChatHistory(old=>({...old,[active.id]:[]}));setChatDraft("");setPanel("chat");setShowChatSettings(false);}}><SquarePen size={19}/></button><button type="button" title="Settings" aria-label="Sydney settings" aria-expanded={showChatSettings} onClick={()=>setShowChatSettings(v=>!v)}><Settings size={19}/></button></>}<button type="button" className="sw-ai-conversation-close" aria-label="Close employee conversation" onClick={()=>placement==="launcher"?onDismiss?.():setSelected(null)}><X size={19}/></button></div>
         </header>
+        {active.id==="executive-female"&&showChatSettings&&<div className="sw-ai-chat-audio sw-ai-settings-panel"><label><input type="checkbox" checked={autoSpeak} onChange={e=>{setAutoSpeak(e.target.checked);if(!e.target.checked)stopVoice();}}/> Speak replies automatically</label><label><input type="checkbox" checked={rememberConversation} onChange={e=>{const enabled=e.target.checked;setRememberConversation(enabled);try{localStorage.setItem("sw_sydney_memory_opt_in_v1",enabled?"yes":"no");}catch{}}}/> Remember conversations</label>{rememberConversation&&<button type="button" className="sw-ai-review-nav" onClick={resetConversationMemory}>Reset recall</button><small>New conversation clears this window, not saved recall or tasks.</small>}{memoryNotice&&<span role="status">{memoryNotice}</span>}{voiceNotice&&<span role="status">{voiceNotice}</span>}</div>}
         <div className="sw-ai-conversation-toolbar">
           <button type="button" onClick={()=>goAction("/sync/assist/assignments?new=1&role="+encodeURIComponent(active.roleKey||"CHIEF_OF_STAFF"))}><BriefcaseBusiness size={15}/> Assign work</button>
           <button type="button" onClick={()=>{if(active.id==="executive-female"){stopVoice();setScheduleOpen(false);setReadBrief(false);setReviewOpen(false);setShowPlan(false);setShowArchive(false);setTodoOpen(false);setPanel(v=>v==="brief"?"chat":"brief");}else{setSelected(null);openEmployee(active);}}}><Maximize2 size={15}/> {active.id==="executive-female"?(panel==="brief"?"Back to chat":"Daily briefing"):"Employee workspace"}</button>
         </div>
         <div className={`sw-ai-work-summary ${active.id==="executive-female"&&!showAssignedWork?"sw-ai-work-summary--collapsed":""}`}>
-          <div className="sw-ai-work-summary-head">{active.id==="executive-female"?<button type="button" className="sw-ai-assigned-toggle" aria-expanded={showAssignedWork} onClick={()=>setShowAssignedWork(v=>!v)}>Assigned work {showAssignedWork?"−":"+"}</button>:<strong>Assigned work</strong>}<span>{currentWork?.status==="ready"?`${currentWork.data.pending_count} awaiting review`:"Review-only pilot"}</span>
+          <div className="sw-ai-work-summary-head">{active.id==="executive-female"?<button type="button" className="sw-ai-assigned-toggle" aria-expanded={showAssignedWork} onClick={()=>setShowAssignedWork(v=>!v)}><BriefcaseBusiness size={14}/> Assigned work <ChevronRight size={13} className={showAssignedWork?"sw-ai-chevron-open":""}/></button>:<strong>Assigned work</strong>}<span>{currentWork?.status==="ready"?`${currentWork.data.pending_count} awaiting review`:"Review-only pilot"}</span>
             <button type="button" title="Refresh assigned work" aria-label="Refresh employee assignments" onClick={()=>setWorkRefresh(n=>n+1)}><RefreshCw size={13}/></button>
           </div>
-          {currentWork?.status==="error"?<p role="status">Assigned work unavailable. {currentWork.message}</p>:
+          {(active.id!=="executive-female"||showAssignedWork)&&(currentWork?.status==="error"?<p role="status">Assigned work unavailable. {currentWork.message}</p>:
            currentWork?.status==="ready"?(currentWork.data.assignments?.length?
            <div className="sw-ai-work-summary-items">{currentWork.data.assignments.slice(0,3).map(item=><button type="button" key={item.assignment_id} onClick={()=>goAction("/sync/assist/assignments")}>
              <span>{item.kind}{item.ticket_id?` #${item.ticket_id}`:""} · {item.state?.replaceAll("_"," ")}</span>
@@ -593,7 +595,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
              {item.status_changed_since_review&&<em>Ticket status changed — review again</em>}
            </button>)}</div>:
            <p>No work assigned to {active.name} yet.</p>):
-           <p>Loading this employee's task inbox…</p>}
+           <p>Loading this employee's task inbox…</p>)}
         </div>
         {panel==="brief"?<div className="sw-ai-command-body">
           <nav className="sw-ai-command-nav" aria-label="Executive workspace" onClick={e=>{if(e.target.closest("button")&&!e.target.closest("[data-schedule-build]"))setScheduleOpen(false)}}><button data-schedule-build type="button" className="sw-ai-review-nav" onClick={buildSchedule} disabled={scheduleBusy}>Build my schedule</button>
@@ -636,7 +638,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           <div ref={chatEndRef}/>
         </div>
         {chatError&&<p role="alert" className="sw-ai-conversation-error">{chatError}</p>}
-        {active.id==="executive-female"&&<div className="sw-ai-chat-audio"><label><input type="checkbox" checked={autoSpeak} onChange={e=>{setAutoSpeak(e.target.checked);if(!e.target.checked)stopVoice();}}/> Speak replies automatically</label><label><input type="checkbox" checked={rememberConversation} onChange={e=>{const enabled=e.target.checked;setRememberConversation(enabled);try{localStorage.setItem("sw_sydney_memory_opt_in_v1",enabled?"yes":"no");}catch{}}}/> Remember conversations</label>{rememberConversation&&<button type="button" className="sw-ai-review-nav" onClick={resetConversationMemory}>Reset recall</button>}{memoryNotice&&<span role="status">{memoryNotice}</span>}{voiceNotice&&<span role="status">{voiceNotice}</span>}</div>}
+        {active.id==="executive-female"&&(memoryNotice||voiceNotice)&&<div className="sw-ai-compact-status" role="status">{voiceNotice||memoryNotice}</div>}
         <form className="sw-ai-conversation-compose" onSubmit={sendMessage}>
           <label htmlFor="sw-ai-chat-message" className="sr-only">Message {active.name}</label>
           <textarea id="sw-ai-chat-message" ref={chatFieldRef} rows={2} maxLength={4000} value={chatDraft} onChange={event=>setChatDraft(event.target.value)}
