@@ -1,5 +1,5 @@
 // src/components/customer-health/QuestionnaireDrawer.jsx
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import HealthDrawer from "./HealthDrawer";
 import { cx } from "./healthStorage";
 
@@ -255,6 +255,9 @@ export default function QuestionnaireDrawer({
   onBuildPlan,
 }) {
   const safeProfile = profile || {};
+  const [stepIndex,setStepIndex] = useState(0);
+  useEffect(() => { if(open) setStepIndex(0); }, [open]);
+  const steps = ["Goal","Body","Training","Schedule","Safety"];
 
   const coachPath = useMemo(
     () => inferCoachPath(safeProfile),
@@ -369,22 +372,12 @@ export default function QuestionnaireDrawer({
       open={open}
       onClose={onClose}
       title="AI Fitness Plan Intake"
-      subtitle="Give SYNC the few details that matter. The coach will use them to build the right plan, schedule it at your preferred time, and adjust it as you progress."
+      subtitle={`Step ${stepIndex+1} of 5 · ${steps[stepIndex]}`}
+      navigation={<div className="syncfit-step-nav">{steps.map((label,index)=><button type="button" key={label} aria-current={stepIndex===index?"step":undefined} onClick={()=>setStepIndex(index)}>{label}</button>)}</div>}
+      footer={<div className="syncfit-step-footer"><button type="button" onClick={()=>setStepIndex(v=>Math.max(0,v-1))} disabled={stepIndex===0}>Back</button><button type="button" onClick={()=>stepIndex<4?setStepIndex(v=>v+1):finishIntake()}>{stepIndex<4?"Continue":"Save & build plan"}</button></div>}
     >
-      <div className="space-y-5">
-        <section className="rounded-3xl border border-lime-400/25 bg-[radial-gradient(circle_at_top_left,rgba(57,255,136,0.14),transparent_40%),rgba(57,255,136,0.06)] p-4">
-          <div className="text-[10px] font-black uppercase tracking-[0.18em] text-lime-200">
-            What SYNC Will Build
-          </div>
-          <div className="mt-2 text-xl font-black text-white">
-            One plan built around your body, goals, schedule, and experience
-          </div>
-          <div className="mt-2 text-sm leading-6 text-slate-300">
-            SYNC will connect strength, cardio, mobility, stretching, recovery, nutrition, body weight, sets, reps, and progression. Beginners get more instruction. Advanced users can train harder with more control.
-          </div>
-        </section>
-
-        <Section
+      <div key={stepIndex} className="syncfit-intake-content">
+        {stepIndex === 0 && <div className="syncfit-intake-step">        <Section
           title="1. Your Goal"
           subtitle="Choose the result that matters most. You can still combine several training styles."
           tone="fuchsia"
@@ -460,7 +453,7 @@ export default function QuestionnaireDrawer({
 
           <div className="mt-4">
             <div className="mb-2 text-xs font-semibold text-slate-400">
-              Training focus â€” choose all that apply
+              Training focus — choose all that apply
             </div>
             <div className="flex flex-wrap gap-2">
               {TRAINING_FOCUS_OPTIONS.map(
@@ -507,7 +500,8 @@ export default function QuestionnaireDrawer({
           </label>
         </Section>
 
-        <Section
+</div>}
+        {stepIndex === 1 && <div className="syncfit-intake-step">        <Section
           title="2. Body and Target"
           subtitle="This helps the coach shape calories, protein, training volume, cardio, recovery, and progression."
           tone="cyan"
@@ -617,7 +611,8 @@ export default function QuestionnaireDrawer({
           </div>
         </Section>
 
-        <Section
+</div>}
+        {stepIndex === 2 && <div className="syncfit-intake-step">        <Section
           title="3. Where and How You Train"
           subtitle="SYNC will create gym, home, outdoor, or mixed plans using equipment you actually have."
           tone="emerald"
@@ -685,7 +680,7 @@ export default function QuestionnaireDrawer({
 
           <div className="mt-4">
             <div className="mb-2 text-xs font-semibold text-slate-400">
-              Available equipment â€” choose all that apply
+              Available equipment — choose all that apply
             </div>
             <div className="flex flex-wrap gap-2">
               {EQUIPMENT_OPTIONS.map(
@@ -712,7 +707,8 @@ export default function QuestionnaireDrawer({
           </div>
         </Section>
 
-        <Section
+</div>}
+        {stepIndex === 3 && <div className="syncfit-intake-step">        <Section
           title="4. Your Weekly Schedule"
           subtitle="Choose the days and exact time you prefer. SYNC should schedule 8:00 AM when you say 8:00 AM."
           tone="amber"
@@ -809,7 +805,7 @@ export default function QuestionnaireDrawer({
 
           <div className="mt-4">
             <div className="mb-2 text-xs font-semibold text-slate-400">
-              Preferred cardio â€” choose any you enjoy
+              Preferred cardio — choose any you enjoy
             </div>
             <div className="flex flex-wrap gap-2">
               {CARDIO_OPTIONS.map(
@@ -836,7 +832,8 @@ export default function QuestionnaireDrawer({
           </div>
         </Section>
 
-        <Section
+</div>}
+        {stepIndex === 4 && <div className="syncfit-intake-step">        <Section
           title="5. Protect Your Body"
           subtitle="Tell SYNC what needs extra care so the plan can train around limitations instead of ignoring them."
           tone="slate"
@@ -915,18 +912,7 @@ export default function QuestionnaireDrawer({
           </div>
         </section>
 
-        <div className="sticky bottom-0 rounded-3xl border border-lime-300/25 bg-[#07111f]/95 p-3 backdrop-blur-xl">
-          <button
-            type="button"
-            onClick={finishIntake}
-            className="h-12 w-full rounded-2xl border border-lime-300/35 bg-lime-300/20 text-sm font-black text-lime-100 shadow-[0_0_28px_rgba(57,255,136,0.12)]"
-          >
-            Save Profile and Build My Plan
-          </button>
-          <div className="mt-2 text-center text-[10px] leading-4 text-slate-500">
-            Your coach can be updated anytime as your goals, schedule, equipment, or body change.
-          </div>
-        </div>
+</div>}
       </div>
     </HealthDrawer>
   );
