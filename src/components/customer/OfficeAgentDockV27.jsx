@@ -256,7 +256,8 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   },[selected,panel]);
   const [spokenKey,setSpokenKey]=useState("");
   const [autoSpeak,setAutoSpeak]=useState(true);
-  const [rememberConversation,setRememberConversation]=useState(false);
+  const [rememberConversation,setRememberConversation]=useState(()=>{try{return localStorage.getItem("sw_sydney_memory_opt_in_v1")==="yes";}catch{return false;}});
+  const [showAssignedWork,setShowAssignedWork]=useState(false);
   const [memoryNotice,setMemoryNotice]=useState("");
   const memoryEndpoint="/sync-ai/assist/pilot/chief/agent/";
   async function saveConversationTurn(question,answer){
@@ -563,7 +564,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   );
   const conversation = visible && active && shown.some(person => person.id === active.id) ? createPortal(
     <div className="sw-ai-conversation-overlay" role="presentation" onMouseDown={event => {if(event.target===event.currentTarget){if(placement==="launcher")onDismiss?.();else setSelected(null);}}}>
-      <section className={`sw-ai-conversation ${panel==="brief"?"sw-ai-conversation--command":""}`} style={dialogTheme} role="dialog" aria-modal="true" aria-labelledby="sw-ai-conversation-title" data-bubble-theme={theme}>
+      <section className={`sw-ai-conversation ${active.id==="executive-female"?"sw-ai-conversation--sydney":""} ${panel==="brief"?"sw-ai-conversation--command":""}`} style={dialogTheme} role="dialog" aria-modal="true" aria-labelledby="sw-ai-conversation-title" data-bubble-theme={theme}>
         <header className="sw-ai-conversation-header">
           <div className="sw-ai-conversation-identity">
             <img className="sw-ai-conversation-photo" src={active.photo} onError={e=>{if(active.fallbackPhoto&&!e.currentTarget.src.endsWith(active.fallbackPhoto))e.currentTarget.src=active.fallbackPhoto;}} alt={`${active.name}, ${active.role}`} />
@@ -571,7 +572,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
               <span className="sw-ai-conversation-eyebrow"><Sparkles size={12}/> SYNCWORKS AI TEAM</span>
               <h2 id="sw-ai-conversation-title">{active.name}</h2>
               <p>{active.role}</p>
-              <span className="sw-ai-conversation-status">{chatBusy ? "SYNC is preparing a response…" : "Role-focused advisory chat"}</span>
+              <span className="sw-ai-conversation-status">{chatBusy ? "Preparing a response…" : active.id==="executive-female"?"Executive assistant · private pilot":"Role-focused advisory chat"}</span>
             </div>
           </div>
           <button type="button" className="sw-ai-conversation-close" aria-label="Close employee conversation" onClick={()=>placement==="launcher"?onDismiss?.():setSelected(null)}><X size={19}/></button>
@@ -580,8 +581,8 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           <button type="button" onClick={()=>goAction("/sync/assist/assignments?new=1&role="+encodeURIComponent(active.roleKey||"CHIEF_OF_STAFF"))}><BriefcaseBusiness size={15}/> Assign work</button>
           <button type="button" onClick={()=>{if(active.id==="executive-female"){stopVoice();setScheduleOpen(false);setReadBrief(false);setReviewOpen(false);setShowPlan(false);setShowArchive(false);setTodoOpen(false);setPanel(v=>v==="brief"?"chat":"brief");}else{setSelected(null);openEmployee(active);}}}><Maximize2 size={15}/> {active.id==="executive-female"?(panel==="brief"?"Back to chat":"Daily briefing"):"Employee workspace"}</button>
         </div>
-        <div className="sw-ai-work-summary">
-          <div className="sw-ai-work-summary-head"><strong>Assigned work</strong><span>{currentWork?.status==="ready"?`${currentWork.data.pending_count} awaiting review`:"Review-only pilot"}</span>
+        <div className={`sw-ai-work-summary ${active.id==="executive-female"&&!showAssignedWork?"sw-ai-work-summary--collapsed":""}`}>
+          <div className="sw-ai-work-summary-head">{active.id==="executive-female"?<button type="button" className="sw-ai-assigned-toggle" aria-expanded={showAssignedWork} onClick={()=>setShowAssignedWork(v=>!v)}>Assigned work {showAssignedWork?"−":"+"}</button>:<strong>Assigned work</strong>}<span>{currentWork?.status==="ready"?`${currentWork.data.pending_count} awaiting review`:"Review-only pilot"}</span>
             <button type="button" title="Refresh assigned work" aria-label="Refresh employee assignments" onClick={()=>setWorkRefresh(n=>n+1)}><RefreshCw size={13}/></button>
           </div>
           {currentWork?.status==="error"?<p role="status">Assigned work unavailable. {currentWork.message}</p>:
@@ -624,8 +625,8 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           {!messages.length && <div className="sw-ai-conversation-intro">
             <img src={active.photo} onError={e=>{if(active.fallbackPhoto&&!e.currentTarget.src.endsWith(active.fallbackPhoto))e.currentTarget.src=active.fallbackPhoto;}} alt="" aria-hidden="true"/>
             <strong>Talk with {active.name}</strong>{active.id==="executive-female"&&<button type="button" className="sw-ai-review-nav" onClick={buildSchedule} disabled={scheduleBusy}>Build my schedule</button>}
-            <p>Ask about {active.role.toLowerCase()} priorities, request a recommendation, or assign a real task using the button above.</p>
-            <small>Responses use SYNC advisory chat with a role-focused prompt. This is not a separate autonomous employee session; no business actions run from chat.</small>
+            <p>{active.id==="executive-female"?"What would you like to accomplish today?":"Ask about "+active.role.toLowerCase()+" priorities or assign work."}</p>
+            <small>{active.id==="executive-female"?"Calendar, task and delegation commands use connected tools. Other requests may be advisory.":"Advisory conversation · assignments require review."}</small>
           </div>}
           {messages.map((message,index)=><div key={index} className={`sw-ai-conversation-message sw-ai-conversation-message--${message.by}`}>
             {message.by==="assistant"&&<img src={active.photo} onError={e=>{if(active.fallbackPhoto&&!e.currentTarget.src.endsWith(active.fallbackPhoto))e.currentTarget.src=active.fallbackPhoto;}} alt="" aria-hidden="true"/>}
@@ -635,7 +636,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           <div ref={chatEndRef}/>
         </div>
         {chatError&&<p role="alert" className="sw-ai-conversation-error">{chatError}</p>}
-        {active.id==="executive-female"&&<div className="sw-ai-chat-audio"><label><input type="checkbox" checked={autoSpeak} onChange={e=>{setAutoSpeak(e.target.checked);if(!e.target.checked)stopVoice();}}/> Speak replies automatically</label><label><input type="checkbox" checked={rememberConversation} onChange={e=>setRememberConversation(e.target.checked)}/> Remember conversations</label>{rememberConversation&&<button type="button" className="sw-ai-review-nav" onClick={resetConversationMemory}>Reset recall</button>}{memoryNotice&&<span role="status">{memoryNotice}</span>}{voiceNotice&&<span role="status">{voiceNotice}</span>}</div>}
+        {active.id==="executive-female"&&<div className="sw-ai-chat-audio"><label><input type="checkbox" checked={autoSpeak} onChange={e=>{setAutoSpeak(e.target.checked);if(!e.target.checked)stopVoice();}}/> Speak replies automatically</label><label><input type="checkbox" checked={rememberConversation} onChange={e=>{const enabled=e.target.checked;setRememberConversation(enabled);try{localStorage.setItem("sw_sydney_memory_opt_in_v1",enabled?"yes":"no");}catch{}}}/> Remember conversations</label>{rememberConversation&&<button type="button" className="sw-ai-review-nav" onClick={resetConversationMemory}>Reset recall</button>}{memoryNotice&&<span role="status">{memoryNotice}</span>}{voiceNotice&&<span role="status">{voiceNotice}</span>}</div>}
         <form className="sw-ai-conversation-compose" onSubmit={sendMessage}>
           <label htmlFor="sw-ai-chat-message" className="sr-only">Message {active.name}</label>
           <textarea id="sw-ai-chat-message" ref={chatFieldRef} rows={2} maxLength={4000} value={chatDraft} onChange={event=>setChatDraft(event.target.value)}
@@ -644,7 +645,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           <button type="submit" aria-label={`Send message to ${active.name}`} disabled={!chatDraft.trim()||chatBusy}><Send size={19}/></button>
         </form>
         </>}
-        <div className="sw-ai-conversation-footnote">Advisor chat · review proposed actions before execution · pilot access only</div>
+        <div className="sw-ai-conversation-footnote">{active.id==="executive-female"?"Private pilot · verified actions and review-only advice":"Advisor chat · pilot access only"}</div>
       </section>
     </div>,document.body
   ) : null;
