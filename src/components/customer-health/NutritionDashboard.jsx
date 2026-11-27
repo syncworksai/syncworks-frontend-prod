@@ -484,6 +484,19 @@ export default function NutritionDashboard({
           </div>
 
           <div className="space-y-3">
+            <div className="rounded-[1.5rem] border border-cyan-300/20 bg-cyan-300/[0.05] p-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">Frequent meals</div>
+              <div className="mt-2 space-y-2">
+                {frequentMeals.length ? frequentMeals.map(({ meal, count }) => (
+                  <button key={`${meal?.id}-${count}`} type="button" onClick={() => onReuseMeal?.(meal)} className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-left"><span className="min-w-0 truncate text-xs font-black text-white">{meal?.description || meal?.note || "Meal"}</span><span className="ml-2 shrink-0 text-[10px] text-cyan-200">{count}x · Reuse</span></button>
+                )) : <div className="text-xs leading-5 text-slate-500">Frequent meals appear after foods are logged repeatedly.</div>}
+              </div>
+            </div>
+          </div>
+        </div>
+
+</>}
+          {fuelTab==="history" && <>          <div className="space-y-3">
             <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3">
               <div className="text-[10px] font-black uppercase tracking-[0.16em] text-fuchsia-200">Last 7 days</div>
               <div className="mt-3 space-y-2">
@@ -498,20 +511,9 @@ export default function NutritionDashboard({
               <div className="mt-2 text-[10px] text-slate-500">Average uses {averages.days} logged day{averages.days === 1 ? "" : "s"}; unlogged days are not treated as zero intake.</div>
             </div>
 
-            <div className="rounded-[1.5rem] border border-cyan-300/20 bg-cyan-300/[0.05] p-3">
-              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">Frequent meals</div>
-              <div className="mt-2 space-y-2">
-                {frequentMeals.length ? frequentMeals.map(({ meal, count }) => (
-                  <button key={`${meal?.id}-${count}`} type="button" onClick={() => onReuseMeal?.(meal)} className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-left"><span className="min-w-0 truncate text-xs font-black text-white">{meal?.description || meal?.note || "Meal"}</span><span className="ml-2 shrink-0 text-[10px] text-cyan-200">{count}x · Reuse</span></button>
-                )) : <div className="text-xs leading-5 text-slate-500">Frequent meals appear after foods are logged repeatedly.</div>}
-              </div>
-            </div>
           </div>
-        </div>
-
-</>}
-          {fuelTab==="history" && <>        <div className="mt-3">
-          <NutritionConsistencyTracker days={last7} calorieGoal={calorieGoal} proteinGoal={proteinGoal} onSelectDay={setSelectedDate} />
+        <div className="mt-3">
+          <NutritionConsistencyTracker days={last7} calorieGoal={calorieGoal} proteinGoal={proteinGoal} onSelectDay={(day)=>{setSelectedDate(day);setFuelTab("meals");}} />
         </div>
 
 </>}
