@@ -86,7 +86,7 @@ html:has(.syncfit-lobby-page),body:has(.syncfit-lobby-page){overflow:hidden!impo
 
 /* Restore global dock; keep it above the fixed lobby and below modal UI. */
 body:has(.syncfit-lobby-page) .sw-role-mobile-nav[data-syncfit-route="true"]{z-index:2147481000!important}
-body:has(.syncfit-modal-open :is(.sw-health-drawer-panel,.syncfit-fuel-sheet,.syncfit-profile-sheet,.syncfit-nutrition-sheet,.syncfit-coach-drawer,.syncfit-workout-hud,.syncfit-log-sheet)) .sw-role-mobile-nav[data-syncfit-route="true"],body:has(.syncfit-lobby .sw-health-tools-layer) .sw-role-mobile-nav[data-syncfit-route="true"]{visibility:hidden!important;pointer-events:none!important}
+body:has(.syncfit-modal-open :is(.sw-health-drawer-panel,.syncfit-fuel-sheet,.syncfit-profile-sheet,.syncfit-nutrition-sheet,.syncfit-coach-drawer,.syncfit-workout-hud,.syncfit-log-sheet)) .sw-role-mobile-nav[data-syncfit-route="true"],body:has(.syncfit-lobby .sw-health-tools-layer:not(.sw-health-recovery-layer)) .sw-role-mobile-nav[data-syncfit-route="true"]{visibility:hidden!important;pointer-events:none!important}
 .sw-role-mobile-nav[data-syncfit-route="true"]{background:#100e0deb!important;border-color:#805b49!important;box-shadow:0 8px 24px #0008!important}
 .sw-role-mobile-nav[data-syncfit-route="true"] button{color:#e2b5a0!important}
 .sw-role-mobile-nav[data-syncfit-route="true"] .sw-role-mobile-nav-center.is-sync .sw-role-mobile-nav-center-orb{border-color:#c58f77!important;background:#191411!important;box-shadow:0 0 12px #c58f7744!important}
@@ -256,3 +256,27 @@ background:#100d0b85!important;backdrop-filter:blur(10px);border-color:#c58f7755
 .syncfit-drawer .sw-health-drawer-header,.syncfit-fuel-header,.syncfit-nutrition-coach-header{position:relative;isolation:isolate}
 .syncfit-drawer .sw-health-drawer-header:after,.syncfit-fuel-header:after,.syncfit-nutrition-coach-header:after{content:"";position:absolute;left:0;right:0;height:1px;pointer-events:none;background:#e2b5a0;box-shadow:0 0 12px 2px #c58f7760;animation:syncfit-scan .85s ease-out both}
 @media(prefers-reduced-motion:reduce){.syncfit-fuel-content,.syncfit-intake-content,.syncfit-progress-content,.syncfit-drawer .sw-health-drawer-body>div,.syncfit-nutrition-coach-content,.syncfit-lobby .syncfit-arena-copy,.syncfit-lobby .syncfit-mission-grid,.syncfit-workout-hud .health-active-workout-main>div,.syncfit-portal>section>div,.syncfit-log-sheet>section>div,.syncfit-drawer .sw-health-drawer-header:after,.syncfit-fuel-header:after,.syncfit-nutrition-coach-header:after{animation:none!important}.syncfit-drawer .sw-health-drawer-header:after,.syncfit-fuel-header:after,.syncfit-nutrition-coach-header:after{display:none}}
+
+/* Calendar and recovery share the lobby environment and fixed navigation. */
+.syncfit-lobby-page .sw-health-recovery-layer{position:fixed!important;inset:0 0 calc(100px + env(safe-area-inset-bottom))!important;z-index:2147480900!important;display:flex!important;align-items:flex-end;justify-content:center}
+.syncfit-lobby-page .sw-health-recovery-drawer{position:relative!important;inset:auto!important;width:min(100%,520px)!important;max-height:100%;overflow:auto!important;background:#100d0be8!important;border-color:#c58f7780!important;animation:syncfit-expand .55s ease-out both}
+body:has(.syncfit-lobby .sw-health-recovery-layer) .sw-role-mobile-nav[data-syncfit-route="true"]{visibility:visible!important;pointer-events:auto!important}
+.syncfit-calendar{background:#100d0b!important}
+.syncfit-calendar>section{background:linear-gradient(#080706a8,#080706b8),url("/health/syncfit-bg.png") center/contain no-repeat!important;height:100dvh!important}
+.syncfit-calendar header{flex:none;background:#100d0bb8!important;border-color:#805b49!important;padding: max(12px,env(safe-area-inset-top)) 12px 8px!important}
+.syncfit-calendar-body{min-height:0;display:flex;flex-direction:column;overflow:hidden;padding-bottom:max(8px,env(safe-area-inset-bottom))!important}
+.syncfit-calendar-days{flex:none;grid-auto-rows:clamp(32px,6dvh,58px);animation:syncfit-project .65s ease-out both}
+.syncfit-calendar-days>*{min-height:0!important;background:#15110eb0!important;border-color:#805b4966!important}
+.syncfit-calendar-days>div{background:transparent!important;border-color:transparent!important}
+.syncfit-calendar-days button[aria-pressed="true"]{background:#c58f77!important;border-color:#e2b5a0!important}
+.syncfit-calendar-days button[aria-pressed="true"] span{color:#100d0c!important}
+.syncfit-calendar-selected{flex:1;min-height:0;display:flex;flex-direction:column;background:#100d0ba8!important;border-color:#805b49!important;margin-top:8px!important;padding:8px!important}
+.syncfit-calendar-entries{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.syncfit-calendar-actions{flex:none;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px!important;margin-top:6px!important}
+.syncfit-calendar-actions select{grid-column:1/-1;min-width:0;color-scheme:dark}
+.syncfit-calendar :is(button,select)[class*="border"]{border-color:#805b4980!important;color:#e2b5a0!important}
+.syncfit-calendar header button,.syncfit-calendar-actions :is(button,select){background:#191411b0!important}
+.syncfit-current-exercise{animation:syncfit-expand .65s cubic-bezier(.2,.75,.3,1) both;transform-origin:50% 0}
+#health-workout-command-center{background:#100d0bc9!important;border-color:#805b4980!important}
+#health-workout-command-center .bg-gradient-to-r{background:linear-gradient(90deg,#98634f,#e2b5a0)!important;transition:width .5s ease}
+@media(prefers-reduced-motion:reduce){.syncfit-lobby-page .sw-health-recovery-drawer,.syncfit-calendar-days,.syncfit-current-exercise{animation:none!important}}

@@ -310,7 +310,7 @@ export default function HealthMobileHome({
       <div className="syncfit-mission-grid" aria-label="Training zones">
         <button type="button" onClick={() => onOpen?.("my-workouts")}><Dumbbell/><strong>TRAIN</strong><small>{snapshot?.workout_completed_today ? "Complete" : "Workouts"}</small></button>
         <button type="button" onClick={() => onOpen?.("nutrition-dashboard")}><Utensils/><strong>FUEL</strong><small>{Math.round(protein)} / {Math.round(proteinGoal)}g P</small></button>
-        <button type="button" onClick={() => setRecoveryOpen(true)}><HeartPulse/><strong>RECOVER</strong><small>{sleepHours ? `${sleepHours}h sleep` : "Check in"}</small></button>
+        <button type="button" onClick={() => { setToolsOpen(false); setRecoveryOpen(v=>!v); }}><HeartPulse/><strong>RECOVER</strong><small>{sleepHours ? `${sleepHours}h sleep` : "Check in"}</small></button>
       </div>
       <div className="syncfit-objectives" aria-label="Daily objectives">
         <div><span>DAILY OBJECTIVES</span><button type="button" onClick={() => onOpen?.("quick-log")}>Log <ChevronRight size={14}/></button></div>

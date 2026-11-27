@@ -309,7 +309,7 @@ export default function HealthPlannerDrawer({
   const cells = calendarCells(visibleMonth);
 
   return (
-    <div className="fixed inset-0 z-[90] bg-[#020403] text-white">
+    <div className="syncfit-calendar fixed inset-0 z-[90] bg-[#020403] text-white">
       <section className="flex h-[100dvh] w-full flex-col overflow-hidden bg-[radial-gradient(circle_at_top,rgba(112,255,61,0.12),transparent_30%),linear-gradient(180deg,#050806,#020403)]">
         <header className="border-b border-lime-300/15 bg-[#030604]/96 px-3 py-3 backdrop-blur-xl sm:px-5">
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
@@ -358,7 +358,7 @@ export default function HealthPlannerDrawer({
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-5xl flex-1 overflow-y-auto px-2 py-3 pb-28 sm:px-5">
+        <main className="syncfit-calendar-body mx-auto w-full max-w-5xl flex-1 px-2 py-3 sm:px-5">
           <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-black uppercase tracking-[0.12em] text-slate-500">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
               (label) => (
@@ -369,7 +369,7 @@ export default function HealthPlannerDrawer({
             )}
           </div>
 
-          <div className="grid grid-cols-7 gap-1">
+          <div className="syncfit-calendar-days grid grid-cols-7 gap-1">
             {cells.map((date, index) => {
               if (!date) {
                 return (
@@ -389,6 +389,7 @@ export default function HealthPlannerDrawer({
                 <button
                   key={dateKey}
                   type="button"
+                  aria-pressed={selected}
                   onClick={() => setSelectedYmd(dateKey)}
                   className={`min-h-[74px] overflow-hidden rounded-xl border p-1.5 text-left transition ${
                     selected
@@ -430,7 +431,7 @@ export default function HealthPlannerDrawer({
             })}
           </div>
 
-          <section className="mt-4 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-3 sm:p-4">
+          <section className="syncfit-calendar-selected mt-4 rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-3 sm:p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-[9px] font-black uppercase tracking-[0.18em] text-lime-300">
@@ -451,7 +452,7 @@ export default function HealthPlannerDrawer({
               </div>
             </div>
 
-            <div className="mt-3 space-y-2">
+            <div className="syncfit-calendar-entries mt-3 space-y-2">
               {selectedEntries.map((item) => {
                 const canStart =
                   item.calendar_source === "plan" &&
@@ -535,7 +536,7 @@ export default function HealthPlannerDrawer({
               ) : null}
             </div>
 
-            <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+            <div className="syncfit-calendar-actions mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
               <select
                 defaultValue=""
                 onChange={(event) => {
