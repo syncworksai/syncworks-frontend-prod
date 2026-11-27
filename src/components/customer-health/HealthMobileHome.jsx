@@ -153,22 +153,7 @@ export default function HealthMobileHome({
 
   const weekPlan = Array.isArray(snapshot?.week_plan) ? snapshot.week_plan : [];
   const todayWorkout = currentDayWorkout(weekPlan, dayKey);
-  const nextWorkout = useMemo(
-    () =>
-      todayWorkout ||
-      [...weekPlan]
-        .filter(
-          (item) =>
-            item?.workout_name &&
-            !["Completed", "Skipped", "Rescheduled"].includes(item?.status) &&
-            String(item?.ymd || "") >= dayKey
-        )
-        .sort((a, b) =>
-          String(a?.ymd || "9999").localeCompare(String(b?.ymd || "9999"))
-        )[0] ||
-      null,
-    [weekPlan, todayWorkout, dayKey]
-  );
+  const nextWorkout = todayWorkout;
 
   const workoutName = nextWorkout?.workout_name || nextWorkout?.name || "Build Today's Plan";
   const workoutMinutes = num(nextWorkout?.duration_minutes ?? nextWorkout?.minutes, 45);
@@ -287,6 +272,12 @@ export default function HealthMobileHome({
       ? "Your recent training is logged. SYNC can use recovery, nutrition and performance to adjust the next session."
       : "Complete your profile, build your first plan, and log the day. SYNC will adapt workouts, nutrition and recovery around you.");
 
+  function openTodayMission() {
+    if (resumePreviousWorkout) { onStartWorkout?.(resumePreviousWorkout); return; }
+    if (decision?.needsRebuild || !todayWorkout) { onOpen?.("plan-today"); return; }
+    onStartWorkout?.(todayWorkout);
+  }
+
   function openQuick(type, fallback) {
     if (onQuickLog) {
       onQuickLog(type);
@@ -308,7 +299,7 @@ export default function HealthMobileHome({
         <button className="syncfit-arena-coach" type="button" onClick={() => onOpen?.("coach-chat")} aria-label="Talk to SYNCFIT fitness coach"><img src="/jarvis-avatars/sarahgym1.png" alt=""/><span>SYNCFIT</span></button>
       </div>
       <div className="syncfit-mission-grid" aria-label="Training zones">
-        <button type="button" onClick={() => onOpen?.("my-workouts")}><Dumbbell/><strong>TRAIN</strong><small>{snapshot?.workout_completed_today ? "Complete" : "Workouts"}</small></button>
+        <button type="button" onClick={openTodayMission}><Dumbbell/><strong>TRAIN</strong><small>{snapshot?.workout_completed_today ? "Complete" : "Today"}</small></button>
         <button type="button" onClick={() => onOpen?.("nutrition-dashboard")}><Utensils/><strong>FUEL</strong><small>{Math.round(protein)} / {Math.round(proteinGoal)}g P</small></button>
         <button type="button" onClick={() => { setToolsOpen(false); setRecoveryOpen(v=>!v); }}><HeartPulse/><strong>RECOVER</strong><small>{sleepHours ? `${sleepHours}h sleep` : "Check in"}</small></button>
       </div>
@@ -320,7 +311,7 @@ export default function HealthMobileHome({
           ["Steps", stepGoal ? clampPct(steps / stepGoal * 100) : 0, () => openQuick("steps","daily-goals")]
         ].map(([label,pct,action]) => <button type="button" key={label} onClick={action}><span>{label}</span><span className="syncfit-meter"><i style={{width:pct+"%"}}/></span><small>{pct}%</small></button>)}
       </div>
-      <button type="button" className="syncfit-start-mission" onClick={() => resumePreviousWorkout ? onStartWorkout?.(resumePreviousWorkout) : decision?.needsRebuild ? onOpen?.("planner") : nextWorkout ? onStartWorkout?.(nextWorkout) : onOpen?.("plan-today")}>{resumePreviousWorkout ? "RESUME MISSION" : nextWorkout ? "START MISSION" : "BUILD MISSION"} <ChevronRight size={20}/></button>
+      <button type="button" className="syncfit-start-mission" onClick={openTodayMission}>{resumePreviousWorkout ? "RESUME MISSION" : nextWorkout && !decision?.needsRebuild ? "START TODAY’S WORKOUT" : "PLAN TODAY’S WORKOUT"} <ChevronRight size={20}/></button>
       {toolsOpen ? (
         <div className="sw-health-tools-layer" role="presentation">
           <button type="button" className="sw-health-tools-backdrop"
@@ -338,7 +329,7 @@ export default function HealthMobileHome({
             </div>
             <div className="sw-health-tools-grid">
               {[
-                { label: "Start Workout", detail: "Launch your guided session", icon: Dumbbell, action: () => nextWorkout ? onStartWorkout?.(nextWorkout) : onOpen?.("plan-today") },
+                { label: "Start Workout", detail: "Launch your guided session", icon: Dumbbell, action: openTodayMission },
                 { label: "Workout Library", detail: "Exercises and previous sessions", icon: Activity, action: () => onOpen?.("my-workouts") },
                 { label: "Build My Plan", detail: "Set up or revise your training", icon: CalendarDays, action: () => onOpen?.("questionnaire") },
                 { label: "Nutrition", detail: "Meals, macros and food logging", icon: Utensils, action: () => onOpen?.("nutrition-dashboard") },
