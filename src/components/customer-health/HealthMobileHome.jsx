@@ -294,17 +294,18 @@ export default function HealthMobileHome({
   }
 
   return (
-    <section className="syncfit-lobby sw-health-home" aria-label="SYNCFIT training lobby">
+    <section className="syncfit-lobby" aria-label="SYNCFIT training lobby">
       <header className="syncfit-lobby-head">
-        <div><small>ATHLETE HQ</small><strong>{firstName}</strong></div>
+        <div><small>ATHLETE HQ · SYNCFIT</small><strong>{firstName}</strong></div>
         <button type="button" onClick={() => setToolsOpen(true)} aria-label="Open training tools"><Menu size={22}/></button>
       </header>
       <div className="syncfit-arena">
+        <div className="syncfit-arena-light" aria-hidden="true" />
         <img className="syncfit-arena-mark" src="/health/brand/syncfit-mark.svg" alt=""/>
         <div className="syncfit-arena-copy"><small>DAILY MISSION</small><h1>{resumePreviousWorkout ? resumePreviousWorkout.workout_name : workoutName}</h1><span>{nextWorkout ? `${workoutExercises || "—"} exercises · ${workoutMinutes} min` : "Build your personalized training plan"}</span></div>
         <button className="syncfit-arena-coach" type="button" onClick={() => onOpen?.("coach-chat")} aria-label="Talk to SYNCFIT fitness coach"><img src="/jarvis-avatars/sarahgym1.png" alt=""/><span>SYNCFIT</span></button>
       </div>
-      <div className="syncfit-mission-grid">
+      <div className="syncfit-mission-grid" aria-label="Training zones">
         <button type="button" onClick={() => onOpen?.("my-workouts")}><Dumbbell/><strong>TRAIN</strong><small>{snapshot?.workout_completed_today ? "Complete" : "Workouts"}</small></button>
         <button type="button" onClick={() => onOpen?.("nutrition-dashboard")}><Utensils/><strong>FUEL</strong><small>{Math.round(protein)} / {Math.round(proteinGoal)}g P</small></button>
         <button type="button" onClick={() => setRecoveryOpen(true)}><HeartPulse/><strong>RECOVER</strong><small>{sleepHours ? `${sleepHours}h sleep` : "Check in"}</small></button>
@@ -326,7 +327,7 @@ export default function HealthMobileHome({
             aria-label="SyncWorks Health tools">
             <div className="sw-health-tools-head">
               <div>
-                <small>SYNCWORKS HEALTH</small>
+                <small>SYNCFIT</small>
                 <h2>Command Center</h2>
                 <p>Choose where to go. Your workout stays available.</p>
               </div>
@@ -343,7 +344,7 @@ export default function HealthMobileHome({
                 { label: "Body Metrics", detail: "Measurements and health profile", icon: Scale, action: () => onOpen?.("profile-intake") },
                 { label: "Performance", detail: "Trends, progress and records", icon: BarChart3, action: () => onOpen?.("progress") },
                 { label: "Strength Progression", detail: "Personal weights, reps and improvement", icon: BarChart3, action: () => setProgressionOpen(true) },
-                { label: "SYNC AI Coach", detail: "Ask questions and adjust your plan", icon: BrainCircuit, action: () => onOpen?.("coach-chat") },
+                { label: "SYNCFIT Coach", detail: "Ask questions and adjust your plan", icon: BrainCircuit, action: () => onOpen?.("coach-chat") },
               ].map(({label,detail,icon:Icon,action}) => (
                 <button key={label} type="button" className="sw-health-tool-item"
                   onClick={() => { setToolsOpen(false); action(); }}>
@@ -365,7 +366,7 @@ export default function HealthMobileHome({
           <aside className="sw-health-tools-drawer sw-health-recovery-drawer" role="dialog"
             aria-modal="true" aria-label="Readiness and recovery details">
             <div className="sw-health-tools-head">
-              <div><small>SYNCWORKS HEALTH</small><h2>Readiness & Recovery</h2>
+              <div><small>SYNCFIT</small><h2>Readiness & Recovery</h2>
                 <p>Your current recovery snapshot and daily check-in.</p></div>
               <button type="button" className="sw-health-tools-close"
                 aria-label="Close recovery details" onClick={() => setRecoveryOpen(false)}><X size={22} /></button>
