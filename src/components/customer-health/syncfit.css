@@ -1,0 +1,19 @@
+/* Scope all SYNCFIT styling to the existing Health workspace. */
+.syncfit-theme.health-obsidian-electric {
+ --sw-health-bg:#080808;--sw-health-green:#c58f77;--sw-health-green-bright:#e2b5a0;--sw-health-green-deep:#98634f;--sw-health-green-muted:#e2b5a0;--sw-health-cyan:#c58f77;--sw-health-blue:#c58f77;--sw-health-violet:#b47c65;--sw-health-border:rgba(197,143,119,.28);--sw-health-border-strong:rgba(197,143,119,.55);--sw-health-panel:rgba(18,17,16,.94);--sw-health-glow:transparent;--sw-health-glow-strong:transparent;
+ background:#080808!important;
+}
+.syncfit-theme .sw-health-environment-tint{background:rgba(8,8,8,.65)!important}
+.syncfit-theme .sw-health-environment-image{background-color:#100d0c}
+.syncfit-theme .sw-health-home{--panel-edge:linear-gradient(130deg,#a26b55,#49352d)}
+.syncfit-theme .sw-health-hero,.syncfit-theme .sw-health-panel,.syncfit-theme :where(section,article)[class*="rounded-"]{background:rgba(18,17,16,.87)!important;border-color:#61473b!important;box-shadow:none!important}
+.syncfit-theme .sw-health-hero::after,.syncfit-theme :where(section,article)[class*="rounded-"]::after{background:none!important;filter:none!important}
+.syncfit-theme .sw-health-hero__logo{filter:none!important;opacity:.32!important}
+.syncfit-theme :is(.sw-health-eyebrow,.sw-health-section-head>span,.sw-health-section-head>button,.sw-health-flow-status,.sw-health-flow-icon,.sw-health-quick-log__icon,.sw-health-ai-pill,.sw-health-voice-pill,[class*="text-cyan-"],[class*="text-blue-"],[class*="text-emerald-"],[class*="text-lime-"],[class*="text-violet-"],[class*="text-purple-"]){color:#e2b5a0!important}
+.syncfit-theme :is(.sw-health-flow-action,.sw-health-ai-pill,.sw-health-voice-pill,.sw-health-quick-log,.sw-health-shell-tab,.sw-health-tools-drawer,[class*="bg-slate-950"],[class*="bg-cyan-"],[class*="bg-blue-"],[class*="bg-lime-"],[class*="bg-emerald-"],[class*="bg-violet-"]){background-color:#191614!important;border-color:#61473b!important;box-shadow:none!important}
+.syncfit-theme :is(.sw-health-flow-action,.sw-health-ai-pill,.sw-health-voice-pill,.sw-health-quick-log,.sw-health-shell-tab,.sw-health-tools-drawer){background:#191614!important}
+.syncfit-theme button[class*="bg-gradient"],.syncfit-theme .health-workout-start-button{background:#c58f77!important;color:#14100e!important;border-color:#e2b5a0!important;box-shadow:none!important}
+.syncfit-theme .syncfit-coach-bubble{position:fixed;right:16px;bottom:calc(100px + env(safe-area-inset-bottom,0px));z-index:90;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px;border-radius:20px;background:#11100f;border:1px solid #805b49;color:#e2b5a0;font-size:10px;font-weight:800;letter-spacing:.08em;box-shadow:0 6px 20px #0008}
+.syncfit-theme .syncfit-coach-bubble img{width:50px;height:50px;object-fit:cover;object-position:top;border-radius:50%;border:1px solid #c58f77}
+.syncfit-theme .syncfit-coach-bubble:focus-visible{outline:2px solid #e2b5a0;outline-offset:3px}
+@media(min-width:1024px){.syncfit-theme .syncfit-coach-bubble{bottom:30px;right:24px}}

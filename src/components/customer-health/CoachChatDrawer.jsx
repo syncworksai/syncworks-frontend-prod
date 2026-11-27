@@ -604,7 +604,7 @@ export default function CoachChatDrawer({
 
               <div className="min-w-0">
                 <div className="truncate text-base font-black text-white sm:text-lg">
-                  SYNC Health Assistant
+                  SYNCFIT · Fitness Coach
                 </div>
 
                 <div className="text-[10px] font-bold text-slate-400">
@@ -732,7 +732,7 @@ export default function CoachChatDrawer({
 
                 <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">
 
-                  SYNC Daily Briefing
+                  SYNCFIT Daily Briefing
 
                 </div>
 

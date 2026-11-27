@@ -9,11 +9,11 @@ function cx(...parts) {
 }
 
 const PRIMARY_ITEMS = [
-  ["Health Home", "home", HeartPulse],
+  ["SYNCFIT Home", "home", HeartPulse],
   ["Workouts", "dashboard", Dumbbell],
   ["Nutrition", "nutrition-dashboard", Utensils],
   ["Progress", "insights", Activity],
-  ["SYNC Coach", "coach-chat", Sparkles],
+  ["SYNCFIT Coach", "coach-chat", Sparkles],
   ["Profile", "profile-intake", UserRound],
 ];
 
@@ -58,8 +58,8 @@ export default function HealthAppHeader({ hasHealthAccess, syncStatus = "local",
           </button>
 
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[9px] font-black uppercase tracking-[0.18em] text-cyan-300 sm:text-[10px] sm:tracking-[0.2em]">Health & Fitness</div>
-            <div className="truncate text-[10px] text-slate-500 sm:text-xs sm:text-slate-400">Training, nutrition, recovery and SYNC coaching.</div>
+            <div className="truncate text-[9px] font-black uppercase tracking-[0.18em] text-cyan-300 sm:text-[10px] sm:tracking-[0.2em]">SYNCFIT</div>
+            <div className="truncate text-[10px] text-slate-500 sm:text-xs sm:text-slate-400">Powered by SyncWorks · Training & nutrition</div>
           </div>
 
           {hasHealthAccess ? (
