@@ -360,7 +360,7 @@ export default function WorkoutLocationCheckInDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-[145] flex items-end justify-center bg-black/90 p-3 backdrop-blur-xl sm:items-center">
+    <div className="syncfit-location-check fixed inset-0 z-[145] flex items-end justify-center bg-black/90 p-3 backdrop-blur-xl sm:items-center">
       <button
         type="button"
         aria-label="Close workout location"
