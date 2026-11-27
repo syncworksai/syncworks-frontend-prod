@@ -103,7 +103,7 @@ export default function GlobalModeBar() {
   const isGodMode = String(user?.email || "").trim().toLowerCase() === GOD_MODE_EMAIL;
   // Protected Social and Sports pages use this ONE header for navigation and notifications.
   const showConnectNotifications = location.pathname === "/connect" || location.pathname.startsWith("/connect/");
-  const hidden = ["/login", "/register", "/employee/invite", "/accept-invite"].some((path) => location.pathname.startsWith(path));
+  const hidden = /^\/customer\/health\/?$/.test(location.pathname) || ["/login", "/register", "/employee/invite", "/accept-invite"].some((path) => location.pathname.startsWith(path));
   const modes = useMemo(() => Object.entries(MODE_ROUTES).filter(([key]) => availableModes?.[key] && (key !== "PLATFORM" || isGodMode)), [availableModes, isGodMode]);
   const topLevelRoutes = new Set(["/customer", "/sbo", "/employee", "/pm", "/tenant", "/investor", "/connect", "/calendar", "/inbox", "/settings", "/profile"]);
   const showBack = !topLevelRoutes.has(location.pathname.replace(/\/+$/, "") || "/") && !location.pathname.startsWith("/platform");

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import HealthStrengthProgression from "./HealthStrengthProgression";
 import {
   Activity,
@@ -128,6 +129,7 @@ export default function HealthMobileHome({
   onQuickLog,
   onEditDailyGoals,
 }) {
+  const navigate = useNavigate();
   const [dayKey, setDayKey] = useState(() => localYmd());
   const [desktopPanel, setDesktopPanel] = useState("today");
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -297,7 +299,7 @@ export default function HealthMobileHome({
     <section className="syncfit-lobby" aria-label="SYNCFIT training lobby">
       <header className="syncfit-lobby-head">
         <div><small>ATHLETE HQ · SYNCFIT</small><strong>{firstName}</strong></div>
-        <div className="syncfit-head-actions"><button type="button" onClick={() => onOpen?.("planner")} aria-label="Weekly missions"><CalendarDays size={20}/></button><button type="button" onClick={() => onOpen?.("progress")} aria-label="Performance stats"><BarChart3 size={20}/></button><button type="button" onClick={() => setToolsOpen(true)} aria-label="Open training tools"><Menu size={22}/></button></div>
+        <div className="syncfit-head-actions"><button type="button" className="syncfit-desktop-home" onClick={() => navigate("/customer")} aria-label="Return to SyncWorks home"><Home size={20}/></button><button type="button" onClick={() => onOpen?.("planner")} aria-label="Weekly missions"><CalendarDays size={20}/></button><button type="button" onClick={() => onOpen?.("progress")} aria-label="Performance stats"><BarChart3 size={20}/></button><button type="button" onClick={() => setToolsOpen(true)} aria-label="Open training tools"><Menu size={22}/></button></div>
       </header>
       <div className="syncfit-arena">
         <div className="syncfit-arena-light" aria-hidden="true" />
