@@ -6,6 +6,7 @@ import React, {
 } from "react";
 
 import api from "../../api/client";
+import { Sparkles, LayoutDashboard, X } from "lucide-react";
 
 function safeNumber(value, fallback = 0) {
   const parsed = Number(
@@ -865,48 +866,16 @@ export default function NutritionCoachDrawer({
       />
 
       <section className="relative z-[136] h-[100dvh] w-full max-w-3xl overflow-y-auto border border-lime-300/20 bg-[radial-gradient(circle_at_top_left,rgba(112,255,61,0.10),transparent_30%),radial-gradient(circle_at_top_right,rgba(255,59,212,0.08),transparent_28%),linear-gradient(180deg,#07111f,#040812)] p-3 pb-24 shadow-[0_28px_90px_rgba(0,0,0,0.72)] sm:h-auto sm:max-h-[94vh] sm:rounded-[2rem] sm:p-6">
-        <div className="sticky top-0 z-10 -mx-3 -mt-3 flex items-start justify-between gap-2 border-b border-white/10 bg-[#07111f]/95 px-3 py-3 backdrop-blur-xl sm:static sm:mx-0 sm:mt-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
-          <div>
-            <div className="text-[10px] font-black uppercase tracking-[0.22em] text-lime-200">
-              SyncWorks Nutrition Coach
-            </div>
-
-            <h2 className="mt-0.5 text-xl font-black leading-tight text-white sm:text-3xl">
-              Tell me what you ate
-            </h2>
-
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400 sm:mt-2 sm:text-sm sm:leading-6">
-              Describe the meal naturally. The coach will estimate calories and macros, show its assumptions, and wait for your confirmation before saving.
-            </p>
+        <header className="syncfit-nutrition-coach-header">
+          <div className="syncfit-nutrition-title"><small>SYNCFIT · FUEL</small><h2>Log a meal</h2></div>
+          <div className="syncfit-icon-actions">
+            <button type="button" onClick={onOpenUpgrade} aria-label="AI nutrition plan" title="AI nutrition plan"><Sparkles size={20}/></button>
+            <button type="button" onClick={onOpenDashboard} aria-label="Nutrition dashboard" title="Nutrition dashboard"><LayoutDashboard size={20}/></button>
+            <button type="button" onClick={onClose} aria-label="Close meal logger" title="Close"><X size={22}/></button>
           </div>
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onOpenUpgrade}
-              className="h-9 rounded-xl border border-lime-300/25 bg-lime-300/10 px-2.5 text-[11px] font-black text-lime-100"
-            >
-              AI Plan
-            </button>
-
-            <button
-              type="button"
-              onClick={onOpenDashboard}
-              className="h-9 rounded-xl border border-fuchsia-300/25 bg-fuchsia-300/10 px-2.5 text-[11px] font-black text-fuchsia-100"
-            >
-              Dashboard
-            </button>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-sm font-black text-white"
-            >
-              Ã¢Å“â€¢
-            </button>
-          </div>
-        </div>
-
+          <p>Describe your meal, review the estimated macros, then confirm to save.</p>
+        </header>
+        <div className="syncfit-nutrition-coach-content">
         <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3">
           <ProgressBar
             label="Calories today"
@@ -1149,6 +1118,7 @@ export default function NutritionCoachDrawer({
 
         <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[0.07] p-4 text-xs leading-5 text-slate-400">
           Nutrition values are estimates and can vary by brand, portion size, and preparation. Review the numbers before saving. This tool supports health tracking and is not medical nutrition therapy.
+        </div>
         </div>
       </section>
     </div>
