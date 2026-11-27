@@ -496,6 +496,31 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
         if(autoSpeak)void speakText(answer,voiceKey);
         return;
       }
+      const propertyOn=/^(?:please )?(?:enable|start|turn on) (?:automatic |daily )?(?:sarah(?:'s|’s)? )?property (?:review|monitoring)$/i.test(normalized);
+      const propertyOff=/^(?:please )?(?:disable|stop|turn off) (?:automatic |daily )?(?:sarah(?:'s|’s)? )?property (?:review|monitoring)$/i.test(normalized);
+      const propertyRun=/^(?:please )?(?:run|execute) sarah(?:'s|’s)? property review$/i.test(normalized);
+      const propertyFindings=/^(?:show|read|check) sarah(?:'s|’s)? (?:property )?(?:findings|report)$/i.test(normalized);
+      const employeeStatus=/^(?:show|check) (?:my )?employee (?:status|work|reports)$/i.test(normalized);
+      if(id==="executive-female"&&(propertyOn||propertyOff||propertyRun||propertyFindings||employeeStatus)){
+        const command=propertyOn?"enable_property_review":propertyOff?"disable_property_review":propertyRun?"run_property_review":propertyFindings?"show_property_findings":"employee_status";
+        const {data}=await api.post("/sync-ai/assist/pilot/chief/execute/",{command},{timeout:30000});
+        let answer;
+        if(propertyOn||propertyOff)answer=data.enabled?"Sarah's daily property review is enabled. She'll check recorded projects, lease deadlines and previously reviewed correspondence.":"Sarah's daily property review is disabled.";
+        else if(employeeStatus)answer="There are "+data.pending+" assignments awaiting execution or review, "+data.qa_reports+" saved Kylee reports and "+data.reports_awaiting_review+" audit reports awaiting review.";
+        else {
+          const report=propertyRun?data:data.report;
+          if(!report)answer="Sarah hasn't saved a property review yet.";
+          else if(!report.property_count)answer="Sarah found no connected property records to review.";
+          else if(!report.flags?.length)answer="Sarah reviewed your recorded property operations. No flagged issues in those records. Rent reconciliation and fresh email checks are not included.";
+          else if(propertyFindings)answer=report.flags.map(p=>p.name+": "+[p.overdue_projects?p.overdue_projects+" overdue projects":null,p.leases_ending?p.leases_ending+" leases ending within 60 days":null,p.correspondence_issues?.length?p.correspondence_issues.length+" recorded correspondence issues":null].filter(Boolean).join(", ")).join("; ")+". Rent balances and fresh email have not been verified.";
+          else answer="Sarah reviewed "+report.property_count+" properties. "+report.flags.map(p=>p.name).join(", ")+" need attention. Her findings are saved; ask for Sarah's findings for details.";
+        }
+        const voiceKey="property:"+Date.now();
+        setChatHistory(previous=>({...previous,[id]:[...(previous[id]||[]),{by:"assistant",text:answer,voiceKey,execution:propertyRun||propertyFindings,link:"/pm"}]}));
+        void saveConversationTurn(question,answer);
+        if(autoSpeak)void speakText(answer,voiceKey);
+        return;
+      }
       const dailyOn=/^(?:please )?(?:enable|start|turn on) (?:automatic )?daily (?:executive |task )?review$/i.test(normalized);
       const dailyOff=/^(?:please )?(?:disable|stop|turn off) (?:automatic )?daily (?:executive |task )?review$/i.test(normalized);
       const responsibilityStatus=/^(?:show|check|list) (?:my |your )?(?:standing |ongoing )?responsibilities$/i.test(normalized);
