@@ -530,3 +530,30 @@ export function persistSessionExerciseMemory(session, history) {
   writeExerciseMemory(next);
   return next;
 }
+/** Spoken recap uses actual working sets from supplied account history only.
+ * Exact exercise names intentionally avoid conflating equipment or side variants.
+ */
+export function buildSpokenTrainingMemory(exercise, history) {
+  const name = cleanText(exercise?.substituted && exercise?.substitute_name ? exercise.substitute_name : exercise?.name);
+  const exact = v => cleanText(v).toLowerCase().replace(/\s+/g, " ");
+  if (!name) return "";
+  const sessions = (Array.isArray(history) ? history : []).filter(s => s?.status === "completed" || s?.completed_at).sort((a,b)=>String(b.completed_at || b.updated_at || "").localeCompare(String(a.completed_at || a.updated_at || "")));
+  for (const session of sessions) {
+    const row = (session.exercises || []).find(e=>exact(e.substituted && e.substitute_name ? e.substitute_name : e.name || e.exercise_name) === exact(name));
+    if (!row) continue;
+    const logs = (row.set_logs || []).filter(l=>l.set_type === "working" && cleanText(l.actual_reps ?? l.reps) && cleanText(l.actual_weight ?? l.weight));
+    if (!logs.length) continue;
+    const last = logs[logs.length-1];
+    const reps = cleanText(last.actual_reps ?? last.reps);
+    const load = cleanText(last.actual_weight ?? last.weight);
+    const effort = cleanText(last.rpe);
+    const unit = cleanText(last.weight_unit || row.weight_unit || session.weight_unit);
+    const loadText = /^(bodyweight|body weight|bw)$/i.test(load) ? "bodyweight" : /^[0-9]+(?:\.[0-9]+)?$/.test(load) && /^(lb|lbs|kg)$/i.test(unit) ? load+" "+unit : load;
+    const details = "Last time you logged "+logs.length+" working "+(logs.length===1?"set":"sets")+" of "+name+". Your final set was "+reps+" reps at "+loadText+(effort ? ", with reported effort "+effort+" out of ten" : "")+".";
+    const pain = logs.some(l=>cleanText(l.pain_score)!=="" && Number(l.pain_score)>0);
+    if (pain) return details+" Pain was reported last time. Let's check how you feel before repeating that load.";
+    if (last.reached_failure || Number(effort)>=9) return details+" That was demanding. Let's hold or reduce the load today.";
+    return details+" Let's check your recovery, form and effort before deciding whether to increase.";
+  }
+  return "I don't have a verified previous working set for "+name+". Let's establish a comfortable baseline.";
+}
