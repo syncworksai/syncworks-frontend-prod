@@ -218,14 +218,14 @@ export default function HealthProfileIntakeDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-[500] flex justify-end bg-black/80 backdrop-blur-xl">
+    <div className="syncfit-profile-sheet fixed inset-0 z-[500] flex justify-end bg-black/80 backdrop-blur-xl">
       <button type="button" aria-label="Close health profile" onClick={onClose} className="absolute inset-0" />
       <section className="relative z-[501] flex h-full w-full max-w-5xl flex-col overflow-hidden border-l border-cyan-300/20 bg-[radial-gradient(circle_at_top_left,rgba(37,135,255,.13),transparent_28%),linear-gradient(180deg,#020712,#06101e)] shadow-[-30px_0_80px_rgba(0,0,0,.65)]">
         <header className="shrink-0 border-b border-white/10 px-4 py-4 sm:px-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Your health profile</div>
-              <h2 className="mt-1 text-2xl font-black text-white sm:text-3xl">Give SYNC the data that should drive the plan</h2>
+              <h2 className="mt-1 text-2xl font-black text-white sm:text-3xl">Athlete profile</h2>
               <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-400 sm:text-sm sm:leading-6">
                 Add what you know. SYNC uses these body metrics, goals, training constraints, nutrition targets and recovery goals when building and adapting your plan.
               </p>
@@ -251,7 +251,7 @@ export default function HealthProfileIntakeDrawer({
           </div>
         </header>
 
-        <main className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-28 sm:px-6 sm:py-6">
+        <main className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-4 sm:px-6 sm:py-6">
           {tab === "body" ? (
             <div className="space-y-4">
               <Section eyebrow="Starting point" title="Body metrics & measurements" description="Measurements are optional, but they give progress another signal beyond the scale.">
@@ -376,7 +376,7 @@ export default function HealthProfileIntakeDrawer({
           ) : null}
         </main>
 
-        <footer className="absolute inset-x-0 bottom-0 z-[502] border-t border-white/10 bg-[#020712]/95 px-4 py-3 backdrop-blur-xl sm:px-6">
+        <footer className="syncfit-profile-footer shrink-0 z-[502] border-t border-white/10 bg-[#020712]/95 px-4 py-3 backdrop-blur-xl sm:px-6">
           <div className="flex items-center justify-between gap-3">
             <div className="text-[10px] text-slate-500">You can update these numbers anytime as the plan changes.</div>
             <button type="button" onClick={save} className="min-h-11 rounded-xl border border-lime-300/50 bg-lime-400/15 px-5 text-xs font-black uppercase tracking-[.12em] text-lime-100 shadow-[0_0_24px_rgba(166,255,0,.12)]">
