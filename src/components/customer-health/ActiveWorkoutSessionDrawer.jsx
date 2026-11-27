@@ -1,4 +1,5 @@
 // src/components/customer-health/ActiveWorkoutSessionDrawer.jsx
+import { createHealthCoachTurn } from "../../api/customerHealth";
 import React, {
   useEffect,
   useMemo,
@@ -3344,10 +3345,16 @@ export default function ActiveWorkoutSessionDrawer({
     return `I am tracking ${exerciseName}, your target, completed sets, effort, rest, and exercise history. Ask whether to increase weight, shorten rest, swap the exercise, explain the rep target, or give you a form cue.`;
   }
 
-  function submitAskSync(rawQuestion) {
+  async function submitAskSync(rawQuestion, useAI = true) {
     const question = String(rawQuestion || "").trim();
     if (!question) return;
-    const reply = coachReplyForQuestion(question);
+    let reply = coachReplyForQuestion(question);
+    if (useAI && !isCoachQuestion(question.toLowerCase())) {
+      try {
+        const result = await createHealthCoachTurn({ userText: question, profile: snapshot?.profile || snapshot?.health_profile || {}, snapshot: { workout_name: session?.workout_name, current_exercise: currentExercise, rest_active: session?.rest_active, set_active: session?.set_active, readiness: snapshot?.readiness }, history: [] });
+        if (String(result?.reply || "").trim()) reply = String(result.reply).trim();
+      } catch { /* retain deterministic coaching fallback */ }
+    }
     const stamp = Date.now();
 
     setAskSyncMessages((previous) => [
@@ -3490,8 +3497,19 @@ export default function ActiveWorkoutSessionDrawer({
       return;
     }
 
+    const spokenSet = command.match(/^(?:log(?: set)?[,: ]+)?(?:i (?:got|did) )?(\d{1,3})(?: reps)? (?:at|with) (\d{1,4}(?:\.\d+)?)(?: pounds| lbs?)?(?:[, ]+(?:rpe|effort) (\d{1,2}))?$/);
+    if (spokenSet && session?.pending_set_logging && currentExercise && !savingSet) {
+      const reps = Number(spokenSet[1]), weight = Number(spokenSet[2]), effort = spokenSet[3] ? Number(spokenSet[3]) : null;
+      if (reps > 0 && reps <= 100 && weight >= 0 && weight <= 2000 && effort !== null && effort >= 1 && effort <= 10) {
+        saveTimedSet({actual_reps:String(reps), reps:String(reps), actual_weight:String(weight), weight:String(weight), rpe:String(effort), ease_score:String(effort), set_type:"working"});
+        setVoiceError("");
+        return;
+      }
+      setVoiceError("Tell me reps, weight and effort from one to ten, or use the set log to confirm.");
+      return;
+    }
+
     if (isCoachQuestion(command)) {
-      setAskSyncOpen(true);
       submitAskSync(command);
       return;
     }
@@ -3614,9 +3632,7 @@ export default function ActiveWorkoutSessionDrawer({
       return;
     }
 
-    setVoiceError(
-      "Command not recognized. Try start set, finish set, pause, repeat cue, exercise info, stop rest, or finish workout."
-    );
+    submitAskSync(command);
   }
 
   function startVoiceListening() {
