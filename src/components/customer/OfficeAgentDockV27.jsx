@@ -258,18 +258,32 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   const [autoSpeak,setAutoSpeak]=useState(true);
   const [rememberConversation,setRememberConversation]=useState(()=>{try{return localStorage.getItem("sw_sydney_memory_opt_in_v1")==="yes";}catch{return false;}});
   const [showAssignedWork,setShowAssignedWork]=useState(false);
+  const [conversationId,setConversationId]=useState(()=>crypto.randomUUID());
+  const [conversationArchive,setConversationArchive]=useState([]);
+  const [archiveStatus,setArchiveStatus]=useState("");
+  const pendingMemory=useRef(Promise.resolve());
+  async function openConversations(){
+    setShowAssignedWork(true);setShowChatSettings(false);setArchiveStatus("Loading conversations…");
+    try{await pendingMemory.current;const {data}=await api.get(memoryEndpoint,{params:{view:"conversations"},timeout:15000});setConversationArchive(data.conversations||[]);setArchiveStatus("");}
+    catch{setArchiveStatus("Previous conversations could not be loaded.");}
+  }
+  function restoreConversation(thread){
+    stopVoice();setConversationId(thread.id==="legacy"?crypto.randomUUID():thread.id);
+    setChatHistory(old=>({...old,"executive-female":thread.turns.flatMap(t=>[{by:"user",text:t.question},{by:"assistant",text:t.answer}])}));
+    setChatDraft("");setPanel("chat");setShowAssignedWork(false);
+  }
   const [showChatSettings,setShowChatSettings]=useState(false);
   const [memoryNotice,setMemoryNotice]=useState("");
   const memoryEndpoint="/sync-ai/assist/pilot/chief/agent/";
   async function saveConversationTurn(question,answer){
     if(!rememberConversation)return;
     try{
-      const {data}=await api.post(memoryEndpoint,{action:"remember_turn",question,answer},{timeout:15000});
+      const pending=api.post(memoryEndpoint,{action:"remember_turn",question,answer,conversation_id:conversationId},{timeout:15000});pendingMemory.current=pending.catch(()=>{});const {data}=await pending;
       setMemoryNotice(data.saved?"Conversation remembered":data.reason||"Conversation not saved");
     }catch{setMemoryNotice("Memory save could not be verified");}
   }
   async function resetConversationMemory(){
-    try{await api.post(memoryEndpoint,{action:"reset"},{timeout:15000});setChatHistory(old=>({...old,"executive-female":[]}));setMemoryNotice("Previous saved conversation excluded from future recall. Audit records retained.");}
+    try{await api.post(memoryEndpoint,{action:"reset"},{timeout:15000});setChatHistory(old=>({...old,"executive-female":[]}));setConversationArchive([]);setConversationId(crypto.randomUUID());setMemoryNotice("Previous saved conversation excluded from future recall. Audit records retained.");}
     catch{setMemoryNotice("Memory reset could not be verified");}
   }
 
@@ -576,14 +590,14 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
               <span className="sw-ai-conversation-status">{chatBusy ? "Preparing a response…" : active.id==="executive-female"?"Executive assistant · private pilot":"Role-focused advisory chat"}</span>
             </div>
           </div>
-          <div className="sw-ai-header-actions">{active.id==="executive-female"&&<><button type="button" title="New conversation" aria-label="New conversation" disabled={chatBusy} onClick={()=>{stopVoice();setChatHistory(old=>({...old,[active.id]:[]}));setChatDraft("");setPanel("chat");setShowChatSettings(false);}}><SquarePen size={19}/></button><button type="button" title="Settings" aria-label="Sydney settings" aria-expanded={showChatSettings} onClick={()=>setShowChatSettings(v=>!v)}><Settings size={19}/></button></>}<button type="button" className="sw-ai-conversation-close" aria-label="Close employee conversation" onClick={()=>placement==="launcher"?onDismiss?.():setSelected(null)}><X size={19}/></button></div>
+          <div className="sw-ai-header-actions">{active.id==="executive-female"&&<><button type="button" title="New conversation" aria-label="New conversation" disabled={chatBusy} onClick={()=>{stopVoice();setConversationId(crypto.randomUUID());setShowAssignedWork(false);setChatHistory(old=>({...old,[active.id]:[]}));setChatDraft("");setPanel("chat");setShowChatSettings(false);}}><SquarePen size={19}/></button><button type="button" title="Settings" aria-label="Sydney settings" aria-expanded={showChatSettings} onClick={()=>setShowChatSettings(v=>!v)}><Settings size={19}/></button></>}<button type="button" className="sw-ai-conversation-close" aria-label="Close employee conversation" onClick={()=>placement==="launcher"?onDismiss?.():setSelected(null)}><X size={19}/></button></div>
         </header>
         {active.id==="executive-female"&&showChatSettings&&<div className="sw-ai-chat-audio sw-ai-settings-panel"><label><input type="checkbox" checked={autoSpeak} onChange={e=>{setAutoSpeak(e.target.checked);if(!e.target.checked)stopVoice();}}/> Speak replies automatically</label><label><input type="checkbox" checked={rememberConversation} onChange={e=>{const enabled=e.target.checked;setRememberConversation(enabled);try{localStorage.setItem("sw_sydney_memory_opt_in_v1",enabled?"yes":"no");}catch{}}}/> Remember conversations</label>{rememberConversation&&<button type="button" className="sw-ai-review-nav" onClick={resetConversationMemory}>Reset recall</button><small>New conversation clears this window, not saved recall or tasks.</small>}{memoryNotice&&<span role="status">{memoryNotice}</span>}{voiceNotice&&<span role="status">{voiceNotice}</span>}</div>}
         <div className="sw-ai-conversation-toolbar">
           <button type="button" onClick={()=>goAction("/sync/assist/assignments?new=1&role="+encodeURIComponent(active.roleKey||"CHIEF_OF_STAFF"))}><BriefcaseBusiness size={15}/> Assign work</button>
           <button type="button" onClick={()=>{if(active.id==="executive-female"){stopVoice();setScheduleOpen(false);setReadBrief(false);setReviewOpen(false);setShowPlan(false);setShowArchive(false);setTodoOpen(false);setPanel(v=>v==="brief"?"chat":"brief");}else{setSelected(null);openEmployee(active);}}}><Maximize2 size={15}/> {active.id==="executive-female"?(panel==="brief"?"Back to chat":"Daily briefing"):"Employee workspace"}</button>
         </div>
-        <div className={`sw-ai-work-summary ${active.id==="executive-female"&&!showAssignedWork?"sw-ai-work-summary--collapsed":""}`}>
+        {active.id==="executive-female"?<div className="sw-ai-history-strip"><button type="button" className="sw-ai-assigned-toggle" disabled={chatBusy} aria-expanded={showAssignedWork} onClick={()=>showAssignedWork?setShowAssignedWork(false):openConversations()}><MessageCircle size={15}/> Previous conversations <ChevronRight size={14}/></button><button type="button" className="sw-ai-history-work" onClick={()=>goAction("/sync/assist/assignments")}>{currentWork?.status==="ready"?currentWork.data.pending_count+" awaiting review":"Assigned work"}</button></div>:<div className={`sw-ai-work-summary ${active.id==="executive-female"&&!showAssignedWork?"sw-ai-work-summary--collapsed":""}`}>
           <div className="sw-ai-work-summary-head">{active.id==="executive-female"?<button type="button" className="sw-ai-assigned-toggle" aria-expanded={showAssignedWork} onClick={()=>setShowAssignedWork(v=>!v)}><BriefcaseBusiness size={14}/> Assigned work <ChevronRight size={13} className={showAssignedWork?"sw-ai-chevron-open":""}/></button>:<strong>Assigned work</strong>}<span>{currentWork?.status==="ready"?`${currentWork.data.pending_count} awaiting review`:"Review-only pilot"}</span>
             <button type="button" title="Refresh assigned work" aria-label="Refresh employee assignments" onClick={()=>setWorkRefresh(n=>n+1)}><RefreshCw size={13}/></button>
           </div>
@@ -596,7 +610,8 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
            </button>)}</div>:
            <p>No work assigned to {active.name} yet.</p>):
            <p>Loading this employee's task inbox…</p>)}
-        </div>
+        </div>}
+        {active.id==="executive-female"&&showAssignedWork&&<div className="sw-ai-history-shade" onMouseDown={e=>{if(e.target===e.currentTarget)setShowAssignedWork(false);}}><aside className="sw-ai-history-drawer" aria-label="Previous conversations"><header><strong>Previous conversations</strong><button type="button" aria-label="Close conversation history" onClick={()=>setShowAssignedWork(false)}><X size={18}/></button></header><div className="sw-ai-history-list">{archiveStatus?<p role="status">{archiveStatus}</p>:conversationArchive.length?conversationArchive.map(thread=><button type="button" key={thread.id} onClick={()=>restoreConversation(thread)}><strong>{thread.title}</strong><small>{new Date(thread.updated_at).toLocaleString()} · {thread.turns.length} turns</small><ChevronRight size={15}/></button>):<p>No saved conversations yet. Enable Remember conversations in settings to save new exchanges.</p>}</div></aside></div>}
         {panel==="brief"?<div className="sw-ai-command-body">
           <nav className="sw-ai-command-nav" aria-label="Executive workspace" onClick={e=>{if(e.target.closest("button")&&!e.target.closest("[data-schedule-build]"))setScheduleOpen(false)}}><button data-schedule-build type="button" className="sw-ai-review-nav" onClick={buildSchedule} disabled={scheduleBusy}>Build my schedule</button>
 
