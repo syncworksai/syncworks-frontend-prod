@@ -182,3 +182,30 @@ body:has(.syncfit-modal-open) .syncfit-return-chip,body:has(.syncfit-lobby .sw-h
 :is(.syncfit-drawer,.syncfit-profile-sheet,.syncfit-fuel-sheet) :is([class*="bg-amber-"],[class*="bg-cyan-"],[class*="bg-lime-"],[class*="bg-fuchsia-"],[class*="bg-emerald-"]){background-color:#c58f771a!important;border-color:#805b4980!important}
 :is(.syncfit-drawer,.syncfit-profile-sheet,.syncfit-fuel-sheet) :is([class*="text-cyan-"],[class*="text-lime-"],[class*="text-fuchsia-"],[class*="text-emerald-"]){color:#e2b5a0!important}
 @media(max-width:639px){.syncfit-drawer .sw-health-drawer-header p,.syncfit-profile-sheet header p,.syncfit-fuel-header p{font-size:11px!important;line-height:1.35!important}.syncfit-fuel-header h2,.syncfit-profile-sheet header h2{font-size:20px!important}.syncfit-profile-sheet header{padding-bottom:8px!important}.syncfit-profile-sheet header>div:last-child{margin-top:8px!important}.syncfit-fuel-actions{margin-top:5px!important}.syncfit-fuel-sheet>section{padding-top:8px!important}}
+
+
+/* Cinematic continuity: one shared environment, glass HUD, short angular transitions.
+   Animate content only, never the fixed shell or its nested fixed controls. */
+.syncfit-lobby-page .sw-health-environment-image{background-image:url("/health/syncfit-bg.png")!important;background-size:cover!important;background-position:center!important}
+.syncfit-lobby-page .sw-health-environment-tint{background:linear-gradient(180deg,#08080850,#08080812 40%,#08080880)!important}
+:is(.syncfit-drawer .sw-health-drawer-panel,.syncfit-profile-sheet>section,.syncfit-fuel-sheet>section,.syncfit-nutrition-sheet>section,.syncfit-coach-drawer>section,.syncfit-workout-hud .health-active-workout-shell,.syncfit-portal>section,.syncfit-log-sheet>section){
+background:linear-gradient(180deg,#080706a8,#08070680 45%,#080706b8),url("/health/syncfit-bg.png") center center/cover no-repeat!important;
+}
+:is(.syncfit-drawer .sw-health-drawer-header,.syncfit-profile-sheet header,.syncfit-fuel-sheet .syncfit-fuel-header,.syncfit-fixed-nav,.syncfit-fixed-footer,.syncfit-fuel-tabs,.syncfit-fuel-actions,.syncfit-profile-footer,.syncfit-coach-drawer header,.syncfit-workout-hud .health-active-workout-header){
+background:#100d0b85!important;backdrop-filter:blur(10px);border-color:#c58f7755!important;
+}
+.syncfit-fuel-sheet .syncfit-fuel-actions button{background:#18110e90!important;border-color:#c58f7780!important;color:#f2c5ad!important}
+.syncfit-fuel-sheet .syncfit-fuel-actions button:first-child{background:#c58f77!important;color:#100d0c!important}
+.syncfit-fuel-sheet .syncfit-fuel-content :is(div,section)[class*="rounded-"][class*="border"]{background:#100d0b86!important;border-color:#c58f7755!important;box-shadow:none!important}
+.syncfit-fuel-sheet .syncfit-fuel-content [class*="text-amber-"]{color:#e2b5a0!important}
+.syncfit-fuel-sheet .syncfit-fuel-content [class*="bg-amber-"]{background-color:#c58f7722!important}
+.syncfit-fuel-sheet .syncfit-fuel-content [class*="border-amber-"]{border-color:#c58f7766!important}
+.syncfit-fuel-sheet .syncfit-fuel-header{padding-top:max(18px,env(safe-area-inset-top))!important}
+.syncfit-fuel-content,.syncfit-intake-content{animation:syncfit-hud-turn .32s cubic-bezier(.2,.75,.25,1) both;transform-origin:50% 35%}
+@keyframes syncfit-hud-turn{from{opacity:0;transform:perspective(1000px) rotateY(-9deg) rotateZ(-1deg) translateX(12px) scale(.97)}to{opacity:1;transform:none}}
+:is(.syncfit-drawer,.syncfit-profile-sheet,.syncfit-fuel-sheet,.syncfit-nutrition-sheet,.syncfit-coach-drawer,.syncfit-portal,.syncfit-log-sheet){animation:syncfit-overlay-reveal .26s ease-out both}
+@keyframes syncfit-overlay-reveal{from{opacity:0}to{opacity:1}}
+.syncfit-lobby-page .syncfit-arena-light{animation:syncfit-light-drift 9s ease-in-out infinite alternate}
+:is(.syncfit-fuel-tabs,.syncfit-step-nav,.syncfit-fuel-actions) button{transition:transform .18s ease,background-color .18s ease,border-color .18s ease}
+:is(.syncfit-fuel-tabs,.syncfit-step-nav,.syncfit-fuel-actions) button:active{transform:scale(.96)}
+@media(prefers-reduced-motion:reduce){.syncfit-fuel-content,.syncfit-intake-content,:is(.syncfit-drawer,.syncfit-profile-sheet,.syncfit-fuel-sheet,.syncfit-nutrition-sheet,.syncfit-coach-drawer,.syncfit-portal,.syncfit-log-sheet),.syncfit-lobby-page .syncfit-arena-light{animation:none!important}:is(.syncfit-fuel-tabs,.syncfit-step-nav,.syncfit-fuel-actions) button{transition:none!important}}
