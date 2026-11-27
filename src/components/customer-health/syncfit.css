@@ -223,3 +223,19 @@ background:#100d0b85!important;backdrop-filter:blur(10px);border-color:#c58f7755
 :is(.syncfit-drawer,.syncfit-profile-sheet,.syncfit-fuel-sheet,.syncfit-nutrition-sheet,.syncfit-coach-drawer,.syncfit-portal,.syncfit-log-sheet){animation:syncfit-overlay-reveal .65s ease-out both}
 .syncfit-drawer .sw-health-drawer-body>div:not(.syncfit-intake-content):not(.syncfit-progress-content){animation:syncfit-hud-turn .85s cubic-bezier(.18,.65,.22,1) both}
 @media(prefers-reduced-motion:reduce){.syncfit-fuel-content,.syncfit-intake-content,.syncfit-progress-content,.syncfit-drawer .sw-health-drawer-body>div,:is(.syncfit-drawer,.syncfit-profile-sheet,.syncfit-fuel-sheet,.syncfit-nutrition-sheet,.syncfit-coach-drawer,.syncfit-portal,.syncfit-log-sheet){animation:none!important}}
+
+
+/* Responsive icon chrome and stable meal logging surface. */
+.syncfit-nutrition-sheet>section{display:flex!important;flex-direction:column!important;overflow:hidden!important;height:100dvh!important;max-height:100dvh!important;padding:0!important}
+.syncfit-nutrition-coach-header{flex:none;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding: max(16px,env(safe-area-inset-top)) 12px 12px;background:#100d0bd9;border-bottom:1px solid #805b4970;backdrop-filter:blur(10px)}
+.syncfit-nutrition-title{min-width:0}.syncfit-nutrition-title small{font-size:10px;font-weight:800;letter-spacing:.15em;color:#e2b5a0}.syncfit-nutrition-title h2{font-size:21px;font-weight:800;line-height:1.2;color:#fff}
+.syncfit-nutrition-coach-header p{grid-column:1/-1;font-size:12px;line-height:1.45;color:#c7bdb8;margin:0}
+.syncfit-icon-actions{display:flex;flex:none;gap:6px}.syncfit-icon-actions button{width:44px;height:44px;flex:none;display:grid;place-items:center;border:1px solid #805b49;border-radius:14px;background:#16110ecc;color:#e2b5a0}
+.syncfit-nutrition-coach-content{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:8px 12px calc(84px + env(safe-area-inset-bottom));animation:syncfit-hud-turn .85s cubic-bezier(.18,.65,.22,1) both}
+.syncfit-nutrition-coach-content :is(input,textarea,select){max-width:100%;min-width:0;box-sizing:border-box;color-scheme:dark}
+.syncfit-nutrition-coach-content button[class*="bg-white/"],.syncfit-nutrition-coach-content button[class*="bg-slate-"]{background:#171310!important;border-color:#805b4966!important;color:#f1e7e0!important}
+.syncfit-nutrition-coach-content :is([class*="border-amber-"],[class*="border-purple-"]){border-color:#805b4970!important}
+.syncfit-nutrition-coach-content :is([class*="bg-amber-"],[class*="bg-purple-"]){background-color:#c58f7718!important}
+.syncfit-theme :is(.sw-health-drawer-header,.health-active-workout-header) button{flex-shrink:0;overflow-wrap:normal;word-break:normal}
+@media(max-width:350px){.syncfit-icon-actions button{width:38px;height:44px}.syncfit-icon-actions{gap:3px}.syncfit-nutrition-title h2{font-size:17px}}
+@media(prefers-reduced-motion:reduce){.syncfit-nutrition-coach-content{animation:none!important}}
