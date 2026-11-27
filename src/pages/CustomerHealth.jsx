@@ -3565,6 +3565,7 @@ export default function CustomerHealth() {
               />
             </div>
           ) : (            <HealthPremiumHome
+              onStartToday={()=>{const plan=buildAdaptiveWorkout({history,snapshot:syncedSnapshot,profile,mode:"recommended"});if(plan?.exercises?.length){const item=planWorkoutForToday(plan);if(item){setActivePlannerItem(applyTrainingMode(item));setDrawer("pre-workout");}}else setDrawer("plan-today");}}
               trainerState={trainerState}
               onTrainerAccess={()=>trainerState==="free"?setDrawer("ai-coach-upgrade"):trainerState==="trainer"?setDrawer("coach-chat"):setTrainerCheck(v=>v+1)}
               profile={profile}
