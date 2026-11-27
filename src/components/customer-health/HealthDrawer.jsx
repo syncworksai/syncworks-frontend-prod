@@ -14,7 +14,7 @@ export default function HealthDrawer({
   if (!open) return null;
 
   return (
-    <div className="sw-health-drawer-layer fixed inset-0 z-[1300]">
+    <div className="syncfit-drawer sw-health-drawer-layer fixed inset-0 z-[1300]">
       <button
         type="button"
         aria-label="Back to previous Health screen"
