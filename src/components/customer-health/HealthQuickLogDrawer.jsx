@@ -126,7 +126,7 @@ function DrawerShell({
   footer,
 }) {
   return (
-    <div className="fixed inset-0 z-[130] flex items-end justify-center bg-black/85 px-3 pt-3 backdrop-blur-xl sm:items-center sm:p-4">
+    <div className="syncfit-log-sheet fixed inset-0 z-[130] flex items-end justify-center bg-black/85 px-3 pt-3 backdrop-blur-xl sm:items-center sm:p-4">
       <button
         type="button"
         aria-label="Close quick log"
