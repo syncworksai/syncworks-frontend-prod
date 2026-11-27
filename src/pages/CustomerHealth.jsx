@@ -2949,7 +2949,7 @@ export default function CustomerHealth() {
     const plannerItem = planWorkoutForToday(plan);
     if (plannerItem) {
       setActivePlannerItem(plannerItem);
-      setDrawer("workout-location");
+      setDrawer("pre-workout");
     }
   }
   function confirmPreWorkout(
