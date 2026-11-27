@@ -209,6 +209,7 @@ export default function RoleAwareMobileNav() {
 
   const hidden = useMemo(() => {
     if (!navMode) return true;
+    if (pathname === "/customer/health" || pathname === "/customer/health/") return true;
     if (pathname === "/customer/games/table") return true;
     if (pathname === "/customer/games/clubs/room" && new URLSearchParams(location.search).has("room")) return true;
     if (/^\/tickets\/[^/]+\/?$/.test(pathname)) return true;
