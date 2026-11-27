@@ -496,8 +496,8 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
         if(autoSpeak)void speakText(answer,voiceKey);
         return;
       }
-      const propertyOn=/^(?:please )?(?:enable|start|turn on) (?:automatic |daily )?(?:sarah(?:'s|’s)? )?property (?:review|monitoring)$/i.test(normalized);
-      const propertyOff=/^(?:please )?(?:disable|stop|turn off) (?:automatic |daily )?(?:sarah(?:'s|’s)? )?property (?:review|monitoring)$/i.test(normalized);
+      const propertyOn=/^(?:please )?(?:enable|start|turn on) (?:automatic |daily )?(?:sarah(?:'s|’s)? )?(?:automatic |daily )?property (?:review|monitoring)$/i.test(normalized);
+      const propertyOff=/^(?:please )?(?:disable|stop|turn off) (?:automatic |daily )?(?:sarah(?:'s|’s)? )?(?:automatic |daily )?property (?:review|monitoring)$/i.test(normalized);
       const propertyRun=/^(?:please )?(?:run|execute) sarah(?:'s|’s)? property review$/i.test(normalized);
       const propertyFindings=/^(?:show|read|check) sarah(?:'s|’s)? (?:property )?(?:findings|report)$/i.test(normalized);
       const employeeStatus=/^(?:show|check) (?:my )?employee (?:status|work|reports)$/i.test(normalized);
