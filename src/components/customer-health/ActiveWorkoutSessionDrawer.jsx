@@ -4220,6 +4220,9 @@ export default function ActiveWorkoutSessionDrawer({
     playWorkoutCoachMessage({
       text:
         buildImmediateSetCoachMessage({
+          history,
+          session,
+          timed: isTimedExercise,
           exercise:
             currentExercise,
           savedSet:

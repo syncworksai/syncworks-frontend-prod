@@ -194,95 +194,51 @@ export function mergeLiveTrainingWithHistory(
     : [liveSession, ...rows];
 }
 
-export function buildImmediateSetCoachMessage({
-  exercise,
-  savedSet,
-  suggestion,
-  restSeconds = 0,
-  exerciseFinished = false,
-  nextExerciseName = "",
-}) {
-  const name =
-    exercise?.substitute_name ||
-    exercise?.name ||
-    "That exercise";
-
-  const weight =
-    savedSet?.actual_weight ??
-    savedSet?.weight ??
-    "";
-
-  const reps =
-    savedSet?.actual_reps ??
-    savedSet?.reps ??
-    "";
-
-  const rpe = safeNumber(
-    savedSet?.rpe ??
-      savedSet?.ease_score,
-    0
-  );
-
-  const pain = safeNumber(
-    savedSet?.pain_score,
-    0
-  );
-
-  const completedLine = `${name}. ${reps || "Set"} reps at ${
-    weight || "bodyweight"
-  }${weight ? " pounds" : ""} saved.`;
-
-  if (pain >= 3) {
-    return `${completedLine} Pain was reported. Reduce the load or switch to a pain-free variation.`;
+// Compare like-for-like working sets from the latest completed session.
+function numeric(value) {
+  if (value == null || !String(value).trim() || !/^\d+(\.\d+)?$/.test(String(value).trim())) return null;
+  return Number(value);
+}
+function exactName(e) {
+  return String(e?.substituted && e?.substitute_name ? e.substitute_name : e?.name || e?.exercise_name || "").trim().toLowerCase().replace(/\s+/g," ");
+}
+function actual(log, key) { return log?.["actual_"+key] ?? log?.[key]; }
+function isWorking(log) { return String(log?.set_type || "working").toLowerCase() === "working"; }
+function unitOf(log, exercise, session) { const u=String(log?.weight_unit || exercise?.weight_unit || session?.weight_unit || "").toLowerCase(); return u==="lbs"?"lb":u; }
+export function compareCompletedWorkingSet({exercise,savedSet,history,session}) {
+  const name=exactName(exercise);
+  const ordinal=(exercise?.set_logs || []).filter(isWorking).length+1;
+  if (!name || !isWorking(savedSet)) return {text:"", comparable:false};
+  const rows=(Array.isArray(history)?history:[]).filter(h=> (h?.status==="completed" || h?.completed_at) && String(h?.id || h?.session_id || "")!==String(session?.id || "")).sort((a,b)=>String(b.completed_at || b.updated_at || "").localeCompare(String(a.completed_at || a.updated_at || "")));
+  for(const h of rows) {
+    const e=(h.exercises || []).find(x=>exactName(x)===name);
+    if(!e) continue;
+    const logs=(e.set_logs || []).filter(isWorking);
+    if(!logs.length) continue;
+    const prior=logs[ordinal-1];
+    if(!prior) return {text:"No matching set number from your last session.",comparable:false};
+    const w=numeric(actual(savedSet,"weight")), pw=numeric(actual(prior,"weight")), reps=numeric(actual(savedSet,"reps")), pr=numeric(actual(prior,"reps"));
+    const u=unitOf(savedSet,exercise,session), pu=unitOf(prior,e,h);
+    if(w===null || pw===null || reps===null || pr===null || u!==pu) return {text:"Last session is recorded, but these sets aren't directly comparable.",comparable:false};
+    if(!u && w!==pw) return {text:"Weight units are not verified, so I won't compare the loads.",comparable:false};
+    const text=w===pw ? (reps===pr?"You matched the same set last time.":(reps>pr?"That's "+(reps-pr)+" more reps":"That's "+(pr-reps)+" fewer reps")+" at the same recorded load.") : "Last time this set was "+pr+" reps at "+pw+" "+u+".";
+    return {text,comparable:true};
   }
-
-  if (exerciseFinished && nextExerciseName) {
-    return `${completedLine} Strong work. ${name} is complete. Next is ${nextExerciseName}.`;
-  }
-
-  if (exerciseFinished) {
-    return `${completedLine} ${name} is complete. Finish the workout review when you are ready.`;
-  }
-
-  const targetWeight =
-    suggestion?.target_weight ??
-    suggestion?.weight ??
-    exercise?.current_target_weight ??
-    exercise?.planned_weight ??
-    "";
-
-  const targetReps =
-    suggestion?.target_reps ??
-    suggestion?.reps ??
-    exercise?.current_target_reps ??
-    exercise?.planned_reps ??
-    "";
-
-  let direction = "";
-
-  if (suggestion?.action === "increase") {
-    direction = targetWeight
-      ? `You earned a progression. Move to ${targetWeight} pounds and target ${targetReps || reps} clean reps.`
-      : "You earned a progression. Keep the load and add one or two clean reps.";
-  } else if (
-    suggestion?.action === "reduce" ||
-    rpe >= 9
-  ) {
-    direction = `That was a hard set. Keep the same load or reduce slightly and target ${targetReps || reps} clean reps.`;
-  } else if (rpe > 0 && rpe <= 7) {
-    direction = targetWeight
-      ? `You had more available. Use ${targetWeight} pounds if it is available, or keep the load and increase the rep target.`
-      : "You had more available. Keep the movement controlled and increase the rep target.";
-  } else {
-    direction = "Stay with the current target and make the next set cleaner.";
-  }
-
-  const restLine =
-    restSeconds > 0
-      ? `You have ${restSeconds} seconds to recover.`
-      : "";
-
-  return [completedLine, direction, restLine]
-    .filter(Boolean)
-    .join(" ");
+  return {text:"This is your starting baseline for this exercise.",comparable:false};
+}
+export function buildImmediateSetCoachMessage({exercise,savedSet,suggestion,restSeconds=0,exerciseFinished=false,nextExerciseName="",history,session,timed=false}) {
+  const reps=numeric(actual(savedSet,"reps")), weight=numeric(actual(savedSet,"weight"));
+  const effort=numeric(savedSet?.rpe), pain=numeric(savedSet?.pain_score);
+  const form=String(savedSet?.form_quality||"").toLowerCase();
+  if(pain!==null && pain>0) return "Set recorded. Stop that movement for now and assess the pain before continuing.";
+  if(timed || !isWorking(savedSet)) return "Movement recorded. Recover comfortably before continuing.";
+  const comparison=compareCompletedWorkingSet({exercise,savedSet,history,session});
+  const rest=restSeconds>0?" Rest for "+restSeconds+" seconds.":"";
+  if(exerciseFinished) return "Set recorded. "+comparison.text+(nextExerciseName?" Next is "+nextExerciseName+".":" Exercise complete.")+rest;
+  const clean=["good","great","clean","excellent"].includes(form);
+  let direction="Keep the current target until we confirm effort, form and recovery.";
+  if(savedSet?.reached_failure || (effort!==null && effort>=9) || form==="poor") direction="That was demanding. Hold or reduce the load for the next set.";
+  else if(clean && pain===0 && effort!==null && effort>=1 && effort<=6 && reps!==null && weight!==null) direction="Nice controlled set. If you're recovered, consider a small increase, or repeat the same load for "+reps+" clean reps.";
+  else if(clean && pain===0 && effort!==null && effort>6 && effort<9 && reps!==null) direction="Stay at the same load and aim for "+reps+" controlled reps.";
+  return ["Set recorded.",comparison.text,direction,rest].filter(Boolean).join(" ");
 }
