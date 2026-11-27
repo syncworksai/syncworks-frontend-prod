@@ -30,6 +30,9 @@ export default function HealthPremiumHome({
   history = [],
   onOpen,
   onStartWorkout,
+  trainerState = "checking",
+  onTrainerAccess,
+  onStartToday,
   onShowInsights,
   onQuickLog,
   onEditDailyGoals,
@@ -187,6 +190,9 @@ export default function HealthPremiumHome({
       snapshot={guardedSnapshot}
       history={history}
       decision={decision}
+      trainerState={trainerState}
+      onTrainerAccess={onTrainerAccess}
+      onStartToday={onStartToday}
       onOpen={onOpen}
       onStartWorkout={guardedStartWorkout}
       onShowInsights={onShowInsights}
