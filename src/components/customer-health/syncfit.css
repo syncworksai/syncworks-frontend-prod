@@ -86,7 +86,7 @@ html:has(.syncfit-lobby-page),body:has(.syncfit-lobby-page){overflow:hidden!impo
 
 /* Restore global dock; keep it above the fixed lobby and below modal UI. */
 body:has(.syncfit-lobby-page) .sw-role-mobile-nav[data-syncfit-route="true"]{z-index:2147481000!important}
-body:has(.syncfit-modal-open) .sw-role-mobile-nav[data-syncfit-route="true"],body:has(.syncfit-lobby .sw-health-tools-layer) .sw-role-mobile-nav[data-syncfit-route="true"]{visibility:hidden!important;pointer-events:none!important}
+body:has(.syncfit-modal-open :is(.sw-health-drawer-panel,.syncfit-fuel-sheet,.syncfit-profile-sheet,.syncfit-nutrition-sheet,.syncfit-coach-drawer,.syncfit-workout-hud,.syncfit-log-sheet)) .sw-role-mobile-nav[data-syncfit-route="true"],body:has(.syncfit-lobby .sw-health-tools-layer) .sw-role-mobile-nav[data-syncfit-route="true"]{visibility:hidden!important;pointer-events:none!important}
 .sw-role-mobile-nav[data-syncfit-route="true"]{background:#100e0deb!important;border-color:#805b49!important;box-shadow:0 8px 24px #0008!important}
 .sw-role-mobile-nav[data-syncfit-route="true"] button{color:#e2b5a0!important}
 .sw-role-mobile-nav[data-syncfit-route="true"] .sw-role-mobile-nav-center.is-sync .sw-role-mobile-nav-center-orb{border-color:#c58f77!important;background:#191411!important;box-shadow:0 0 12px #c58f7744!important}
@@ -209,3 +209,17 @@ background:#100d0b85!important;backdrop-filter:blur(10px);border-color:#c58f7755
 :is(.syncfit-fuel-tabs,.syncfit-step-nav,.syncfit-fuel-actions) button{transition:transform .18s ease,background-color .18s ease,border-color .18s ease}
 :is(.syncfit-fuel-tabs,.syncfit-step-nav,.syncfit-fuel-actions) button:active{transform:scale(.96)}
 @media(prefers-reduced-motion:reduce){.syncfit-fuel-content,.syncfit-intake-content,:is(.syncfit-drawer,.syncfit-profile-sheet,.syncfit-fuel-sheet,.syncfit-nutrition-sheet,.syncfit-coach-drawer,.syncfit-portal,.syncfit-log-sheet),.syncfit-lobby-page .syncfit-arena-light{animation:none!important}:is(.syncfit-fuel-tabs,.syncfit-step-nav,.syncfit-fuel-actions) button{transition:none!important}}
+
+/* Fit full artwork without a second visible fallback layer; softly fill unused edges. */
+.syncfit-lobby-page .sw-health-environment-image{background-image:url("/health/syncfit-bg.png"),linear-gradient(#0b0908,#18100b)!important;background-size:contain,cover!important;background-position:center!important;background-repeat:no-repeat!important}
+:is(.syncfit-drawer .sw-health-drawer-panel,.syncfit-profile-sheet>section,.syncfit-fuel-sheet>section,.syncfit-nutrition-sheet>section,.syncfit-coach-drawer>section,.syncfit-workout-hud .health-active-workout-shell,.syncfit-portal>section,.syncfit-log-sheet>section){background-image:linear-gradient(180deg,#080706a8,#08070680 45%,#080706b8),url("/health/syncfit-bg.png")!important;background-size:cover,contain!important;background-color:#0b0908!important;background-position:center!important;background-repeat:no-repeat!important}
+.syncfit-fixed-nav .syncfit-fuel-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+.syncfit-save-measure{width:100%;min-height:44px;border-radius:12px;background:#c58f77;color:#100d0c;font-weight:800}
+.syncfit-drawer .sw-health-drawer-back{background:#100d0b85!important;border-color:#c58f7780!important;color:#e2b5a0!important}
+.syncfit-lobby-page .syncfit-head-actions button:focus-visible{outline:2px solid #e2b5a0;outline-offset:2px}
+.syncfit-lobby-page .syncfit-head-actions button{border-color:#c58f7760!important}
+.syncfit-fuel-content,.syncfit-intake-content,.syncfit-progress-content{animation:syncfit-hud-turn .85s cubic-bezier(.18,.65,.22,1) both;transform-origin:50% 40%}
+@keyframes syncfit-hud-turn{0%{opacity:.15;transform:perspective(850px) rotateY(-30deg) rotateZ(-3deg) translateX(22px) scale(.91)}45%{opacity:.85;transform:perspective(850px) rotateY(5deg) scale(1.01)}100%{opacity:1;transform:none}}
+:is(.syncfit-drawer,.syncfit-profile-sheet,.syncfit-fuel-sheet,.syncfit-nutrition-sheet,.syncfit-coach-drawer,.syncfit-portal,.syncfit-log-sheet){animation:syncfit-overlay-reveal .65s ease-out both}
+.syncfit-drawer .sw-health-drawer-body>div:not(.syncfit-intake-content):not(.syncfit-progress-content){animation:syncfit-hud-turn .85s cubic-bezier(.18,.65,.22,1) both}
+@media(prefers-reduced-motion:reduce){.syncfit-fuel-content,.syncfit-intake-content,.syncfit-progress-content,.syncfit-drawer .sw-health-drawer-body>div,:is(.syncfit-drawer,.syncfit-profile-sheet,.syncfit-fuel-sheet,.syncfit-nutrition-sheet,.syncfit-coach-drawer,.syncfit-portal,.syncfit-log-sheet){animation:none!important}}
