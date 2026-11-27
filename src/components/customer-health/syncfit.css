@@ -140,3 +140,20 @@ body:has(.syncfit-modal-open) .syncfit-return-chip,body:has(.syncfit-lobby .sw-h
 
 @media(max-width:1023px){.syncfit-lobby-page .syncfit-head-actions .syncfit-desktop-home{display:none}}
 @media(min-width:1024px){.syncfit-lobby-page .syncfit-lobby{max-width:1200px;grid-template-columns:minmax(130px,1fr) minmax(0,3fr) minmax(130px,1fr);grid-template-rows:auto minmax(0,1fr) auto;gap:12px}.syncfit-lobby-head{grid-column:1/-1}.syncfit-arena{grid-column:2;grid-row:2}.syncfit-mission-grid{grid-column:1;grid-row:2;display:flex;flex-direction:column;justify-content:center}.syncfit-objectives{grid-column:3;grid-row:2;align-self:center}.syncfit-start-mission{grid-column:2;grid-row:3}}
+
+
+/* Training and fuel: consistent copper palette, fixed chrome, scrollable detail only. */
+:is(.syncfit-workout-hud,.syncfit-log-sheet,.syncfit-nutrition-sheet,.syncfit-fuel-sheet) :is([class*="border-cyan-"],[class*="border-lime-"],[class*="border-fuchsia-"],[class*="border-emerald-"],[class*="border-purple-"],[class*="border-[#39ff88]"],[class*="border-[#65ff9a]"]){border-color:#a6745d80!important}
+:is(.syncfit-workout-hud,.syncfit-log-sheet,.syncfit-nutrition-sheet,.syncfit-fuel-sheet) :is([class*="text-cyan-"],[class*="text-lime-"],[class*="text-fuchsia-"],[class*="text-emerald-"],[class*="text-purple-"],[class*="text-[#8affb4]"]){color:#e2b5a0!important}
+:is(.syncfit-workout-hud,.syncfit-log-sheet,.syncfit-nutrition-sheet,.syncfit-fuel-sheet) :is([class*="bg-cyan-"],[class*="bg-lime-"],[class*="bg-fuchsia-"],[class*="bg-emerald-"],[class*="bg-purple-"],[class*="bg-[#39ff88]/"]){background:#c58f771a!important}
+:is(.syncfit-workout-hud,.syncfit-log-sheet,.syncfit-nutrition-sheet,.syncfit-fuel-sheet) :is([class*="shadow-[0_0_"]){box-shadow:none!important}
+.syncfit-workout-hud,.syncfit-workout-hud .health-active-workout-shell{background:#0c0b0a!important}
+.syncfit-workout-hud .health-active-workout-header{background:#14110f!important;border-color:#805b49!important;padding-top:max(10px,env(safe-area-inset-top))!important}
+.syncfit-workout-hud .health-active-workout-main{min-height:0;overscroll-behavior:contain}
+.syncfit-workout-hud button[class*="bg-[#39ff88]"]:not([class*="bg-[#39ff88]/"]){background:#c58f77!important;color:#100d0c!important}
+.syncfit-workout-hud :is(div,section)[class*="bg-[#020"],.syncfit-workout-hud :is(div,section)[class*="bg-[#040"],.syncfit-workout-hud :is(div,section)[class*="bg-[#030"]{background:#14110f!important}
+:is(.syncfit-log-sheet,.syncfit-nutrition-sheet,.syncfit-fuel-sheet)>section{background:#14110f!important;border-color:#805b49!important;overscroll-behavior:contain}
+:is(.syncfit-nutrition-sheet,.syncfit-fuel-sheet)>section>div.sticky{background:#14110f!important;padding-top:max(12px,env(safe-area-inset-top))!important}
+.syncfit-log-sheet>section{max-height:calc(100dvh - max(12px,env(safe-area-inset-top)))!important}
+.syncfit-log-sheet>section>div.sticky{background:#14110f!important;padding-bottom:max(12px,env(safe-area-inset-bottom))!important}
+:is(.syncfit-log-sheet,.syncfit-nutrition-sheet,.syncfit-fuel-sheet) button:focus-visible,.syncfit-workout-hud button:focus-visible{outline:2px solid #e2b5a0;outline-offset:2px}
