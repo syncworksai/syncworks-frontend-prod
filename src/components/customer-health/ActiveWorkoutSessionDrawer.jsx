@@ -2676,6 +2676,8 @@ export default function ActiveWorkoutSessionDrawer({
   const latestSessionRef = useRef(null);
   const primaryActionLockRef = useRef(false);
   const voiceRecognitionRef = useRef(null);
+  const coachTurnRef = useRef(0);
+  useEffect(() => () => { coachTurnRef.current += 1; }, [open]);
   const voiceListenTimeoutRef = useRef(null);
 
   const lastExerciseCueRef = useRef("");
@@ -3290,14 +3292,13 @@ export default function ActiveWorkoutSessionDrawer({
     const previous = currentExercise?.previous_performance || null;
     const recommendation = currentExercise?.memory_recommendation || null;
 
-    if (question.includes("should i increase") || question.includes("increase the weight") || question.includes("feel stronger")) {
-      if (recommendation?.weight) {
-        return `Your logged history supports ${recommendation.weight} pounds for ${recommendation.reps || currentReps || "the planned reps"}. ${recommendation.reason || "Use the increase only if your warm-up and form feel clean."}`;
-      }
-      if (currentWeight > 0) {
-        return `You do not have enough clean history for an automatic jump yet. Complete this set at ${currentWeight} pounds around effort 7. If form stays clean, add 5 pounds next set.`;
-      }
-      return "Use a comfortable working load around effort 6 to 8. This is a baseline set, not a max-out attempt.";
+    if (/should i (?:increase|add weight|go heavier)|increase the weight|feel stronger/.test(question)) {
+      const logs = currentExercise?.set_logs || [];
+      const last = logs[logs.length - 1];
+      if (!last || !["good","great","clean","excellent"].includes(String(last.form_quality || "").toLowerCase()) || last.pain_score == null || last.pain_score === "" || Number(last.pain_score) !== 0 || last.reached_failure) return "Hold that weight for now. Tell me how your form and pain felt before we increase.";
+      const effort = Number(last.rpe || last.ease_score);
+      if (!(effort > 0 && effort <= 6)) return "Keep the load steady. Let's get another clean set.";
+      return "Nice work! Check the next-set recommendation. Only increase if you feel recovered and your form stays clean.";
     }
 
     if (question.includes("shoulder") && (question.includes("tight") || question.includes("hurt") || question.includes("pain"))) {
@@ -3318,13 +3319,11 @@ export default function ActiveWorkoutSessionDrawer({
     }
 
     if (question.includes("30 minutes") || question.includes("short on time") || question.includes("less time")) {
-      return "Keep the main working exercises, shorten rest by 15 to 20 seconds, and skip optional accessories. I will prioritize the highest-value sets first.";
+      return "Prioritize the main exercises and skip optional accessories if needed. Keep enough rest for clean reps.";
     }
 
     if (question.includes("shorter") && question.includes("rest")) {
-      const nextRest = Math.max(30, Number(currentExercise?.rest_seconds || 60) - 15);
-      patchExercise("rest_seconds", nextRest);
-      return `Rest for ${nextRest} seconds after this exercise. I reduced it by 15 seconds while keeping enough recovery for quality reps.`;
+      return "Keep the planned rest for now. If you feel fully recovered, you can adjust the rest timer in your workout controls.";
     }
 
     if (question.includes("focus") || question.includes("cue") || question.includes("form")) {
@@ -3348,13 +3347,19 @@ export default function ActiveWorkoutSessionDrawer({
   async function submitAskSync(rawQuestion, useAI = true) {
     const question = String(rawQuestion || "").trim();
     if (!question) return;
+    const turn = ++coachTurnRef.current;
     let reply = coachReplyForQuestion(question);
-    if (useAI && !isCoachQuestion(question.toLowerCase())) {
+    const urgent = /chest pain|faint|severe shortness of breath|cannot breathe|can.t breathe/i.test(question);
+    const painReported = /\b(?:pain|hurts?|injur(?:y|ed)|dizzy|dizziness)\b/i.test(question);
+    if (urgent) reply = "Stop exercising now. Seek emergency medical help.";
+    else if (painReported) reply = "Stop that movement for now. Tell me where it hurts before we continue.";
+    if (useAI && !urgent && !painReported && !isCoachQuestion(question.toLowerCase())) {
       try {
-        const result = await createHealthCoachTurn({ userText: question, profile: snapshot?.profile || snapshot?.health_profile || {}, snapshot: { workout_name: session?.workout_name, current_exercise: currentExercise, rest_active: session?.rest_active, set_active: session?.set_active, readiness: snapshot?.readiness }, history: [] });
+        const result = await createHealthCoachTurn({ userText: question, profile: snapshot?.profile || snapshot?.health_profile || {}, snapshot: { workout_name: session?.workout_name, current_exercise: currentExercise, rest_active: session?.rest_active, set_active: session?.set_active, readiness: snapshot?.readiness }, history: askSyncMessages.slice(-6).map(m=>({role:m.role,content:m.text})) });
         if (String(result?.reply || "").trim()) reply = String(result.reply).trim();
       } catch { /* retain deterministic coaching fallback */ }
     }
+    if (turn !== coachTurnRef.current) return;
     const stamp = Date.now();
 
     setAskSyncMessages((previous) => [
@@ -3498,6 +3503,12 @@ export default function ActiveWorkoutSessionDrawer({
     }
 
     const spokenSet = command.match(/^(?:log(?: set)?[,: ]+)?(?:i (?:got|did) )?(\d{1,3})(?: reps)? (?:at|with) (\d{1,4}(?:\.\d+)?)(?: pounds| lbs?)?(?:[, ]+(?:rpe|effort) (\d{1,2}))?$/);
+    if (/\b(?:pain|hurts?|injur(?:y|ed)|dizzy|dizziness|faint|chest pain|cannot breathe|can.t breathe)\b/i.test(command)) {
+      if (session && !session.paused) setSession(toggleSessionPause(session));
+      submitAskSync(command, false);
+      return;
+    }
+
     if (spokenSet && session?.pending_set_logging && currentExercise && !savingSet) {
       const reps = Number(spokenSet[1]), weight = Number(spokenSet[2]), effort = spokenSet[3] ? Number(spokenSet[3]) : null;
       if (reps > 0 && reps <= 100 && weight >= 0 && weight <= 2000 && effort !== null && effort >= 1 && effort <= 10) {
