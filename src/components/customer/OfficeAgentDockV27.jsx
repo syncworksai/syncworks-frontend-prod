@@ -483,6 +483,18 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
         if(autoSpeak)void speakText(answer,voiceKey);
         return;
       }
+      if(id==="executive-female"&&/^(?:please )?(?:assign|ask|delegate to|coordinate|run|prepare|review)\s/i.test(normalized)&&normalized.length<=500){
+        const {data:receipt}=await api.post("/sync-ai/assist/pilot/chief/orchestrate/",{objective:normalized,request_id:crypto.randomUUID()},{timeout:25000});
+        if(receipt.handled){
+          const answer=receipt.message;
+          const voiceKey="orchestration:"+Date.now();
+          setChatHistory(previous=>({...previous,[id]:[...(previous[id]||[]),{by:"assistant",text:answer,voiceKey,execution:true,link:receipt.url||(receipt.kind==="goal"?"/sync/assist/daily":"/sync/assist/assignments")}]}));
+          window.dispatchEvent(new Event("syncworks:tasks-changed"));
+          void saveConversationTurn(question,answer);
+          if(autoSpeak)void speakText(answer,voiceKey);
+          return;
+        }
+      }
       // Keep conversational context bounded and avoid sending unnecessary historical data.
       let executiveContext="";
       if(id==="executive-female"){
