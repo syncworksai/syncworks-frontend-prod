@@ -53,7 +53,7 @@ import ExerciseLibraryDrawer from "../components/customer-health/ExerciseLibrary
 import AiCoachDrawer from "../components/customer-health/AiCoachDrawer";
 import CoachChatDrawer from "../components/customer-health/CoachChatDrawer";
 import ActiveWorkoutSessionDrawer from "../components/customer-health/ActiveWorkoutSessionDrawer";
-import HealthMobileQuickNav from "../components/customer-health/HealthMobileQuickNav";
+
 import SyncWorksAffiliateStore from "../components/store/SyncWorksAffiliateStore";
 import HealthReleaseUpdateModal, {
   HEALTH_RELEASE_UPDATE_ID,
@@ -3418,7 +3418,7 @@ export default function CustomerHealth() {
     !!syncedSnapshot?.coach_plan_proposal;
 
   return (
-    <div className={`syncfit-theme health-ui-polish health-obsidian-electric min-h-dvh overflow-x-hidden bg-[#020617] pb-24 text-slate-100 lg:pb-0 ${hasHealthAccess && healthView === "home" ? "syncfit-lobby-page" : ""}`}>
+    <div className={`syncfit-theme health-ui-polish health-obsidian-electric min-h-dvh overflow-x-hidden bg-[#020617] pb-24 text-slate-100 lg:pb-0 ${hasHealthAccess && healthView === "home" ? "syncfit-lobby-page" : ""} ${drawer || quickLogType || releaseUpdateOpen ? "syncfit-modal-open" : ""}`}>
       <div className="pointer-events-none fixed inset-0" aria-hidden="true">
         <div
           className="absolute inset-0 sw-health-environment-image"
@@ -4322,30 +4322,7 @@ export default function CustomerHealth() {
           />
 
           {healthView !== "home" && !drawer && !quickLogType && !releaseUpdateOpen && <button type="button" className="syncfit-coach-bubble" aria-label="Open SYNCFIT fitness coach" onClick={() => handleDashboardOpen("coach-chat")}><img src="/jarvis-avatars/sarahgym1.png" alt="" /><span>SYNCFIT</span></button>}
-          {!drawer && !quickLogType && !releaseUpdateOpen && <HealthMobileQuickNav
-            onOpen={handleDashboardOpen}
-            onLog={() => setQuickLogType("menu")}
-            onOpenSync={() => {
-              const briefing =
-                buildHomeSyncBriefing({
-                  profile,
-                  snapshot: syncedSnapshot,
-                  workout: mobileNextSession,
-                });
 
-              setHealthView("home");
-              setDrawer("coach-chat");
-
-              stopCoachVoice();
-            }}
-            nextSession={
-              mobileNextSession
-            }
-            hasCoachProposal={
-              hasCoachProposal
-            }
-            activeView={healthView}
-          />}
         </>
       ) : null}
 
