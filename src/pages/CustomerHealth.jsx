@@ -2942,22 +2942,15 @@ export default function CustomerHealth() {
     }));
 
     setDrawer("");
+    return plannerItem;
   }
 
   function planAndStartWorkout(plan) {
-    planWorkoutForToday(plan);
-
-    const now = new Date();
-
-    startAdaptiveWorkout({
-      ...plan,
-      title:
-        plan?.title ||
-        "Adaptive Workout",
-      ymd: todayYmd(),
-      time:
-        now.toTimeString().slice(0, 5),
-    });
+    const plannerItem = planWorkoutForToday(plan);
+    if (plannerItem) {
+      setActivePlannerItem(plannerItem);
+      setDrawer("workout-location");
+    }
   }
   function confirmPreWorkout(
     checkIn = {}
