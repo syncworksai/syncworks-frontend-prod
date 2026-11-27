@@ -479,6 +479,24 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
       const taskMatch=normalized.match(/^mark (.+) as (?:completed|done)$/i)||normalized.match(/^(?:complete|check off) (?:the task )?(.+)$/i);
       const sportsImport=/^(?:please )?(?:add|import|refresh|sync|update) (?:all )?(?:my|the) (?:upcoming )?(?:sports|favorite teams’|favorite teams\x27) (?:games|schedule|calendar)(?: to (?:my|the) calendar)?$/i.test(normalized);
       const sportsStatus=/^(?:what sports teams am i following(?:,? and what are my notification preferences)?|(?:check|show) my sports (?:calendar|schedule|preferences)|have you added my (?:sports )?games(?: to my calendar)?)$/i.test(normalized);
+      const dailyOn=/^(?:please )?(?:enable|start|turn on) (?:automatic )?daily (?:executive |task )?review$/i.test(normalized);
+      const dailyOff=/^(?:please )?(?:disable|stop|turn off) (?:automatic )?daily (?:executive |task )?review$/i.test(normalized);
+      const responsibilityStatus=/^(?:show|check|list) (?:my |your )?(?:standing |ongoing )?responsibilities$/i.test(normalized);
+      if(id==="executive-female"&&(dailyOn||dailyOff||responsibilityStatus)){
+        let answer;
+        if(responsibilityStatus){
+          const {data}=await api.get(memoryEndpoint,{params:{view:"responsibilities"},timeout:15000});
+          answer=(data.responsibilities||[]).map(item=>item.objective+": "+(item.enabled?"enabled":"disabled")+(item.last_success_at?". Last recorded successful check: "+new Date(item.last_success_at).toLocaleString():"")+(item.next_due_at?". Next eligible check: "+new Date(item.next_due_at).toLocaleString():"")+".").join("\n");
+        }else{
+          const {data}=await api.post(memoryEndpoint,{action:dailyOn?"enable_daily_review":"disable_daily_review"},{timeout:15000});
+          answer=data.enabled?"Daily executive review is enabled. I will check recorded upcoming bills and workout planning through the scheduled runtime. I will not make payments or assume workouts are completed.":"Daily executive review is disabled.";
+        }
+        const voiceKey="responsibilities:"+Date.now();
+        setChatHistory(previous=>({...previous,[id]:[...(previous[id]||[]),{by:"assistant",text:answer,voiceKey}]}));
+        void saveConversationTurn(question,answer);
+        if(autoSpeak)void speakText(answer,voiceKey);
+        return;
+      }
       const autoSports=/^(?:please )?(?:enable|turn on|start) (?:automatic |daily )?sports (?:calendar )?(?:refresh|updates)$/i.test(normalized);
       const stopSports=/^(?:please )?(?:disable|turn off|stop) (?:automatic |daily )?sports (?:calendar )?(?:refresh|updates)$/i.test(normalized);
       const saveSports=/^(?:please )?(?:save|remember) my sports preferences$/i.test(normalized);
