@@ -479,6 +479,19 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
       const taskMatch=normalized.match(/^mark (.+) as (?:completed|done)$/i)||normalized.match(/^(?:complete|check off) (?:the task )?(.+)$/i);
       const sportsImport=/^(?:please )?(?:add|import|refresh|sync|update) (?:all )?(?:my|the) (?:upcoming )?(?:sports|favorite teams’|favorite teams\x27) (?:games|schedule|calendar)(?: to (?:my|the) calendar)?$/i.test(normalized);
       const sportsStatus=/^(?:what sports teams am i following(?:,? and what are my notification preferences)?|(?:check|show) my sports (?:calendar|schedule|preferences)|have you added my (?:sports )?games(?: to my calendar)?)$/i.test(normalized);
+      const runKylee=/^(?:please )?(?:run|execute|start) kylee(?:'s|’s)? (?:dashboard )?audit$/i.test(normalized);
+      const showKylee=/^(?:show|check|read) kylee(?:'s|’s)? (?:audit|findings|audit findings|report)$/i.test(normalized);
+      if(id==="executive-female"&&(runKylee||showKylee)){
+        const {data}=await api.post("/sync-ai/assist/pilot/chief/execute/",{command:runKylee?"run_kylee_audit":"show_kylee_findings"},{timeout:30000});
+        const receipt=runKylee?(data.executed?data:null):data.reports?.[0];
+        const answer=receipt?"Kylee checked "+receipt.records_checked+" active calendar and task records, including "+receipt.tasks_checked+" tasks. "+(receipt.findings||[]).map(f=>f.check+": "+f.count).join("; ")+". This is a data integrity audit, not a browser or visual test. Findings are saved for review.":runKylee?data.reason:"No saved Kylee audit results yet.";
+        const voiceKey="kylee:"+Date.now();
+        setChatHistory(previous=>({...previous,[id]:[...(previous[id]||[]),{by:"assistant",text:answer,voiceKey,execution:!!receipt,link:"/sync/assist/assignments"}]}));
+        if(receipt)window.dispatchEvent(new Event("syncworks:tasks-changed"));
+        void saveConversationTurn(question,answer);
+        if(autoSpeak)void speakText(answer,voiceKey);
+        return;
+      }
       const dailyOn=/^(?:please )?(?:enable|start|turn on) (?:automatic )?daily (?:executive |task )?review$/i.test(normalized);
       const dailyOff=/^(?:please )?(?:disable|stop|turn off) (?:automatic )?daily (?:executive |task )?review$/i.test(normalized);
       const responsibilityStatus=/^(?:show|check|list) (?:my |your )?(?:standing |ongoing )?responsibilities$/i.test(normalized);
