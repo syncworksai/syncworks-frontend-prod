@@ -136,3 +136,7 @@ body:has(.syncfit-modal-open) .sw-role-mobile-nav[data-syncfit-route="true"],bod
 .syncfit-return-chip{position:fixed;right:12px;bottom:calc(92px + env(safe-area-inset-bottom));z-index:2147481001;border:1px solid #c58f77;border-radius:999px;background:#15110f;color:#e2b5a0;padding:9px 14px;font-size:12px;font-weight:700;box-shadow:0 4px 16px #0008}
 body:has(.syncfit-modal-open) .syncfit-return-chip,body:has(.syncfit-lobby .sw-health-tools-layer) .syncfit-return-chip{display:none}
 @media(min-width:1024px){.syncfit-return-chip{bottom:20px}}
+
+
+@media(max-width:1023px){.syncfit-lobby-page .syncfit-head-actions .syncfit-desktop-home{display:none}}
+@media(min-width:1024px){.syncfit-lobby-page .syncfit-lobby{max-width:1200px;grid-template-columns:minmax(130px,1fr) minmax(0,3fr) minmax(130px,1fr);grid-template-rows:auto minmax(0,1fr) auto;gap:12px}.syncfit-lobby-head{grid-column:1/-1}.syncfit-arena{grid-column:2;grid-row:2}.syncfit-mission-grid{grid-column:1;grid-row:2;display:flex;flex-direction:column;justify-content:center}.syncfit-objectives{grid-column:3;grid-row:2;align-self:center}.syncfit-start-mission{grid-column:2;grid-row:3}}
