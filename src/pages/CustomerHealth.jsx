@@ -13,6 +13,7 @@ import { useAuth } from "../auth/AuthContext";
 
 import {
   getCustomerHealthProfile,
+  getHealthAiStatus,
   patchCustomerHealthProfile,
   redeemHealthAccessCode,
 } from "../api/customerHealth";
@@ -38,7 +39,7 @@ import HealthPremiumHome from "../components/customer-health/HealthPremiumHome";
 import PlanTodayWorkoutDrawer from "../components/customer-health/PlanTodayWorkoutDrawer";
 import PreWorkoutCheckInDrawer from "../components/customer-health/PreWorkoutCheckInDrawer";
 import WorkoutLocationCheckInDrawer from "../components/customer-health/WorkoutLocationCheckInDrawer";
-import WorkoutFocusLaunchDrawer from "../components/customer-health/WorkoutFocusLaunchDrawer";
+import { setActiveWorkoutMode, unlockWorkoutCoachAudio } from "../components/customer-health/healthWorkoutAudioController";
 import HealthProfileIntakeDrawer from "../components/customer-health/HealthProfileIntakeDrawer";
 import HealthQuickLogDrawer from "../components/customer-health/HealthQuickLogDrawer";
 import NutritionCoachDrawer from "../components/customer-health/NutritionCoachDrawer";
@@ -737,6 +738,23 @@ export default function CustomerHealth() {
     !!moduleAccess?.customerHealth;
 
   const [drawer, setDrawer] = useState("");
+  const [trainerAccess,setTrainerAccess]=useState(null);
+  const [trainerCheck,setTrainerCheck]=useState(0);
+  useEffect(()=>{
+    if(!hasHealthAccess || !resumeOwner) return;
+    let live=true;
+    setTrainerAccess(null);
+    const timer=setTimeout(()=>{if(live)setTrainerAccess({owner:resumeOwner,error:true});},8000);
+    getHealthAiStatus().then(data=>{if(live)setTrainerAccess({owner:resumeOwner,allowed:data?.has_ai_access===true});}).catch(()=>{if(live)setTrainerAccess({owner:resumeOwner,error:true});}).finally(()=>clearTimeout(timer));
+    return()=>{live=false;clearTimeout(timer);};
+  },[hasHealthAccess,resumeOwner,trainerCheck]);
+  const trainerState=trainerAccess?.owner===resumeOwner ? (trainerAccess.error?"unavailable":trainerAccess.allowed?"trainer":"free"):"checking";
+  function applyTrainingMode(item){
+    const mode=trainerState==="trainer"?"trainer":"gym_log";
+    setActiveWorkoutMode(mode);
+    if(mode==="trainer") unlockWorkoutCoachAudio();
+    return {...item,workout_mode:mode,launch_mode:mode==="trainer"?"personal_trainer":"gym_log",coach_audio_mode:mode==="trainer"?"trainer":"off"};
+  }
   const [healthView, setHealthView] = useState("home");
   const [quickLogType, setQuickLogType] = useState("");
   const [syncStatus, setSyncStatus] =
@@ -2547,7 +2565,7 @@ export default function CustomerHealth() {
       const marker = JSON.parse(localStorage.getItem("syncfit_resume_" + resumeOwner) || "null");
       const saved = JSON.parse(localStorage.getItem("syncworks_health_active_workout_v1") || "null");
       if (!resumeOwner || !marker || saved?.session?.id !== marker.sessionId || saved.session.status !== "active") return;
-      setActivePlannerItem(marker.plannerItem);
+      setActivePlannerItem(applyTrainingMode(marker.plannerItem));
       setHealthView("home");
       setDrawer("active-workout");
     } catch {}
@@ -2559,7 +2577,7 @@ export default function CustomerHealth() {
     window.addEventListener("syncfit:resume", resume);
     if (new URLSearchParams(window.location.search).get("resume") === "1") resume();
     return () => window.removeEventListener("syncfit:resume", resume);
-  }, [hasHealthAccess, resumeOwner]);
+  }, [hasHealthAccess, resumeOwner, trainerState]);
 
   function startPlannerWorkout(
     plannerItem
@@ -2689,7 +2707,7 @@ export default function CustomerHealth() {
       },
     };
 
-    setActivePlannerItem(directStartItem);
+    setActivePlannerItem(applyTrainingMode(directStartItem));
 
     setSnapshot((previous) => ({
       ...previous,
@@ -3116,8 +3134,8 @@ export default function CustomerHealth() {
       updated_at: new Date().toISOString(),
     }));
 
-    setActivePlannerItem(nextPlannerItem);
-    setDrawer("workout-focus-launch");
+    setActivePlannerItem(applyTrainingMode(nextPlannerItem));
+    setDrawer("active-workout");
   }
 
   function saveCustomWorkout(
@@ -3547,6 +3565,8 @@ export default function CustomerHealth() {
               />
             </div>
           ) : (            <HealthPremiumHome
+              trainerState={trainerState}
+              onTrainerAccess={()=>trainerState==="free"?setDrawer("ai-coach-upgrade"):trainerState==="trainer"?setDrawer("coach-chat"):setTrainerCheck(v=>v+1)}
               profile={profile}
               snapshot={syncedSnapshot}
               history={history}
@@ -3759,30 +3779,6 @@ export default function CustomerHealth() {
               });
 
               setDrawer("pre-workout");
-            }}
-          />
-
-          <WorkoutFocusLaunchDrawer
-            open={
-              drawer ===
-              "workout-focus-launch"
-            }
-            workout={
-              activePlannerItem
-            }
-            onCancel={() =>
-              setDrawer("")
-            }
-            onBegin={(launchMeta = {}) => {
-              setActivePlannerItem((previous) =>
-                previous
-                  ? {
-                      ...previous,
-                      ...launchMeta,
-                    }
-                  : previous
-              );
-              setDrawer("active-workout");
             }}
           />
 
@@ -4104,11 +4100,7 @@ export default function CustomerHealth() {
               drawer ===
               "ai-coach-upgrade"
             }
-            onClose={() =>
-              setDrawer(
-                "nutrition-coach"
-              )
-            }
+            onClose={() => {setDrawer("");setTrainerCheck(v=>v+1);}}
             onContinueFree={() =>
               setDrawer(
                 "nutrition-dashboard"
