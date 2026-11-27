@@ -343,3 +343,28 @@ body:has(:is(.syncfit-precheck,.syncfit-location-check,.syncfit-launch-gate)) .s
 .syncfit-lobby-page .syncfit-arena::before{height:75px}
 .syncfit-lobby-page .syncfit-arena-coach img{width:36px;height:36px}
 }
+
+
+/* Isolated coach sheet: avoid inherited full-page header and section layout. */
+.syncfit-coach-drawer.sf-chat-overlay{position:fixed!important;inset:0!important;display:flex!important;align-items:flex-end!important;justify-content:center!important;z-index:2147483000!important;box-sizing:border-box;padding:12px 12px max(16px,env(safe-area-inset-bottom))!important;background:#0005!important;backdrop-filter:blur(2px)!important}
+.sf-chat-backdrop{position:absolute;inset:0;background:transparent;border:0}
+.sf-chat-sheet{position:relative;display:grid!important;grid-template-rows:auto minmax(0,1fr) auto;box-sizing:border-box;width:min(100%,440px);height:min(56dvh,460px);max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 28px);min-height:0;overflow:hidden;border:1px solid #9c725d;border-radius:20px;background:#171310;color:#f5eee9;box-shadow:0 16px 48px #0008;animation:syncfit-expand .45s ease-out both}
+.sf-chat-top{position:relative;min-width:0;padding:10px 12px;border-bottom:1px solid #805b4955;background:#1c1612}
+.sf-chat-bar{display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;min-height:44px}
+.sf-chat-person{display:flex!important;align-items:center;gap:9px;min-width:0}
+.sf-chat-person>img{display:block;width:38px!important;height:38px!important;flex:0 0 38px;border:1px solid #c58f77;border-radius:50%;object-fit:cover}
+.sf-chat-name{min-width:0;display:block}
+.sf-chat-title{font-size:15px;font-weight:800;line-height:1.2;white-space:nowrap;color:#fff}
+.sf-chat-subtitle{font-size:11px;line-height:1.4;color:#c2b0a4;white-space:nowrap}
+.sf-chat-actions{display:flex!important;gap:3px;align-items:center;flex:none}
+.sf-chat-actions button{display:grid!important;place-items:center;width:40px;height:44px;min-width:40px;padding:0;border:0;border-radius:10px;background:transparent;color:#e2b5a0}
+.sf-chat-actions button:active{background:#805b4944}
+.sf-chat-messages{min-width:0;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:12px;background:#171310;scrollbar-width:thin}
+.sf-chat-sheet .sf-chat-composer{display:block!important;position:relative!important;inset:auto!important;min-height:0!important;padding:8px!important;margin:0!important;border-top:1px solid #805b4955;background:#1c1612!important}
+.sf-chat-input-row{display:flex;align-items:flex-end;gap:8px;min-width:0}
+.sf-chat-input-row textarea{flex:1;min-width:0;width:0!important;font-size:16px!important;background:#100d0b;border-color:#805b4970}
+.sf-chat-input-row button[type=submit]{flex:0 0 44px;width:44px;height:44px}
+.sf-chat-status{font-size:11px;line-height:1.4;color:#e2b5a0;text-align:center}
+.sf-chat-status:not(:empty){padding-top:6px}
+@media(max-width:350px){.sf-chat-top{padding:8px}.sf-chat-person{gap:5px}.sf-chat-person>img{width:30px!important;height:30px!important;flex-basis:30px}.sf-chat-actions button{width:34px;min-width:34px}.sf-chat-subtitle{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.sf-chat-sheet{animation:none!important}}

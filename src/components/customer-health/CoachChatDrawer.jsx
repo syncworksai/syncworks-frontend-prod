@@ -590,32 +590,32 @@ export default function CoachChatDrawer({
   if (!open) return null;
 
   return (
-    <div className="syncfit-coach-drawer fixed inset-0 z-[180] flex bg-black/80 backdrop-blur-xl">
+    <div className="syncfit-coach-drawer sf-chat-overlay">
       <button
         type="button"
         aria-label="Close coach chat"
         onClick={onClose}
-        className="absolute inset-0"
+        className="sf-chat-backdrop"
       />
 
-      <section className="relative z-[181] ml-auto flex h-[100dvh] w-full max-w-2xl flex-col overflow-hidden border-l border-white/10 bg-[#06111f] shadow-[-30px_0_80px_rgba(0,0,0,0.5)]">
-        <header className="shrink-0 border-b border-white/10 bg-[#071421]/98 px-3 pb-3 pt-[calc(env(safe-area-inset-top)+0.7rem)] backdrop-blur-xl sm:px-5">
-          <div className="syncfit-coach-header-row">
-            <div className="syncfit-coach-identity">
+      <div className="sf-chat-sheet" role="dialog" aria-modal="true" aria-label="SYNCFIT personal trainer">
+        <div className="sf-chat-top">
+          <div className="sf-chat-bar">
+            <div className="sf-chat-person">
               <CoachAvatar />
 
-              <div className="min-w-0">
-                <div className="truncate text-base font-black text-white sm:text-lg">
+              <div className="sf-chat-name">
+                <div className="sf-chat-title">
                   SYNCFIT
                 </div>
 
-                <div className="text-[10px] font-bold text-slate-400">
+                <div className="sf-chat-subtitle">
                   Personal trainer
                 </div>
               </div>
             </div>
 
-            <div className="syncfit-coach-icons">
+            <div className="sf-chat-actions">
               <button type="button" onClick={toggleAudio} aria-label={audioEnabled?"Mute coach":"Enable coach audio"} aria-pressed={audioEnabled}>{audioEnabled?<Volume2 size={19}/>:<VolumeX size={19}/>}</button>
               <button type="button" onClick={()=>setMenuOpen(v=>!v)} aria-label="Coach options"><Ellipsis size={20}/></button>
               <button type="button" onClick={onClose} aria-label="Close coach"><X size={20}/></button>
@@ -629,11 +629,11 @@ export default function CoachChatDrawer({
             <button type="button" onClick={()=>{setMenuOpen(false);jumpToLatest();}}>Latest message</button>
             <button type="button" onClick={()=>{if(window.confirm("Reset this conversation?"))handleResetChat();}}>Reset conversation</button>
           </div>}
-        </header>
+        </div>
 
         <div
           ref={scrollRef}
-          className="syncfit-coach-messages min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-4 sm:space-y-4 sm:px-5"
+          className="sf-chat-messages space-y-3"
         >
           {!chat.length && <div className="syncfit-coach-welcome">Ready when you are. Ask me about your workout, technique or recovery.</div>}
           {proposal && <button type="button" className="syncfit-coach-plan-link" onClick={()=>setShowPlan(v=>!v)}>{showPlan?"Hide workout plan":"View workout plan"}</button>}
@@ -660,9 +660,9 @@ export default function CoachChatDrawer({
 
         <form
           onSubmit={handleSubmit}
-          className="shrink-0 border-t border-white/10 bg-[#071421]/98 px-3 pb-[calc(env(safe-area-inset-bottom)+0.7rem)] pt-3 backdrop-blur-xl sm:px-5"
+          className="sf-chat-composer"
         >
-          <div className="flex items-end gap-2 rounded-2xl border border-white/10 bg-black/30 p-2">
+          <div className="sf-chat-input-row">
             <textarea
               value={input}
               onChange={(event) =>
@@ -682,12 +682,12 @@ export default function CoachChatDrawer({
             </button>
           </div>
 
-          <div className="mt-2 text-center text-[9px] leading-4 text-slate-600">
+          <div className="sf-chat-status">
             {audioLoading ? <span role="status" className="syncfit-audio-loading"><LoaderCircle size={14} className="animate-spin"/> Loading audio…</span> : sending ? "Thinking…" : providerNote ||
-              "Conversation is saved with your Health profile."}
+              ""}
           </div>
         </form>
-      </section>
+      </div>
     </div>
   );
 }
