@@ -127,7 +127,9 @@ function primeCoachAudioPlayback(volume = 1) {
   return audio;
 }
 
+function notifyAudioState(state) { if(typeof window!=="undefined") window.dispatchEvent(new CustomEvent("syncfit:audio-state",{detail:state})); }
 export function stopCoachVoice() {
+  notifyAudioState("idle");
   if (activeVoiceRequest) {
     activeVoiceRequest.abort();
     activeVoiceRequest = null;
@@ -207,16 +209,18 @@ async function playElevenLabsSpeech({ text, eventType, energy, voiceKey, volume,
   if (cancelFirst) stopCoachVoice();
   requestMusicFriendlyAudioSession();
   const playbackAudio = primeCoachAudioPlayback(volume);
-  activeVoiceRequest = new AbortController();
+  const request = new AbortController();
+  activeVoiceRequest = request;
+  notifyAudioState("loading");
   try {
     const result = await createHealthCoachSpeech({
       text,
       eventType: normalizeElevenLabsEventType(eventType),
       energy: energy === "controlled" ? "balanced" : energy,
       voiceKey,
-      signal: activeVoiceRequest.signal,
+      signal: request.signal,
     });
-    activeVoiceRequest = null;
+    if (activeVoiceRequest !== request || request.signal.aborted) return false;
     if (activeAudioUrl && typeof URL !== "undefined") {
       URL.revokeObjectURL(activeAudioUrl);
       activeAudioUrl = "";
@@ -234,9 +238,14 @@ async function playElevenLabsSpeech({ text, eventType, energy, voiceKey, volume,
     audio.load();
     requestMusicFriendlyAudioSession();
     await audio.play();
+    if(activeVoiceRequest !== request) return false;
+    activeVoiceRequest = null;
+    notifyAudioState("playing");
     return true;
   } catch (error) {
+    if(activeVoiceRequest !== request) return false;
     activeVoiceRequest = null;
+    notifyAudioState("idle");
     if (error?.name === "CanceledError" || error?.name === "AbortError") return false;
     releaseActiveAudio();
     throw error;

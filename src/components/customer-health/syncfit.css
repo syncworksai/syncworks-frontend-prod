@@ -280,3 +280,17 @@ body:has(.syncfit-lobby .sw-health-recovery-layer) .sw-role-mobile-nav[data-sync
 #health-workout-command-center{background:#100d0bc9!important;border-color:#805b4980!important}
 #health-workout-command-center .bg-gradient-to-r{background:linear-gradient(90deg,#98634f,#e2b5a0)!important;transition:width .5s ease}
 @media(prefers-reduced-motion:reduce){.syncfit-lobby-page .sw-health-recovery-drawer,.syncfit-calendar-days,.syncfit-current-exercise{animation:none!important}}
+
+
+/* Compact voice-first coach overlay, scoped to SYNCFIT. */
+.syncfit-coach-drawer{align-items:flex-end;justify-content:flex-end;padding:12px 10px max(12px,env(safe-area-inset-bottom));background:#0006!important;backdrop-filter:blur(2px)!important}
+.syncfit-coach-drawer>section{height:min(66dvh,620px)!important;max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;width:min(100%,440px)!important;margin:0!important;border:1px solid #805b49!important;border-radius:20px!important;background:#15110fef!important;animation:syncfit-expand .55s ease-out both;transform-origin:bottom center}
+.syncfit-coach-drawer header{padding:10px!important;background:#15110f!important}
+.syncfit-coach-drawer header .truncate{font-size:13px!important}
+.syncfit-coach-icons{display:flex;gap:4px;flex:none}
+.syncfit-coach-icons button{display:grid;place-items:center;width:40px;height:40px;color:#e2b5a0;background:#211915;border:1px solid #805b4966;border-radius:12px;flex:none}
+.syncfit-coach-options{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.syncfit-coach-options button{padding:8px;border:1px solid #805b4966;border-radius:8px;color:#e2b5a0;font-size:12px}
+.syncfit-coach-drawer form{padding:8px!important}
+.syncfit-audio-loading{display:inline-flex;gap:6px;align-items:center;color:#e2b5a0;font-size:12px}
+@media(prefers-reduced-motion:reduce){.syncfit-coach-drawer>section,.syncfit-coach-drawer .animate-spin{animation:none!important}}
