@@ -1,5 +1,5 @@
 // src/components/customer-health/MetricDrawers.jsx
-import React from "react";
+import React, { useState, useEffect } from "react";
 import HealthDrawer from "./HealthDrawer";
 import { prettyDate, safeNumber, todayYmd, uid } from "./healthStorage";
 
@@ -89,6 +89,8 @@ export function StepsDrawer({ open, onClose, snapshot, setSnapshot }) {
 }
 
 export function ProgressDrawer({ open, onClose, snapshot, setSnapshot, progressLogs, setProgressLogs, history, setHistory }) {
+  const [tab,setTab]=useState("measure");
+  useEffect(()=>{if(open)setTab("measure");},[open]);
   function addProgressLog() {
     const measurements = {
       waist: snapshot.waist || "",
@@ -121,21 +123,22 @@ export function ProgressDrawer({ open, onClose, snapshot, setSnapshot, progressL
   }
 
   return (
-    <HealthDrawer open={open} onClose={onClose} title="Progress & Measurements" subtitle="Track weight, body measurements, completed workouts, and trends.">
-      <div className="space-y-4">
+    <HealthDrawer open={open} onClose={onClose} title="Progress & Measurements" subtitle="Track your training and body metrics." navigation={<div className="syncfit-fuel-tabs">{[["measure","Measurements"],["history","History"]].map(([id,label])=><button key={id} type="button" aria-pressed={tab===id} onClick={()=>setTab(id)}>{label}</button>)}</div>} footer={tab==="measure"?<button type="button" className="syncfit-save-measure" onClick={addProgressLog}>Save progress & measurements</button>:null}>
+      <div key={tab} className="syncfit-progress-content space-y-4">
+        {tab==="measure" && <>
         <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/[0.06] p-4">
           <div className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">Progress check-in</div>
           <p className="mt-1 text-xs leading-5 text-slate-400">For clean comparisons, use the same conditions each time: ideally morning, before food, and the same tape placement.</p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-2">
           <Field label="Weight (lb)" value={snapshot.weight} onChange={(v) => setSnapshot((p) => ({ ...p, weight: v }))} type="number" />
           <Field label="Readiness" value={snapshot.readiness} onChange={(v) => setSnapshot((p) => ({ ...p, readiness: v }))} />
         </div>
 
         <div>
           <div className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-violet-200">Body measurements · inches</div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
             <Field label="Waist" value={snapshot.waist} onChange={(v) => setSnapshot((p) => ({ ...p, waist: v }))} type="number" placeholder="in" />
             <Field label="Chest" value={snapshot.chest} onChange={(v) => setSnapshot((p) => ({ ...p, chest: v }))} type="number" placeholder="in" />
             <Field label="Hips" value={snapshot.hips} onChange={(v) => setSnapshot((p) => ({ ...p, hips: v }))} type="number" placeholder="in" />
@@ -146,14 +149,8 @@ export function ProgressDrawer({ open, onClose, snapshot, setSnapshot, progressL
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={addProgressLog}
-          className="w-full rounded-2xl border border-cyan-500/25 bg-cyan-500/10 px-4 py-3 text-xs font-black text-cyan-100"
-        >
-          Save Today's Progress + Measurements
-        </button>
-
+        </>}
+        {tab==="history" && <>
         <div className="grid gap-3 md:grid-cols-2">
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
             <div className="text-sm font-black text-white">Progress Entries</div>
@@ -203,6 +200,7 @@ export function ProgressDrawer({ open, onClose, snapshot, setSnapshot, progressL
             </div>
           </div>
         </div>
+        </>}
       </div>
     </HealthDrawer>
   );
