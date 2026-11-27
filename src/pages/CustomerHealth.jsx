@@ -720,12 +720,14 @@ export default function CustomerHealth() {
   const nav = useNavigate();
 
   const {
+    user,
     moduleAccess,
     entitlements,
     refreshEntitlements,
     isPlatformAdmin,
   } = useAuth();
 
+  const resumeOwner = String(user?.id || user?.email || "");
   const hasHealthAccess =
     !!isPlatformAdmin ||
     !!entitlements?.health_access ||
@@ -2540,6 +2542,25 @@ export default function CustomerHealth() {
     buildCurrentWeek("repeat");
   }
 
+  function resumeSavedWorkout() {
+    try {
+      const marker = JSON.parse(localStorage.getItem("syncfit_resume_" + resumeOwner) || "null");
+      const saved = JSON.parse(localStorage.getItem("syncworks_health_active_workout_v1") || "null");
+      if (!resumeOwner || !marker || saved?.session?.id !== marker.sessionId || saved.session.status !== "active") return;
+      setActivePlannerItem(marker.plannerItem);
+      setHealthView("home");
+      setDrawer("active-workout");
+    } catch {}
+  }
+
+  useEffect(() => {
+    if (!hasHealthAccess || !resumeOwner) return;
+    const resume = () => resumeSavedWorkout();
+    window.addEventListener("syncfit:resume", resume);
+    if (new URLSearchParams(window.location.search).get("resume") === "1") resume();
+    return () => window.removeEventListener("syncfit:resume", resume);
+  }, [hasHealthAccess, resumeOwner]);
+
   function startPlannerWorkout(
     plannerItem
   ) {
@@ -4245,7 +4266,12 @@ export default function CustomerHealth() {
             setSnapshot={setSnapshot}
             history={history}
             setHistory={setHistory}
+            onPauseSaved={(session, plannerItem) => {
+              if (!resumeOwner || !plannerItem) return;
+              try { localStorage.setItem("syncfit_resume_" + resumeOwner, JSON.stringify({ sessionId: session.id, plannerItem })); window.dispatchEvent(new Event("syncfit:paused")); } catch {}
+            }}
             onWorkoutComplete={({ summary, session }) => {
+              try { localStorage.removeItem("syncfit_resume_" + resumeOwner); window.dispatchEvent(new Event("syncfit:paused")); } catch {}
               const completedAt = new Date().toISOString();
 
               setSnapshot((previous) => ({
