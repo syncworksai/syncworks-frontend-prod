@@ -27,11 +27,7 @@ function cx(...classes) {
 }
 
 function CoachAvatar() {
-  return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-lime-300/35 bg-lime-300/10 text-[10px] font-black text-lime-100 shadow-[0_0_18px_rgba(57,255,136,0.22)]">
-      S
-    </div>
-  );
+  return <img src="/jarvis-avatars/sarahgym1.png" alt="" className="syncfit-chat-avatar h-8 w-8 shrink-0 rounded-full object-cover object-top" />;
 }
 
 function UserAvatar() {
@@ -588,7 +584,7 @@ export default function CoachChatDrawer({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[180] flex bg-black/80 backdrop-blur-xl">
+    <div className="syncfit-coach-drawer fixed inset-0 z-[180] flex bg-black/80 backdrop-blur-xl">
       <button
         type="button"
         aria-label="Close coach chat"
