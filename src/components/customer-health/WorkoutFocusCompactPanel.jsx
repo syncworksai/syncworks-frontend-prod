@@ -191,7 +191,7 @@ export default function WorkoutFocusCompactPanel({
   const canonicalSlug = exerciseImageSlug(exerciseName);
   useEffect(()=>setImageFailed(false),[exerciseName]);
   const fallbackImage = `/health/exercises/${canonicalSlug}/${canonicalSlug}-hero.png`;
-  const image = imageFailed ? "" : explicitImage || fallbackImage;
+  const image = "/jarvis-avatars/sarahgym1.png";
   const loadLabel = weight
     ? formatLoad(weight)
     : isBodyweightExercise(exerciseName)
@@ -292,7 +292,7 @@ export default function WorkoutFocusCompactPanel({
 
           {image ? (
             <button type="button" onClick={() => setDrawerMode("insight")} className="mt-2 block h-24 w-full overflow-hidden rounded-xl border border-white/10 bg-[#010409] sm:h-52">
-              <img src={image} alt={`${exerciseName} exercise demonstration`} onError={() => setImageFailed(true)} className="h-full w-full object-contain object-center" />
+              <img src={image} alt="SYNCFIT fitness coach"  className="h-full w-full object-contain object-center" />
             </button>
           ) : (
             <button type="button" onClick={() => setDrawerMode("insight")} className="mt-2 flex h-20 w-full items-center justify-center rounded-xl border border-dashed border-cyan-300/15 bg-cyan-300/[0.03] text-center text-[9px] font-bold text-slate-500">Exercise guide · tap for movement details</button>
