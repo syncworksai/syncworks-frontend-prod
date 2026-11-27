@@ -7,6 +7,7 @@ import React, {
   useState,
 } from "react";
 
+import { Volume2, VolumeX, Ellipsis, X, Send, LoaderCircle } from "lucide-react";
 import { createHealthCoachTurn } from "../../api/customerHealth";
 
 import {
@@ -341,7 +342,9 @@ export default function CoachChatDrawer({
   const [summaryExpanded, setSummaryExpanded] =
     useState(false);
 
+  const [audioLoading,setAudioLoading] = useState(false);
   const scrollRef = useRef(null);
+  useEffect(()=>{const listener=e=>setAudioLoading(e.detail==="loading");window.addEventListener("syncfit:audio-state",listener);return()=>window.removeEventListener("syncfit:audio-state",listener);},[]);
   const previousMessageCountRef = useRef(0);
 
   useEffect(() => {
@@ -395,7 +398,8 @@ export default function CoachChatDrawer({
       text,
       audioMode: "essential",
       voicePreference: "australian",
-      rate: 0.96,
+      rate: 0.92,
+      energy: "controlled",
       pitch: 1,
       volume: 1,
       cancelFirst: true,
@@ -604,228 +608,30 @@ export default function CoachChatDrawer({
                 </div>
 
                 <div className="text-[10px] font-bold text-slate-400">
-                  Voice-first daily coach | {chat.length} message
-                  {chat.length === 1 ? "" : "s"}
+                  Personal trainer
                 </div>
               </div>
             </div>
 
-            <div className="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                onClick={toggleAudio}
-                className="h-9 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-3 text-[10px] font-black text-emerald-100"
-              >
-                {audioEnabled ? "Audio On" : "Audio Off"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  try {
-                    window.localStorage.setItem("sw_health_audio_style_v1", "trainer");
-                  } catch {
-                    // Best effort.
-                  }
-                  setInput(
-                    "Use aggressive trainer mode. Be direct, explain movement setup, muscles worked, and the reason for each exercise."
-                  );
-                }}
-                className="h-9 rounded-xl border border-rose-300/20 bg-rose-300/10 px-3 text-[9px] font-black text-rose-100"
-              >
-                Aggressive Trainer
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setHeaderExpanded(
-                    (previous) => !previous
-                  )
-                }
-                className="h-9 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-[10px] font-black text-slate-200"
-              >
-                {headerExpanded ? "Less" : "More"}
-              </button>
-
-              <div className="relative">
-                <button
-                  type="button"
-                  aria-label="Coach chat options"
-                  onClick={() =>
-                    setMenuOpen(
-                      (previous) => !previous
-                    )
-                  }
-                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-sm font-black text-white"
-                >
-                  ...
-                </button>
-
-                {menuOpen ? (
-                  <div className="absolute right-0 top-11 z-20 w-44 rounded-2xl border border-white/10 bg-[#0b1728] p-2 shadow-2xl">
-                    <button
-                      type="button"
-                      onClick={jumpToLatest}
-                      className="h-10 w-full rounded-xl px-3 text-left text-xs font-black text-slate-100 hover:bg-white/[0.06]"
-                    >
-                      Jump to latest
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleResetChat}
-                      className="h-10 w-full rounded-xl px-3 text-left text-xs font-black text-rose-200 hover:bg-rose-300/10"
-                    >
-                      Reset conversation
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-
-              <button
-                type="button"
-                onClick={onClose}
-                className="h-9 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-[10px] font-black text-white"
-              >
-                Close
-              </button>
+            <div className="syncfit-coach-icons">
+              <button type="button" onClick={toggleAudio} aria-label={audioEnabled?"Mute coach":"Enable coach audio"} aria-pressed={audioEnabled}>{audioEnabled?<Volume2 size={19}/>:<VolumeX size={19}/>}</button>
+              <button type="button" onClick={()=>setMenuOpen(v=>!v)} aria-label="Coach options"><Ellipsis size={20}/></button>
+              <button type="button" onClick={onClose} aria-label="Close coach"><X size={20}/></button>
             </div>
           </div>
-
-          {headerExpanded ? (
-            <div className="mt-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.05] p-3">
-              <p className="text-xs leading-5 text-slate-300">
-                Ask about today's workout, soreness, recovery,
-                nutrition, measurements, multiple sessions,
-                or why the plan selected a specific muscle group.
-              </p>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setInput(
-                    "Build a workout for today using my recent training, soreness, readiness, location, and available time."
-                  )
-                }
-                className="mt-2 h-9 rounded-xl border border-cyan-300/20 bg-cyan-300/10 px-3 text-[10px] font-black text-cyan-100"
-              >
-                Use Today Request
-              </button>
-            </div>
-          ) : null}
+          {menuOpen && <div className="syncfit-coach-options">
+            <button type="button" onClick={()=>{setMenuOpen(false);replayDailyBriefing();}}>Play briefing</button>
+            <button type="button" onClick={()=>{setMenuOpen(false);onBuildWorkout?.();}}>Workout plan</button>
+            <button type="button" onClick={()=>{setMenuOpen(false);onOpenNutrition?.();}}>Nutrition</button>
+            <button type="button" onClick={jumpToLatest}>Latest message</button>
+            <button type="button" onClick={handleResetChat}>Reset conversation</button>
+          </div>}
         </header>
 
         <div
           ref={scrollRef}
           className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-4 sm:space-y-4 sm:px-5"
         >
-          <div className="rounded-[1.5rem] border border-emerald-300/20 bg-[linear-gradient(145deg,rgba(8,23,15,0.96),rgba(2,9,6,0.98))] p-4">
-
-            <div className="flex items-start justify-between gap-3">
-
-              <div className="min-w-0">
-
-                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">
-
-                  SYNCFIT Daily Briefing
-
-                </div>
-
-                <div className="mt-2 text-sm leading-6 text-emerald-50">
-
-                  {summaryExpanded
-
-                    ? initialBriefing
-
-                    : String(initialBriefing || "")
-
-                        .split(".")
-
-                        .slice(0, 2)
-
-                        .join(".") + "."}
-
-                </div>
-
-              </div>
-
-              <button
-
-                type="button"
-
-                onClick={replayDailyBriefing}
-
-                disabled={!audioEnabled}
-
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-300/10 text-lg disabled:opacity-35"
-
-                aria-label="Replay daily briefing"
-
-              >
-
-                â–¶
-
-              </button>
-
-            </div>
-
-            <button
-
-              type="button"
-
-              onClick={() =>
-
-                setSummaryExpanded(
-
-                  (previous) => !previous
-
-                )
-
-              }
-
-              className="mt-3 h-10 w-full rounded-xl border border-white/10 bg-white/[0.04] text-[10px] font-black uppercase tracking-[0.14em] text-white"
-
-            >
-
-              {summaryExpanded ? "Show Less" : "More"}
-
-            </button>
-
-          </div>
-          <section className="rounded-[1.5rem] border border-cyan-300/20 bg-cyan-300/[0.05] p-4">
-            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">
-              Pre-Workout Decision
-            </div>
-            <div className="mt-2 text-lg font-black text-white">Review before starting</div>
-            <div className="mt-1 text-xs leading-5 text-slate-400">
-              SYNC should compare today's scheduled workout with completed sessions, soreness, pain, sleep, equipment, and available time before opening the workout player.
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {[
-                "Review today's workout and explain why",
-                "My legs are sore after yesterday",
-                "I may train more than once today",
-                "I need to update my measurements",
-              ].map((prompt) => (
-                <button key={prompt} type="button" onClick={() => setInput(prompt)}
-                  className="min-h-12 rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-left text-[10px] font-black leading-4 text-white">
-                  {prompt}
-                </button>
-              ))}
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <button type="button" onClick={onBuildWorkout}
-                className="h-11 rounded-xl border border-cyan-300/25 bg-cyan-300/10 text-xs font-black text-cyan-100">
-                Adjust Plan
-              </button>
-              <button type="button" onClick={onOpenNutrition}
-                className="h-11 rounded-xl border border-emerald-300/25 bg-emerald-300/10 text-xs font-black text-emerald-100">
-                Nutrition
-              </button>
-            </div>
-          </section>
-
           {!proposal && chat.length === 0 ? (
             <EmptyPlanCard
               onOpenQuestionnaire={
@@ -889,14 +695,14 @@ export default function CoachChatDrawer({
             <button
               type="submit"
               disabled={!input.trim() || sending}
-              className="h-11 shrink-0 rounded-xl border border-cyan-300/30 bg-cyan-300/15 px-4 text-xs font-black text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Send message" className="h-11 shrink-0 rounded-xl border border-cyan-300/30 bg-cyan-300/15 px-4 text-xs font-black text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {sending ? "ThinkingÃ¢â‚¬Â¦" : "Send"}
+              {sending ? <LoaderCircle className="animate-spin" size={18}/> : <Send size={18}/>}
             </button>
           </div>
 
           <div className="mt-2 text-center text-[9px] leading-4 text-slate-600">
-            {providerNote ||
+            {audioLoading ? <span role="status" className="syncfit-audio-loading"><LoaderCircle size={14} className="animate-spin"/> Loading audio…</span> : sending ? "Thinking…" : providerNote ||
               "Conversation is saved with your Health profile."}
           </div>
         </form>
