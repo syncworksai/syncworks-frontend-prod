@@ -281,6 +281,8 @@ export default function NutritionDashboard({
 }) {
   const [selectedDate, setSelectedDate] = useState(todayYmd());
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [fuelTab,setFuelTab] = useState("today");
+  useEffect(()=>{if(open){setFuelTab("today");setSettingsOpen(false);}},[open]);
   const [revisionOpen, setRevisionOpen] = useState(false);
   const [nutritionProfile, setNutritionProfile] = useState(loadNutritionProfile);
 
@@ -415,7 +417,7 @@ export default function NutritionDashboard({
     <div className="syncfit-fuel-sheet fixed inset-0 z-[134] flex items-end justify-center bg-black/80 p-0 backdrop-blur-xl sm:items-center sm:p-3">
       <button type="button" aria-label="Close Nutrition Dashboard" onClick={onClose} className="absolute inset-0" />
       <section className="relative z-[135] h-[100dvh] w-full max-w-5xl overflow-y-auto border border-fuchsia-300/20 bg-[radial-gradient(circle_at_top_left,rgba(255,59,212,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(112,255,61,0.08),transparent_28%),linear-gradient(180deg,#07111f,#040812)] p-3 pb-[calc(env(safe-area-inset-bottom)+2rem)] shadow-[0_28px_90px_rgba(0,0,0,0.72)] sm:h-auto sm:max-h-[94vh] sm:rounded-[2rem] sm:p-6">
-        <div className="sticky top-0 z-20 -mx-3 -mt-3 flex items-start justify-between gap-3 border-b border-white/10 bg-[#07111f]/95 px-3 py-3 backdrop-blur-xl sm:static sm:mx-0 sm:mt-0 sm:border-0 sm:bg-transparent sm:px-0">
+        <div className="syncfit-fuel-header sticky top-0 z-20 -mx-3 -mt-3 flex items-start justify-between gap-3 border-b border-white/10 bg-[#07111f]/95 px-3 py-3 backdrop-blur-xl sm:static sm:mx-0 sm:mt-0 sm:border-0 sm:bg-transparent sm:px-0">
           <div>
             <div className="text-[9px] font-black uppercase tracking-[0.2em] text-fuchsia-200">SYNCFIT · FUEL</div>
             <h2 className="mt-1 text-2xl font-black text-white">Nutrition HQ</h2>
@@ -424,13 +426,15 @@ export default function NutritionDashboard({
           <button type="button" onClick={onClose} aria-label="Close nutrition" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] font-black text-white">X</button>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-2">
+        <div className="syncfit-fuel-actions mt-4 grid grid-cols-3 gap-2">
           <button type="button" onClick={() => onOpenCoach?.(null)} className="h-11 rounded-xl border border-lime-300/30 bg-lime-300/15 text-xs font-black text-lime-100">+ Log Meal</button>
           <button type="button" onClick={onOpenMealPlanner} className="h-11 rounded-xl border border-cyan-300/25 bg-cyan-300/10 text-xs font-black text-cyan-100">What to Eat</button>
           <button type="button" onClick={() => setSettingsOpen((value) => !value)} className="h-11 rounded-xl border border-fuchsia-300/25 bg-fuchsia-300/10 text-xs font-black text-fuchsia-100">{settingsOpen ? "Hide Goals" : "Goals"}</button>
         </div>
 
-        {!targetsReady ? (
+        <div className="syncfit-fuel-tabs" role="group" aria-label="Nutrition views">{[["today","Today"],["meals","Meals"],["history","History"],["guidance","Guidance"]].map(([id,label])=><button key={id} type="button" aria-pressed={fuelTab===id} onClick={()=>{setFuelTab(id);setSettingsOpen(false);}}>{label}</button>)}</div>
+        <div key={fuelTab+String(settingsOpen)} className="syncfit-fuel-content">
+          {settingsOpen ? <>{/* existing settings */}        {!targetsReady ? (
           <div className="mt-3 rounded-[1.35rem] border border-amber-300/25 bg-amber-300/[0.07] p-4">
             <div className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-200">Targets need setup</div>
             <div className="mt-1 text-sm font-black text-white">SYNC will not guess your body weight or pretend a macro target exists.</div>
@@ -457,50 +461,16 @@ export default function NutritionDashboard({
           </div>
         ) : null}
 
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+</> : <>
+          {fuelTab==="today" && <>        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <MacroCard label="Calories" value={totals.calories} goal={calorieGoal} tone="fuchsia" onSetGoal={onOpenGoals} />
           <MacroCard label="Protein" value={totals.protein} goal={proteinGoal} suffix="g" tone="lime" onSetGoal={onOpenGoals} />
           <MacroCard label="Carbs" value={totals.carbs} goal={carbGoal} suffix="g" tone="cyan" onSetGoal={onOpenGoals} />
           <MacroCard label="Fat" value={totals.fat} goal={fatGoal} suffix="g" tone="amber" onSetGoal={onOpenGoals} />
         </div>
 
-        <div className="mt-3">
-          <NutritionConsistencyTracker days={last7} calorieGoal={calorieGoal} proteinGoal={proteinGoal} onSelectDay={setSelectedDate} />
-        </div>
-
-        <div className="mt-3 overflow-hidden rounded-[1.4rem] border border-lime-300/20 bg-lime-300/[0.06]">
-          <button type="button" onClick={() => setRevisionOpen((value) => !value)} className="flex w-full items-center justify-between gap-3 p-4 text-left">
-            <span><span className="block text-[10px] font-black uppercase tracking-[0.16em] text-lime-200">SYNC nutrition status</span><span className="mt-1 block text-sm font-black leading-5 text-white">{aiMessage}</span></span>
-            <span className="text-xs font-black text-lime-100">{revisionOpen ? "Hide" : "View"}</span>
-          </button>
-          {revisionOpen ? (
-            <div className="border-t border-lime-300/15 p-4 pt-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                  <div className="text-[9px] font-black uppercase tracking-wider text-slate-500">Inputs used</div>
-                  <div className="mt-2 space-y-1 text-[11px] leading-4 text-slate-300">
-                    <div>Weight: {currentWeight ? `${Math.round(currentWeight)} lb` : "Not set"}</div>
-                    <div>Workout today: {workoutToday ? "Yes" : "No"}</div>
-                    <div>Goals: {nutritionProfile.goals.map((goal) => GOALS.find(([value]) => value === goal)?.[1]).filter(Boolean).join(", ")}</div>
-                    <div>Target date: {nutritionProfile.targetDate || "Not set"}</div>
-                    <div>Budget: {nutritionProfile.weeklyBudget ? `$${nutritionProfile.weeklyBudget}/week` : "Not set"}</div>
-                  </div>
-                </div>
-                <div className="rounded-xl border border-cyan-300/15 bg-cyan-300/[0.04] p-3">
-                  <div className="text-[9px] font-black uppercase tracking-wider text-cyan-200">How targets were handled</div>
-                  <div className="mt-2 space-y-2 text-[11px] leading-4 text-slate-300">
-                    {derivedTargets.reasons.map((reason) => <div key={reason}>• {reason}</div>)}
-                    <div>• Explicit targets saved in your Health profile override calculated estimates.</div>
-                    <div>• Estimates should be refined from actual intake, weight trend, hunger, recovery and performance.</div>
-                    {nutritionProfile.goals.includes("healthy_hormones") ? <div>• Nutrition can support normal hormone function; the app does not diagnose or promise hormone changes.</div> : null}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="mt-4 grid gap-4 lg:grid-cols-[1.4fr_0.8fr]">
+<button type="button" className="syncfit-fuel-jump" onClick={()=>setFuelTab("meals")}>View meal timeline</button>{!targetsReady && <button type="button" className="syncfit-fuel-jump" onClick={onOpenGoals}>Set nutrition targets</button>}</>}
+          {fuelTab==="meals" && <>        <div className="mt-4 grid gap-4 lg:grid-cols-[1.4fr_0.8fr]">
           <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-3">
             <div className="flex items-end justify-between gap-3">
               <div><div className="text-[10px] font-black uppercase tracking-[0.16em] text-lime-200">Meal timeline</div><div className="mt-1 text-lg font-black text-white">{meals.length ? `${meals.length} meals logged` : "No meals logged"}</div></div>
@@ -539,7 +509,48 @@ export default function NutritionDashboard({
           </div>
         </div>
 
+</>}
+          {fuelTab==="history" && <>        <div className="mt-3">
+          <NutritionConsistencyTracker days={last7} calorieGoal={calorieGoal} proteinGoal={proteinGoal} onSelectDay={setSelectedDate} />
+        </div>
+
+</>}
+          {fuelTab==="guidance" && <>        <div className="mt-3 overflow-hidden rounded-[1.4rem] border border-lime-300/20 bg-lime-300/[0.06]">
+          <button type="button" onClick={() => setRevisionOpen((value) => !value)} className="flex w-full items-center justify-between gap-3 p-4 text-left">
+            <span><span className="block text-[10px] font-black uppercase tracking-[0.16em] text-lime-200">SYNC nutrition status</span><span className="mt-1 block text-sm font-black leading-5 text-white">{aiMessage}</span></span>
+            <span className="shrink-0 whitespace-nowrap text-xs font-black text-lime-100">{revisionOpen ? "Hide" : "View"}</span>
+          </button>
+          {revisionOpen ? (
+            <div className="border-t border-lime-300/15 p-4 pt-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                  <div className="text-[9px] font-black uppercase tracking-wider text-slate-500">Inputs used</div>
+                  <div className="mt-2 space-y-1 text-[11px] leading-4 text-slate-300">
+                    <div>Weight: {currentWeight ? `${Math.round(currentWeight)} lb` : "Not set"}</div>
+                    <div>Workout today: {workoutToday ? "Yes" : "No"}</div>
+                    <div>Goals: {nutritionProfile.goals.map((goal) => GOALS.find(([value]) => value === goal)?.[1]).filter(Boolean).join(", ")}</div>
+                    <div>Target date: {nutritionProfile.targetDate || "Not set"}</div>
+                    <div>Budget: {nutritionProfile.weeklyBudget ? `$${nutritionProfile.weeklyBudget}/week` : "Not set"}</div>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-cyan-300/15 bg-cyan-300/[0.04] p-3">
+                  <div className="text-[9px] font-black uppercase tracking-wider text-cyan-200">How targets were handled</div>
+                  <div className="mt-2 space-y-2 text-[11px] leading-4 text-slate-300">
+                    {derivedTargets.reasons.map((reason) => <div key={reason}>• {reason}</div>)}
+                    <div>• Explicit targets saved in your Health profile override calculated estimates.</div>
+                    <div>• Estimates should be refined from actual intake, weight trend, hunger, recovery and performance.</div>
+                    {nutritionProfile.goals.includes("healthy_hormones") ? <div>• Nutrition can support normal hormone function; the app does not diagnose or promise hormone changes.</div> : null}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
         <div className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/[0.06] p-3 text-[11px] leading-5 text-slate-400">Calorie and macro targets are estimates, not medical advice. Health conditions, pregnancy, eating-disorder history, medications, or hormone concerns should be reviewed with a qualified clinician.</div>
+</>}
+          </>}
+        </div>
       </section>
     </div>
   );
