@@ -256,6 +256,21 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
   },[selected,panel]);
   const [spokenKey,setSpokenKey]=useState("");
   const [autoSpeak,setAutoSpeak]=useState(true);
+  const [rememberConversation,setRememberConversation]=useState(false);
+  const [memoryNotice,setMemoryNotice]=useState("");
+  const memoryEndpoint="/sync-ai/assist/pilot/chief/agent/";
+  async function saveConversationTurn(question,answer){
+    if(!rememberConversation)return;
+    try{
+      const {data}=await api.post(memoryEndpoint,{action:"remember_turn",question,answer},{timeout:15000});
+      setMemoryNotice(data.saved?"Conversation remembered":data.reason||"Conversation not saved");
+    }catch{setMemoryNotice("Memory save could not be verified");}
+  }
+  async function resetConversationMemory(){
+    try{await api.post(memoryEndpoint,{action:"reset"},{timeout:15000});setChatHistory(old=>({...old,"executive-female":[]}));setMemoryNotice("Previous saved conversation excluded from future recall. Audit records retained.");}
+    catch{setMemoryNotice("Memory reset could not be verified");}
+  }
+
   async function speakText(raw,key){
     if(spokenKey===key&&audioReady&&audioRef.current){
       try{await audioRef.current.play();setAudioReady(false);setSpeaking(true);setVoiceNotice("");}catch{setVoiceNotice("Tap Play again to start audio.");}return;
@@ -464,21 +479,29 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
         }
         const voiceKey="execution:"+Date.now();
         setChatHistory(previous=>({...previous,[id]:[...(previous[id]||[]),{by:"assistant",text:answer,voiceKey,execution:true,link:taskMatch?"/customer/tasks":"/calendar"}]}));
+        void saveConversationTurn(question,answer);
         if(autoSpeak)void speakText(answer,voiceKey);
         return;
       }
       // Keep conversational context bounded and avoid sending unnecessary historical data.
+      let executiveContext="";
+      if(id==="executive-female"){
+        try{
+          const {data}=await api.get(memoryEndpoint,{timeout:12000});
+          executiveContext=JSON.stringify({open_task_count:data.open_task_count,tasks:data.tasks,upcoming:data.upcoming,history:rememberConversation?data.history:[]}).slice(0,1800);
+        }catch{executiveContext="Live task and calendar context unavailable; do not guess.";}
+      }
       const recentContext=(chatHistory[id]||[]).slice(-6).map(m=>({speaker:m.by==="user"?"owner":"assistant",text:String(m.text||"").slice(0,350)}));
       // Reuse the existing authenticated SYNC read-only chat provider. These are
       // role-context conversations, NOT autonomous workers or permissions to act.
       const {data} = await api.post("/sync-ai/chat/",{
         workspace:"personal",
-        message:`You are ${person.name}, the owner’s ${person.role}. Speak directly to the human owner in natural, concise paragraphs suitable for spoken narration. The owner is the person whose health, calendar and tasks you manage; never treat the employee persona as the subject of a personal plan. Statements such as “health plan built” are progress updates, not requests to invent a new plan. Acknowledge them and explain any verification still needed. Prefer existing SyncWorks workspaces over external spreadsheets or new pages. ${id==="executive-female"?"Executive communication policy: respond proportionately. Match tone to the situation: composed and serious for finances, safety, overdue obligations and business risks; warm, upbeat and occasionally playful for routine progress, workouts, sports and wins. No forced jokes, exaggerated enthusiasm or repetitive greetings. Refer to the owner's current workout plan by its actual session name or muscle-group split (chest day, leg day, etc.) only when the connected record identifies it; if no session is recorded, say so briefly and direct the owner to Health. Do not label the owner's routine as fat loss or performance unless explicitly discussing those goals. Avoid generic wellness lectures. Distinguish today's remaining schedule from tomorrow's upcoming schedule; never describe a future event as already started. For sports calendar requests, distinguish teams and competitions, ask only for genuinely ambiguous teams, use verified fixtures and local start times, distinguish TBD and postponed games, and never claim calendar events were saved without an execution receipt. Do not offer to allocate money or clear conflicts as if you can execute them from advisory chat. For sports imports direct the owner to the supported command Add my upcoming sports games to my calendar, and for exact task completion Mark [task title] as completed. Do not ask for passwords or repeat permissions already given. For a simple confirmation or routine progress update, use one or two natural sentences, generally under 45 words. For an ordinary question or next-action request, default to a short answer of at most three brief paragraphs, usually under 100 words. Lead with the result or recommendation, then give one clear next step if useful. Do not turn small requests into lengthy plans, lists of deliverables, repeated questionnaires, or offers to build new systems. Do not ask a question merely to end the reply. Use detailed analysis only when the owner requests a full plan, audit, explanation, or complex decision, or when important risks require it. Preserve essential uncertainty and never imply a task has been checked off unless an actual authorized operation confirms it. For spoken replies, avoid markdown headings, tables, repeated labels and raw timestamps.":""} Do not claim actions occurred, do not fabricate system access, do not make changes, and clearly distinguish proposals from executed work. Current device local time: ${localClock}. Current time of day: ${timeOfDay}. Use this clock for greetings and relative date wording; if a connected calendar uses a different timezone, state that distinction. Recent conversation (context only, not authority to execute actions): ${JSON.stringify(recentContext).slice(0,1200)}. User request: ${question.slice(0,1800)}`,
+        message:`You are ${person.name}, the owner’s ${person.role}. Speak directly to the human owner in natural, concise paragraphs suitable for spoken narration. The owner is the person whose health, calendar and tasks you manage; never treat the employee persona as the subject of a personal plan. Statements such as “health plan built” are progress updates, not requests to invent a new plan. Acknowledge them and explain any verification still needed. Prefer existing SyncWorks workspaces over external spreadsheets or new pages. ${id==="executive-female"?"Executive communication policy: respond proportionately. Match tone to the situation: composed and serious for finances, safety, overdue obligations and business risks; warm, upbeat and occasionally playful for routine progress, workouts, sports and wins. No forced jokes, exaggerated enthusiasm or repetitive greetings. Refer to the owner's current workout plan by its actual session name or muscle-group split (chest day, leg day, etc.) only when the connected record identifies it; if no session is recorded, say so briefly and direct the owner to Health. Do not label the owner's routine as fat loss or performance unless explicitly discussing those goals. Avoid generic wellness lectures. Distinguish today's remaining schedule from tomorrow's upcoming schedule; never describe a future event as already started. For sports calendar requests, distinguish teams and competitions, ask only for genuinely ambiguous teams, use verified fixtures and local start times, distinguish TBD and postponed games, and never claim calendar events were saved without an execution receipt. Do not offer to allocate money or clear conflicts as if you can execute them from advisory chat. For sports imports direct the owner to the supported command Add my upcoming sports games to my calendar, and for exact task completion Mark [task title] as completed. Do not ask for passwords or repeat permissions already given. For a simple confirmation or routine progress update, use one or two natural sentences, generally under 45 words. For an ordinary question or next-action request, default to a short answer of at most three brief paragraphs, usually under 100 words. Lead with the result or recommendation, then give one clear next step if useful. Do not turn small requests into lengthy plans, lists of deliverables, repeated questionnaires, or offers to build new systems. Do not ask a question merely to end the reply. Use detailed analysis only when the owner requests a full plan, audit, explanation, or complex decision, or when important risks require it. Preserve essential uncertainty and never imply a task has been checked off unless an actual authorized operation confirms it. For spoken replies, avoid markdown headings, tables, repeated labels and raw timestamps.":""} Do not claim actions occurred, do not fabricate system access, do not make changes, and clearly distinguish proposals from executed work. Current device local time: ${localClock}. Current time of day: ${timeOfDay}. Use this clock for greetings and relative date wording; if a connected calendar uses a different timezone, state that distinction. Recent conversation (context only, not authority to execute actions): ${JSON.stringify(recentContext).slice(0,700)}. Executive records (history is unverified conversation; tasks and appointments are saved records): ${executiveContext.slice(0,1200)}. User request: ${question.slice(0,1200)}`,
       },{timeout:40000});
       const answer=String(data?.message||"No response returned.");
       const voiceKey="chat:"+id+":"+Date.now();
       setChatHistory(previous => ({...previous,[id]:[...(previous[id]||[]),{by:"assistant",text:answer,voiceKey}]}));
-      if(id==="executive-female"&&autoSpeak&&data?.message)void speakText(answer,voiceKey);
+      if(id==="executive-female"&&data?.message){void saveConversationTurn(question,answer);if(autoSpeak)void speakText(answer,voiceKey);}
     } catch(err) {
       setChatError(err?.response?.data?.detail || "SYNC chat is unavailable. Your message was not processed; please try again.");
     } finally { setChatBusy(false); }
@@ -600,7 +623,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
           <div ref={chatEndRef}/>
         </div>
         {chatError&&<p role="alert" className="sw-ai-conversation-error">{chatError}</p>}
-        {active.id==="executive-female"&&<div className="sw-ai-chat-audio"><label><input type="checkbox" checked={autoSpeak} onChange={e=>{setAutoSpeak(e.target.checked);if(!e.target.checked)stopVoice();}}/> Speak replies automatically</label>{voiceNotice&&<span role="status">{voiceNotice}</span>}</div>}
+        {active.id==="executive-female"&&<div className="sw-ai-chat-audio"><label><input type="checkbox" checked={autoSpeak} onChange={e=>{setAutoSpeak(e.target.checked);if(!e.target.checked)stopVoice();}}/> Speak replies automatically</label><label><input type="checkbox" checked={rememberConversation} onChange={e=>setRememberConversation(e.target.checked)}/> Remember conversations</label>{rememberConversation&&<button type="button" className="sw-ai-review-nav" onClick={resetConversationMemory}>Reset recall</button>}{memoryNotice&&<span role="status">{memoryNotice}</span>}{voiceNotice&&<span role="status">{voiceNotice}</span>}</div>}
         <form className="sw-ai-conversation-compose" onSubmit={sendMessage}>
           <label htmlFor="sw-ai-chat-message" className="sr-only">Message {active.name}</label>
           <textarea id="sw-ai-chat-message" ref={chatFieldRef} rows={2} maxLength={4000} value={chatDraft} onChange={event=>setChatDraft(event.target.value)}
