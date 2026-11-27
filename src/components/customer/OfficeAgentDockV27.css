@@ -227,3 +227,39 @@ body .sw-ai-conversation--command{width:min(1120px,100%);height:min(790px,calc(1
 @media (orientation:landscape) and (hover:none) and (pointer:coarse) and (max-height:600px){
  body .sw-ai-conversation-overlay{--sw-agent-safe-top:max(12px,env(safe-area-inset-top,0px));}
 }
+
+/* Sydney executive conversation: compact header, unobtrusive controls, theme-aware glass. */
+body .sw-ai-conversation--sydney:not(.sw-ai-conversation--command){
+ background:color-mix(in srgb,var(--sw-ai-glass) 89%,transparent);
+ -webkit-backdrop-filter:blur(28px);backdrop-filter:blur(28px);
+}
+.sw-ai-conversation--sydney .sw-ai-conversation-header{padding:12px 16px;align-items:center;flex-shrink:0}
+.sw-ai-conversation--sydney .sw-ai-conversation-photo{width:64px;height:64px;border-radius:12px}
+.sw-ai-conversation--sydney .sw-ai-conversation-identification h2{font-size:22px;margin:3px 0}
+.sw-ai-conversation--sydney .sw-ai-conversation-status{margin-top:3px}
+.sw-ai-header-actions{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.sw-ai-header-actions>button{display:grid;place-items:center;width:36px;height:36px;border-radius:9px;border:1px solid color-mix(in srgb,currentColor 22%,transparent);background:transparent;color:inherit}
+.sw-ai-header-actions>button:hover,.sw-ai-header-actions>button[aria-expanded=true]{background:color-mix(in srgb,currentColor 10%,transparent)}
+.sw-ai-conversation--sydney .sw-ai-conversation-toolbar{padding:7px 14px}
+.sw-ai-conversation--sydney .sw-ai-work-summary{padding:5px 14px;background:transparent;flex-shrink:0}
+.sw-ai-work-summary--collapsed .sw-ai-work-summary-items,.sw-ai-work-summary--collapsed>p{display:none}
+.sw-ai-assigned-toggle{display:flex;align-items:center;gap:7px;padding:6px 8px;border:0!important;background:transparent!important;font-size:12px;font-weight:650;color:inherit}
+.sw-ai-chevron-open{transform:rotate(90deg)}
+.sw-ai-settings-panel{padding:10px 16px;border-bottom:1px solid color-mix(in srgb,currentColor 15%,transparent);justify-content:flex-start;gap:10px 18px}
+.sw-ai-settings-panel small{flex-basis:100%;opacity:.72;font-size:11px}
+.sw-ai-compact-status{padding:3px 16px;font-size:11px;opacity:.75;flex-shrink:0}
+.sw-ai-conversation--sydney .sw-ai-conversation-intro{gap:8px;padding:12px;min-height:0}
+.sw-ai-conversation--sydney .sw-ai-conversation-intro>img{width:64px;height:64px}
+.sw-ai-conversation--sydney .sw-ai-conversation-intro p{margin:5px 0}
+.sw-ai-conversation--sydney .sw-ai-conversation-intro .sw-ai-review-nav{font-size:13px;padding:7px 12px}
+.sw-ai-conversation--sydney .sw-ai-conversation-feed{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,currentColor 22%,transparent) transparent}
+@media(max-width:700px){
+ .sw-ai-conversation--sydney .sw-ai-conversation-header{padding:8px 12px;gap:8px}
+ .sw-ai-conversation--sydney .sw-ai-conversation-photo{width:48px;height:48px}
+ .sw-ai-conversation--sydney .sw-ai-conversation-identity{gap:8px}
+ .sw-ai-conversation--sydney .sw-ai-conversation-identification h2{font-size:19px}
+ .sw-ai-conversation--sydney .sw-ai-conversation-eyebrow{font-size:8px}
+ .sw-ai-header-actions{gap:4px}
+ .sw-ai-header-actions>button{width:36px;height:44px;min-height:44px}
+ .sw-ai-header-actions>.sw-ai-conversation-close{width:44px}
+}
