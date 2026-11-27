@@ -60,7 +60,7 @@ export default function SyncAssistantLauncher() {
   // Private founder assistant follows operational routes, but never covers
   // immersive Forge and Games experiences or authentication/onboarding flows.
   const pilotFounder = String(user?.email || "").trim().toLowerCase() === "jacoblord7@outlook.com";
-  const excludedVictoria = /^\/customer\/(?:forge|games)(?:\/|$)/.test(location.pathname) ||
+  const excludedVictoria = /^\/customer\/(?:forge|games|health)(?:\/|$)/.test(location.pathname) ||
     /^\/connect\/(?:games|sports)(?:\/|$)/.test(location.pathname) ||
     /^\/(?:login|register|logout|forgot-password|reset-password|accept-invite|upgrade)(?:\/|$)/.test(location.pathname);
   const eligibleVictoriaRoute = /^\/(?:customer|sbo|pm|platform|calendar|tickets|tenant|investor|sync|employee|inbox)(?:\/|$)/.test(location.pathname);
