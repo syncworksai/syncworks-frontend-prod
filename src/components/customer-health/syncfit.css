@@ -239,3 +239,20 @@ background:#100d0b85!important;backdrop-filter:blur(10px);border-color:#c58f7755
 .syncfit-theme :is(.sw-health-drawer-header,.health-active-workout-header) button{flex-shrink:0;overflow-wrap:normal;word-break:normal}
 @media(max-width:350px){.syncfit-icon-actions button{width:38px;height:44px}.syncfit-icon-actions{gap:3px}.syncfit-nutrition-title h2{font-size:17px}}
 @media(prefers-reduced-motion:reduce){.syncfit-nutrition-coach-content{animation:none!important}}
+
+
+/* SYNCFIT motion system: stable environment, distinct transitions by interaction. */
+@keyframes syncfit-project{0%{opacity:.15;clip-path:inset(0 0 95% 0)}65%{opacity:.9;clip-path:inset(0 0 0 0)}100%{opacity:1;clip-path:inset(0)}}
+@keyframes syncfit-tactical{from{opacity:.25;transform:translateX(22px)}to{opacity:1;transform:none}}
+@keyframes syncfit-expand{0%{opacity:.2;transform:scale(.94,.06)}35%{opacity:.85;transform:scale(1,.06)}100%{opacity:1;transform:none}}
+@keyframes syncfit-depth{from{opacity:.25;transform:scale(.94)}to{opacity:1;transform:none}}
+@keyframes syncfit-scan{0%{top:0;opacity:0}12%{opacity:.8}85%{opacity:.8}100%{top:100%;opacity:0}}
+.syncfit-fuel-content,.syncfit-intake-content,.syncfit-progress-content{animation:syncfit-tactical .48s cubic-bezier(.2,.7,.25,1) both}
+.syncfit-drawer .sw-health-drawer-body>div:not(.syncfit-intake-content):not(.syncfit-progress-content),.syncfit-nutrition-coach-content{animation:syncfit-project .78s ease-out both}
+.syncfit-fuel-sheet .syncfit-fuel-content{animation:syncfit-tactical .48s ease-out both}
+.syncfit-lobby .syncfit-arena-copy,.syncfit-lobby .syncfit-mission-grid{animation:syncfit-depth .65s ease-out both}
+.syncfit-workout-hud .health-active-workout-main>div{animation:syncfit-expand .65s cubic-bezier(.2,.75,.3,1) both;transform-origin:50% 0}
+.syncfit-portal>section>div:not([class*="sticky"]),.syncfit-log-sheet>section>div:not([class*="sticky"]){animation:syncfit-expand .55s ease-out both;transform-origin:50% 0}
+.syncfit-drawer .sw-health-drawer-header,.syncfit-fuel-header,.syncfit-nutrition-coach-header{position:relative;isolation:isolate}
+.syncfit-drawer .sw-health-drawer-header:after,.syncfit-fuel-header:after,.syncfit-nutrition-coach-header:after{content:"";position:absolute;left:0;right:0;height:1px;pointer-events:none;background:#e2b5a0;box-shadow:0 0 12px 2px #c58f7760;animation:syncfit-scan .85s ease-out both}
+@media(prefers-reduced-motion:reduce){.syncfit-fuel-content,.syncfit-intake-content,.syncfit-progress-content,.syncfit-drawer .sw-health-drawer-body>div,.syncfit-nutrition-coach-content,.syncfit-lobby .syncfit-arena-copy,.syncfit-lobby .syncfit-mission-grid,.syncfit-workout-hud .health-active-workout-main>div,.syncfit-portal>section>div,.syncfit-log-sheet>section>div,.syncfit-drawer .sw-health-drawer-header:after,.syncfit-fuel-header:after,.syncfit-nutrition-coach-header:after{animation:none!important}.syncfit-drawer .sw-health-drawer-header:after,.syncfit-fuel-header:after,.syncfit-nutrition-coach-header:after{display:none}}
