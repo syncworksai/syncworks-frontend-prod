@@ -109,7 +109,7 @@ export default function CustomerWorkspace({ settings, update, phoneMode = false,
   const apps = [
     ...(activeCategory ? activeCategory.items : APPS).filter(([name]) => dayTradingEnabled || name !== "Day Trade"),
     ...(dayTradingEnabled && (panel === "business" || panel === "apps") ? [["Freelance Work", "/customer/freelance/overview", BriefcaseBusiness]] : []),
-    ...(forgeEnabled && (panel === "apps" || panel === "personal") ? [["The Forge", "/customer/forge", Flame],["Secure Wallet (Pilot)", "/customer/secure-wallet", Wallet]] : []),
+    ...(forgeEnabled && (panel === "apps" || panel === "personal") ? [["The Forge", "/customer/forge", Flame],["Secure Wallet (Pilot)", "/customer/secure-wallet", Wallet],["Market Intelligence", "/customer/market-intelligence", TrendingUp]] : []),
   ];
   const appsPerPage=narrowApps?6:9;
   const appsPages=Math.max(1,Math.ceil(apps.length/appsPerPage));
