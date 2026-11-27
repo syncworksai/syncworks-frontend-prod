@@ -1,5 +1,5 @@
 // src/components/customer-health/WorkoutFocusCompactPanel.jsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import WorkoutFocusDrawer from "./WorkoutFocusDrawer";
 
 const TIMER_PREFS_KEY = "syncworks_health_workout_timer_preferences_v3";
@@ -189,6 +189,7 @@ export default function WorkoutFocusCompactPanel({
   const hasHistory = Boolean(previousSet || setLogs.length);
   const explicitImage = currentExercise?.image_url || currentExercise?.hero_image || currentExercise?.image || currentExercise?.demo_image || "";
   const canonicalSlug = exerciseImageSlug(exerciseName);
+  useEffect(()=>setImageFailed(false),[exerciseName]);
   const fallbackImage = `/health/exercises/${canonicalSlug}/${canonicalSlug}-hero.png`;
   const image = imageFailed ? "" : explicitImage || fallbackImage;
   const loadLabel = weight
@@ -279,12 +280,12 @@ export default function WorkoutFocusCompactPanel({
           </div>
         </div>
 
-        <div className="p-2.5 pb-24 sm:p-4 sm:pb-32">
+        <div key={currentExercise.id || exerciseName} className="syncfit-current-exercise p-2.5 pb-24 sm:p-4 sm:pb-32">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="text-[7px] font-black uppercase tracking-[0.13em] text-cyan-200">Exercise {safeNumber(session.current_exercise_index, 0) + 1} of {Math.max(1, exercises.length)}</div>
               <h2 className="mt-0.5 truncate text-[16px] font-black text-white">{exerciseName}</h2>
-              <div className="mt-0.5 text-[9px] font-bold text-slate-400">Set {setNumber} of {plannedSets}</div>
+              <div className="mt-0.5 text-[9px] font-bold text-slate-400">Set {setNumber} of {plannedSets} · {session.pending_set_logging ? "Log your result" : session.rest_active ? "Recover before next set" : session.set_active ? "Complete your reps" : "Ready to train"}</div>
             </div>
             <button type="button" onClick={() => setDrawerMode("insight")} className="h-8 rounded-lg border border-cyan-300/20 bg-cyan-300/10 px-3 text-[8px] font-black text-cyan-100">Info</button>
           </div>
