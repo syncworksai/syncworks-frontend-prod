@@ -157,3 +157,28 @@ body:has(.syncfit-modal-open) .syncfit-return-chip,body:has(.syncfit-lobby .sw-h
 .syncfit-log-sheet>section{max-height:calc(100dvh - max(12px,env(safe-area-inset-top)))!important}
 .syncfit-log-sheet>section>div.sticky{background:#14110f!important;padding-bottom:max(12px,env(safe-area-inset-bottom))!important}
 :is(.syncfit-log-sheet,.syncfit-nutrition-sheet,.syncfit-fuel-sheet) button:focus-visible,.syncfit-workout-hud button:focus-visible{outline:2px solid #e2b5a0;outline-offset:2px}
+
+
+/* Anchored subpages: independent navigation, content and action areas. */
+.syncfit-drawer .sw-health-drawer-panel,.syncfit-profile-sheet>section,.syncfit-fuel-sheet>section{height:100dvh!important;max-height:100dvh!important;min-height:0!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;background:linear-gradient(#0b0908ed,#0b0908ed),url("/health/syncfit-bg.png") center/cover!important;border-color:#805b49!important;color:#f5efeb}
+.syncfit-drawer .sw-health-drawer-header,.syncfit-profile-sheet header,.syncfit-fuel-sheet .syncfit-fuel-header{flex:none!important;background:#100e0de8!important;border-color:#805b4966!important;position:relative!important;top:auto!important;padding-top:max(12px,env(safe-area-inset-top))!important}
+.syncfit-drawer .sw-health-drawer-body,.syncfit-profile-sheet main,.syncfit-fuel-content{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain;scrollbar-width:thin}
+.syncfit-fixed-nav,.syncfit-fixed-footer,.syncfit-fuel-tabs,.syncfit-fuel-actions,.syncfit-profile-footer{flex:none!important;position:relative!important;background:#100e0dea!important}
+.syncfit-fixed-nav{padding:8px 12px;border-bottom:1px solid #805b494d}
+.syncfit-fixed-footer,.syncfit-profile-footer{padding:10px 12px max(12px,env(safe-area-inset-bottom))!important;border-top:1px solid #805b4966}
+.syncfit-step-nav,.syncfit-fuel-tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+.syncfit-fuel-tabs{grid-template-columns:repeat(4,minmax(0,1fr));padding:8px 0}
+.syncfit-step-nav button,.syncfit-fuel-tabs button,.syncfit-fuel-jump,.syncfit-step-footer button{min-height:42px;border:1px solid #805b4966;border-radius:12px;background:#1a1512;color:#e2b5a0;font-size:11px;font-weight:800}
+.syncfit-step-nav button[aria-current],.syncfit-fuel-tabs button[aria-pressed="true"]{background:#c58f77;color:#100d0c;border-color:#e2b5a0}
+.syncfit-step-footer{display:grid;grid-template-columns:1fr 2fr;gap:8px}
+.syncfit-step-footer button:last-child{background:#c58f77;color:#100d0c}
+.syncfit-step-footer button:disabled{opacity:.35}
+.syncfit-fuel-jump{width:100%;margin-top:10px}
+.syncfit-fuel-sheet>section{padding-bottom:max(12px,env(safe-area-inset-bottom))!important}
+.syncfit-fuel-content{padding:0 2px 12px}
+.syncfit-intake-content>div{display:grid;gap:10px}
+:is(.syncfit-drawer,.syncfit-profile-sheet,.syncfit-fuel-sheet) :is(button,input,select,textarea){color-scheme:dark}
+:is(.syncfit-drawer,.syncfit-profile-sheet,.syncfit-fuel-sheet) :is(button,input,select,textarea)[class*="bg-slate-"],:is(.syncfit-drawer,.syncfit-profile-sheet,.syncfit-fuel-sheet) button[class*="bg-white/"]{background:#171310!important;border-color:#805b4966!important;color:#f1e7e0!important}
+:is(.syncfit-drawer,.syncfit-profile-sheet,.syncfit-fuel-sheet) :is([class*="bg-amber-"],[class*="bg-cyan-"],[class*="bg-lime-"],[class*="bg-fuchsia-"],[class*="bg-emerald-"]){background-color:#c58f771a!important;border-color:#805b4980!important}
+:is(.syncfit-drawer,.syncfit-profile-sheet,.syncfit-fuel-sheet) :is([class*="text-cyan-"],[class*="text-lime-"],[class*="text-fuchsia-"],[class*="text-emerald-"]){color:#e2b5a0!important}
+@media(max-width:639px){.syncfit-drawer .sw-health-drawer-header p,.syncfit-profile-sheet header p,.syncfit-fuel-header p{font-size:11px!important;line-height:1.35!important}.syncfit-fuel-header h2,.syncfit-profile-sheet header h2{font-size:20px!important}.syncfit-profile-sheet header{padding-bottom:8px!important}.syncfit-profile-sheet header>div:last-child{margin-top:8px!important}.syncfit-fuel-actions{margin-top:5px!important}.syncfit-fuel-sheet>section{padding-top:8px!important}}
