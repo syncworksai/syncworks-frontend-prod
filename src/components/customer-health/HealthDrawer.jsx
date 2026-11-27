@@ -10,6 +10,8 @@ export default function HealthDrawer({
   subtitle,
   onClose,
   children,
+  navigation,
+  footer,
 }) {
   if (!open) return null;
 
@@ -39,7 +41,7 @@ export default function HealthDrawer({
 
             <div className="min-w-0 flex-1">
               <div className="sw-health-drawer-brand text-[9px] font-black uppercase text-cyan-300 sm:text-[10px]">
-                SyncWorks Health
+                SYNCFIT
               </div>
               <h2 className="mt-1 text-lg font-black leading-tight text-white sm:text-xl">
                 {title}
@@ -65,9 +67,11 @@ export default function HealthDrawer({
           </div>
         </header>
 
+        {navigation && <div className="syncfit-fixed-nav">{navigation}</div>}
         <div className="sw-health-drawer-body min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:p-5">
           {children}
         </div>
+        {footer && <footer className="syncfit-fixed-footer">{footer}</footer>}
       </aside>
     </div>
   );
