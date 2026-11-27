@@ -359,16 +359,16 @@ export default function HealthMobileHome({
       ) : null}
       <HealthStrengthProgression open={progressionOpen} onClose={() => setProgressionOpen(false)} />
       <section className="sw-health-hero">
-        <img className="sw-health-hero__logo" src="/health/syncworks-health-s-glow.png" alt="" aria-hidden="true" />
+        <img className="sw-health-hero__logo" src="/health/brand/syncfit-mark.svg" alt="" aria-hidden="true" />
         <div className="sw-health-hero__copy">
-          <div className="sw-health-eyebrow">Ready to</div>
-          <h1>Level up?</h1>
+          <div className="sw-health-eyebrow">Powered by SyncWorks</div>
+          <h1>SYNCFIT</h1>
           <p>What’s the plan today, {firstName}?</p>
-          <div className="sw-health-reference-quote">Stronger habits. A healthier you.</div>
+          <div className="sw-health-reference-quote">Built through discipline.</div>
         </div>
         <div className="sw-health-hero-actions">
           <button type="button" className="sw-health-ai-pill" onClick={() => onOpen?.("coach-chat")}>
-            <BrainCircuit size={17} /> AI Coach <ChevronRight size={15} />
+            <BrainCircuit size={17} /> SYNCFIT Coach <ChevronRight size={15} />
           </button>
           <button type="button" className="sw-health-voice-pill" onClick={() => onOpen?.("workout")}>
             <Mic2 size={15} /> {voiceLabel}
@@ -379,7 +379,7 @@ export default function HealthMobileHome({
       <section className="sw-health-panel sw-health-core-flow">
         <div className="sw-health-section-head">
           <span>Your health plan</span>
-          <button type="button" onClick={() => onOpen?.("coach-chat")}>Ask SYNC <ChevronRight size={13} /></button>
+          <button type="button" onClick={() => onOpen?.("coach-chat")}>Ask SYNCFIT <ChevronRight size={13} /></button>
         </div>
         <div className="sw-health-flow-grid">
           <FlowAction
