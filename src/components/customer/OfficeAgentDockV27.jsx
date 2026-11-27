@@ -479,18 +479,21 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
       const taskMatch=normalized.match(/^mark (.+) as (?:completed|done)$/i)||normalized.match(/^(?:complete|check off) (?:the task )?(.+)$/i);
       const sportsImport=/^(?:please )?(?:add|import|refresh|sync|update) (?:all )?(?:my|the) (?:upcoming )?(?:sports|favorite teams’|favorite teams\x27) (?:games|schedule|calendar)(?: to (?:my|the) calendar)?$/i.test(normalized);
       const sportsStatus=/^(?:what sports teams am i following(?:,? and what are my notification preferences)?|(?:check|show) my sports (?:calendar|schedule|preferences)|have you added my (?:sports )?games(?: to my calendar)?)$/i.test(normalized);
+      const autoSports=/^(?:please )?(?:enable|turn on|start) (?:automatic |daily )?sports (?:calendar )?(?:refresh|updates)$/i.test(normalized);
+      const stopSports=/^(?:please )?(?:disable|turn off|stop) (?:automatic |daily )?sports (?:calendar )?(?:refresh|updates)$/i.test(normalized);
       const saveSports=/^(?:please )?(?:save|remember) my sports preferences$/i.test(normalized);
-      if(id==="executive-female"&&(taskMatch||sportsImport||sportsStatus||saveSports)){
+      if(id==="executive-female"&&(taskMatch||sportsImport||sportsStatus||saveSports||autoSports||stopSports)){
         let result,answer;
         const endpoint="/sync-ai/assist/pilot/chief/execute/";
         if(sportsStatus){
           result=(await api.get(endpoint,{timeout:20000})).data;
-          answer=result.preferences?"Your saved preferences are "+result.preferences.teams.join(", ")+". SyncWorks calendar, Outlook requested, email only, 15-minute reminders, and flag conflicts. There are "+result.upcoming_saved+" upcoming imported games in SyncWorks. Outlook export and automatic refresh are not connected yet.":"Your sports preferences have not been saved yet. Say ‘Save my sports preferences’ to record them.";
+          answer=result.preferences?"Your saved preferences are "+result.preferences.teams.join(", ")+". SyncWorks calendar, Outlook requested, email only, 15-minute reminders, and flag conflicts. There are "+result.upcoming_saved+" upcoming imported games in SyncWorks. Outlook export is not connected. Automatic refresh is "+(result.automatic_refresh?"enabled":"disabled")+".":"Your sports preferences have not been saved yet. Say ‘Save my sports preferences’ to record them.";
         }else{
-          result=(await api.post(endpoint,taskMatch?{command:"complete_task",title:taskMatch[1]}:{command:sportsImport?"import_sports":"save_preferences"},{timeout:90000})).data;
+          result=(await api.post(endpoint,taskMatch?{command:"complete_task",title:taskMatch[1]}:{command:autoSports?"enable_sports_refresh":stopSports?"disable_sports_refresh":sportsImport?"import_sports":"save_preferences"},{timeout:90000})).data;
           if(taskMatch)answer="Done. "+result.title+" is marked completed in your task list.";
+          else if(autoSports||stopSports)answer=result.automatic_refresh?"Daily sports refresh is enabled. The scheduled runtime must successfully run to update your calendar.":"Daily sports refresh is disabled.";
           else if(saveSports)answer="Your sports preferences are saved. Your calendar and notification delivery settings have not been changed.";
-          else answer="Sports import finished. "+result.created_ids.length+" games added, "+result.updated_ids.length+" updated, and "+result.unchanged_ids.length+" already current. "+result.conflict_count+" calendar overlaps found. "+(result.failed_feeds.length?"Unavailable feeds: "+result.failed_feeds.join(", ")+". ":"")+(result.undated_skipped?result.undated_skipped+" games without confirmed times skipped. ":"")+"This first import covers Steelers, Alabama football and men's basketball, and Vanderbilt baseball. Outlook export, additional Alabama sports, email alerts and automatic updates are not connected yet.";
+          else answer="Sports import finished. "+result.created_ids.length+" games added, "+result.updated_ids.length+" updated, and "+result.unchanged_ids.length+" already current. "+result.conflict_count+" calendar overlaps found. "+(result.failed_feeds.length?"Unavailable feeds: "+result.failed_feeds.join(", ")+". ":"")+(result.undated_skipped?result.undated_skipped+" games without confirmed times skipped. ":"")+"This first import covers Steelers, Alabama football and men's basketball, and Vanderbilt baseball. Outlook export, additional Alabama sports and email alerts are not connected yet. Automatic refresh is "+(result.automatic_refresh?"enabled":"disabled")+".";
           window.dispatchEvent(new Event("syncworks:tasks-changed"));
         }
         const voiceKey="execution:"+Date.now();
