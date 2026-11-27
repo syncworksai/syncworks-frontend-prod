@@ -82,3 +82,25 @@ html:has(.syncfit-lobby-page),body:has(.syncfit-lobby-page){overflow:hidden!impo
 @media(min-width:1024px){.syncfit-lobby-page{padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))!important}}
 @media(max-height:620px){.syncfit-mission-grid button{min-height:48px}.syncfit-arena-mark{top:0}.syncfit-lobby-page .syncfit-lobby{gap:4px}}
 @media(prefers-reduced-motion:reduce){.syncfit-arena-light,.syncfit-theme .sw-health-tools-drawer{animation:none!important}.syncfit-lobby button,.syncfit-meter i{transition:none!important}}
+
+
+/* Restore global dock; keep it above the fixed lobby and below modal UI. */
+body:has(.syncfit-lobby-page) .sw-role-mobile-nav[data-syncfit-route="true"]{z-index:2147481000!important}
+body:has(.syncfit-modal-open) .sw-role-mobile-nav[data-syncfit-route="true"],body:has(.syncfit-lobby .sw-health-tools-layer) .sw-role-mobile-nav[data-syncfit-route="true"]{visibility:hidden!important;pointer-events:none!important}
+.sw-role-mobile-nav[data-syncfit-route="true"]{background:#100e0deb!important;border-color:#805b49!important;box-shadow:0 8px 24px #0008!important}
+.sw-role-mobile-nav[data-syncfit-route="true"] button{color:#e2b5a0!important}
+.sw-role-mobile-nav[data-syncfit-route="true"] .sw-role-mobile-nav-center.is-sync .sw-role-mobile-nav-center-orb{border-color:#c58f77!important;background:#191411!important;box-shadow:0 0 12px #c58f7744!important}
+.sw-role-mobile-nav[data-syncfit-route="true"] .sw-role-mobile-nav-center-orb img{width:100%!important;height:100%!important;object-fit:cover!important;object-position:top;filter:none!important}
+.syncfit-lobby-page .sw-health-environment-image{background-image:url("/health/syncfit-bg.png"),url("/health/IMG_3431.png"),url("/health/brand/syncfit-arena.svg")!important}
+.syncfit-lobby-page .sw-health-environment-tint{background:linear-gradient(180deg,#08080844,#08080822 45%,#080808a8)!important}
+.syncfit-lobby-page .syncfit-lobby-head .syncfit-head-actions{display:flex;gap:5px}
+.syncfit-lobby-page .syncfit-head-actions button{display:grid;place-items:center;width:36px;height:36px;padding:0;border-radius:50%;background:#100d0b88}
+.syncfit-lobby-page .syncfit-arena-mark{width:36%;opacity:.38!important;top:12%}
+.syncfit-lobby-page .syncfit-arena-light{background:radial-gradient(ellipse at 35% 35%,#d49a6c20,transparent 55%)}
+.syncfit-lobby-page .syncfit-mission-grid button{border-radius:18px!important;background:#100d0b88!important}
+.syncfit-lobby-page .syncfit-objectives{padding:7px 10px!important;gap:4px!important}
+.syncfit-lobby-page .syncfit-objectives>button{min-height:26px!important}
+.syncfit-lobby-page .syncfit-arena-coach{background:transparent!important}
+.syncfit-lobby-page .syncfit-arena-coach img{width:58px;height:58px}
+@media(min-width:1024px){.syncfit-lobby-page{padding-bottom:18px!important}}
+@media(max-height:620px){.syncfit-lobby-page .syncfit-arena-coach img{width:38px;height:38px}}
