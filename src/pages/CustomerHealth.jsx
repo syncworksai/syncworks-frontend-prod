@@ -66,6 +66,7 @@ import {
 import "../components/customer-health/healthUiPolish.css";
 import "../components/customer-health/healthObsidianElectric.css";
 import "../components/customer-health/healthWorkoutMobileV2.css";
+import "../components/customer-health/syncfit.css";
 import {
   adaptWorkoutToAvailableEquipment,
   buildAdaptiveWorkout,
@@ -3417,12 +3418,12 @@ export default function CustomerHealth() {
     !!syncedSnapshot?.coach_plan_proposal;
 
   return (
-    <div className="health-ui-polish health-obsidian-electric min-h-dvh overflow-x-hidden bg-[#020617] pb-24 text-slate-100 lg:pb-0">
+    <div className="syncfit-theme health-ui-polish health-obsidian-electric min-h-dvh overflow-x-hidden bg-[#020617] pb-24 text-slate-100 lg:pb-0">
       <div className="pointer-events-none fixed inset-0" aria-hidden="true">
         <div
           className="absolute inset-0 sw-health-environment-image"
           style={{
-            backgroundImage: 'url("/health/health%20background.png")',
+            backgroundImage: 'url("/health/syncfit-bg.png")',
             backgroundPosition: "center 60%",
             backgroundRepeat: "no-repeat",
             backgroundSize: "cover",
@@ -4320,6 +4321,7 @@ export default function CustomerHealth() {
             setSnapshot={setSnapshot}
           />
 
+          {!drawer && !quickLogType && !releaseUpdateOpen && <button type="button" className="syncfit-coach-bubble" aria-label="Open SYNCFIT fitness coach" onClick={() => handleDashboardOpen("coach-chat")}><img src="/jarvis-avatars/sarahgym1.png" alt="" /><span>SYNCFIT</span></button>}
           <HealthMobileQuickNav
             onOpen={handleDashboardOpen}
             onLog={() => setQuickLogType("menu")}
