@@ -253,6 +253,7 @@ function persistedSessionHasProgress(persisted) {
     : 0;
 
   return Boolean(
+    session.paused ||
     completedSets > 0 ||
       activeSeconds >= 30 ||
       pendingSet ||
@@ -2634,6 +2635,7 @@ export default function ActiveWorkoutSessionDrawer({
   history,
   setHistory,
   onWorkoutComplete,
+  onPauseSaved,
 }) {
   const [session, setSession] = useState(null);
   const [reviewMode, setReviewMode] = useState(false);
@@ -4476,7 +4478,14 @@ export default function ActiveWorkoutSessionDrawer({
       if (!shouldLeave) return;
     }
 
-    persistWorkoutSession(activeSession, plannerItem);
+    if (activeSession?.status === "active") {
+      const pausedSession = { ...activeSession, paused: true };
+      latestSessionRef.current = pausedSession;
+      setSession(pausedSession);
+      persistWorkoutSession(pausedSession, plannerItem);
+      flushCloudActiveWorkoutSave(pausedSession, plannerItem).catch(() => undefined);
+      onPauseSaved?.(pausedSession, plannerItem);
+    }
 
     setReviewMode(false);
     setFinishMessage("");
@@ -4843,7 +4852,7 @@ export default function ActiveWorkoutSessionDrawer({
                 onClick={closeDrawer}
                 className="h-10 rounded-2xl border border-white/10 bg-white/[0.06] px-4 text-xs font-black text-white"
               >
-                Exit Focus
+                Pause & save
               </button>
             </div>
           </div>
