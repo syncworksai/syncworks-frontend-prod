@@ -78,6 +78,7 @@ import {
 } from "./healthWarmupCooldown";
 
 import {
+  buildSpokenTrainingMemory,
   hydrateSessionWithExerciseMemory,
   persistSessionExerciseMemory,
 } from "./healthExerciseMemory";
@@ -3121,7 +3122,7 @@ export default function ActiveWorkoutSessionDrawer({
       return;
     }
 
-    const key = `${session?.id}:${currentExercise.id}`;
+    const key = `${session?.id}:${currentExercise.id}:${currentExercise.substituted ? currentExercise.substitute_name : currentExercise.name}`;
 
     if (lastExerciseCueRef.current === key) return;
 
@@ -3136,6 +3137,7 @@ export default function ActiveWorkoutSessionDrawer({
 
     playWorkoutCoachMessage({
       text: [
+        !isTimedExercise ? buildSpokenTrainingMemory(currentExercise, history) : "",
         buildNaturalExerciseIntroPhrase({
           exercise: currentExercise,
           knowledge,
@@ -3290,14 +3292,9 @@ export default function ActiveWorkoutSessionDrawer({
     const previous = currentExercise?.previous_performance || null;
     const recommendation = currentExercise?.memory_recommendation || null;
 
-    if (question.includes("should i increase") || question.includes("increase the weight") || question.includes("feel stronger")) {
-      if (recommendation?.weight) {
-        return `Your logged history supports ${recommendation.weight} pounds for ${recommendation.reps || currentReps || "the planned reps"}. ${recommendation.reason || "Use the increase only if your warm-up and form feel clean."}`;
-      }
-      if (currentWeight > 0) {
-        return `You do not have enough clean history for an automatic jump yet. Complete this set at ${currentWeight} pounds around effort 7. If form stays clean, add 5 pounds next set.`;
-      }
-      return "Use a comfortable working load around effort 6 to 8. This is a baseline set, not a max-out attempt.";
+    if (/last time|previous (?:workout|session|sets?)|what did i lift|last weight|last reps/.test(question)) return buildSpokenTrainingMemory(currentExercise, history);
+    if (/should i (?:increase|add weight|go heavier)|increase the weight|feel stronger/.test(question)) {
+      return buildSpokenTrainingMemory(currentExercise, history) + " Tell me how many more clean reps you could do, whether you have any pain, and how recovered you feel before changing the target.";
     }
 
     if (question.includes("shoulder") && (question.includes("tight") || question.includes("hurt") || question.includes("pain"))) {
@@ -3351,7 +3348,7 @@ export default function ActiveWorkoutSessionDrawer({
     let reply = coachReplyForQuestion(question);
     if (useAI && !isCoachQuestion(question.toLowerCase())) {
       try {
-        const result = await createHealthCoachTurn({ userText: question, profile: snapshot?.profile || snapshot?.health_profile || {}, snapshot: { workout_name: session?.workout_name, current_exercise: currentExercise, rest_active: session?.rest_active, set_active: session?.set_active, readiness: snapshot?.readiness }, history: [] });
+        const result = await createHealthCoachTurn({ userText: question, profile: snapshot?.profile || snapshot?.health_profile || {}, snapshot: { workout_name: session?.workout_name, current_exercise: currentExercise ? {name: currentExercise.name, current_target_weight: currentExercise.current_target_weight, current_target_reps: currentExercise.current_target_reps, set_logs: currentExercise.set_logs} : null, previous_training_recap: buildSpokenTrainingMemory(currentExercise, history), rest_active: session?.rest_active, set_active: session?.set_active, readiness: snapshot?.readiness }, history: [] });
         if (String(result?.reply || "").trim()) reply = String(result.reply).trim();
       } catch { /* retain deterministic coaching fallback */ }
     }
@@ -3380,6 +3377,13 @@ export default function ActiveWorkoutSessionDrawer({
 
   function isCoachQuestion(command) {
     return [
+      "last time",
+      "previous workout",
+      "previous session",
+      "previous set",
+      "what did i lift",
+      "last weight",
+      "last reps",
       "should i increase",
       "should i add weight",
       "should i go heavier",
@@ -3439,9 +3443,7 @@ export default function ActiveWorkoutSessionDrawer({
         : currentExercise.name;
 
     playWorkoutCoachMessage({
-      text: buildExerciseIntroSpeech(
-        getExerciseKnowledge(exerciseName)
-      ),
+      text: [!isTimedExercise ? buildSpokenTrainingMemory(currentExercise, history) : "", buildExerciseIntroSpeech(getExerciseKnowledge(exerciseName))].filter(Boolean).join(" "),
       audioMode: coachAudioMode,
       voicePreference: coachVoicePreference,
       rate: 1.02,
