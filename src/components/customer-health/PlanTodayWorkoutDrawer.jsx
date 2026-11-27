@@ -709,7 +709,7 @@ function PlanTodayWorkoutContent({
   const soreAreas = plan?.avoided_sore_areas || [];
 
   return createPortal(
-    <div className="fixed inset-0 z-[2147483000] flex items-end justify-center bg-black/75 p-3 backdrop-blur-md sm:items-center" role="presentation">
+    <div className="syncfit-portal fixed inset-0 z-[2147483000] flex items-end justify-center bg-black/75 p-3 backdrop-blur-md sm:items-center" role="presentation">
       <button
         type="button"
         aria-label="Close plan today"
@@ -1018,7 +1018,7 @@ class PlanTodayErrorBoundary extends React.Component {
   render() {
     if (this.state.failed && this.props.open && typeof document !== "undefined") {
       return createPortal(
-        <div className="fixed inset-0 z-[2147483000] flex items-center justify-center bg-[#020817]/95 p-4">
+        <div className="syncfit-portal fixed inset-0 z-[2147483000] flex items-center justify-center bg-[#020817]/95 p-4">
           <section role="alertdialog" aria-modal="true" aria-label="Workout builder unavailable"
             className="w-full max-w-lg rounded-3xl border border-cyan-300/40 bg-[#071629] p-6 text-white shadow-2xl">
             <p className="text-xs font-bold uppercase tracking-widest text-cyan-300">SyncWorks Health</p>
