@@ -186,6 +186,11 @@ export default function RoleAwareMobileNav() {
   const chiefAvatar = AVATARS.find(a => a.role === "Chief of Staff") || AVATARS[0];
   const [items, setItems] = useState(() => navMode ? readPreference(navMode, user) : []);
   const [unread, setUnread] = useState(0);
+  const [resumeAvailable, setResumeAvailable] = useState(false);
+  useEffect(() => {
+    const check = () => { try { const owner = String(user?.id || user?.email || ""); const marker = JSON.parse(localStorage.getItem("syncfit_resume_" + owner) || "null"); const saved = JSON.parse(localStorage.getItem("syncworks_health_active_workout_v1") || "null"); setResumeAvailable(Boolean(owner && marker && saved?.session?.id === marker.sessionId && saved.session.status === "active")); } catch { setResumeAvailable(false); } };
+    check(); window.addEventListener("syncfit:paused",check); window.addEventListener("storage",check); window.addEventListener("focus",check); return () => { window.removeEventListener("syncfit:paused",check); window.removeEventListener("storage",check); window.removeEventListener("focus",check); };
+  }, [user?.id,user?.email,pathname]);
   const [aiTeamOpen, setAiTeamOpen] = useState(false);
   const [mobileAgentId, setMobileAgentId] = useState(null);
   // The global dock is rendered outside the themed CustomerWorkspace root.
@@ -330,6 +335,7 @@ export default function RoleAwareMobileNav() {
           <button type="button" className="sw-mobile-bots-expand" onClick={() => setAiTeamOpen(true)} aria-label="View all AI employees"><span aria-hidden="true" className="sw-mobile-bots-more-icon">•••</span><span>More</span></button>
         </div>
       )}
+      {resumeAvailable && <button type="button" className="syncfit-return-chip" onClick={() => healthRoute ? window.dispatchEvent(new Event("syncfit:resume")) : navigate("/customer/health?resume=1")}>↩ Resume workout</button>}
       <nav className="sw-role-mobile-nav lg:hidden" aria-label="Mobile quick navigation" data-sync-theme={navMode === "CUSTOMER" ? customerTheme : undefined} data-forge-route={pathname === "/customer/forge" ? "true" : undefined} data-syncfit-route={healthRoute ? "true" : undefined}>
         <div className="sw-role-mobile-nav-grid">
           {renderedItems.slice(0, 2).map((item) => <NavButton key={item.id} item={item} onClick={() => openItem(item)} />)}
