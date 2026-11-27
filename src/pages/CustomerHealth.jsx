@@ -3418,7 +3418,7 @@ export default function CustomerHealth() {
     !!syncedSnapshot?.coach_plan_proposal;
 
   return (
-    <div className="syncfit-theme health-ui-polish health-obsidian-electric min-h-dvh overflow-x-hidden bg-[#020617] pb-24 text-slate-100 lg:pb-0">
+    <div className={`syncfit-theme health-ui-polish health-obsidian-electric min-h-dvh overflow-x-hidden bg-[#020617] pb-24 text-slate-100 lg:pb-0 ${hasHealthAccess && healthView === "home" ? "syncfit-lobby-page" : ""}`}>
       <div className="pointer-events-none fixed inset-0" aria-hidden="true">
         <div
           className="absolute inset-0 sw-health-environment-image"
@@ -4321,8 +4321,8 @@ export default function CustomerHealth() {
             setSnapshot={setSnapshot}
           />
 
-          {!drawer && !quickLogType && !releaseUpdateOpen && <button type="button" className="syncfit-coach-bubble" aria-label="Open SYNCFIT fitness coach" onClick={() => handleDashboardOpen("coach-chat")}><img src="/jarvis-avatars/sarahgym1.png" alt="" /><span>SYNCFIT</span></button>}
-          <HealthMobileQuickNav
+          {healthView !== "home" && !drawer && !quickLogType && !releaseUpdateOpen && <button type="button" className="syncfit-coach-bubble" aria-label="Open SYNCFIT fitness coach" onClick={() => handleDashboardOpen("coach-chat")}><img src="/jarvis-avatars/sarahgym1.png" alt="" /><span>SYNCFIT</span></button>}
+          {!drawer && !quickLogType && !releaseUpdateOpen && <HealthMobileQuickNav
             onOpen={handleDashboardOpen}
             onLog={() => setQuickLogType("menu")}
             onOpenSync={() => {
@@ -4345,7 +4345,7 @@ export default function CustomerHealth() {
               hasCoachProposal
             }
             activeView={healthView}
-          />
+          />}
         </>
       ) : null}
 

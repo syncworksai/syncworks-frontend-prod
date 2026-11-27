@@ -2,6 +2,7 @@
 import React from "react";
 import {
   Activity,
+  PlusCircle,
   Dumbbell,
   HeartPulse,
   UserRound,
@@ -52,19 +53,19 @@ export default function HealthMobileQuickNav({
       >
         <NavButton
           icon={HeartPulse}
-          label="Home"
+          label="Lobby"
           active={activeView === "home"}
           onClick={() => onOpen?.("home")}
         />
         <NavButton
           icon={Dumbbell}
-          label="Workouts"
-          onClick={() => onOpen?.("my-workouts")}
+          label="Missions"
+          onClick={() => onOpen?.("planner")}
         />
         <NavButton
-          icon={Utensils}
-          label="Nutrition"
-          onClick={() => onOpen?.("nutrition-dashboard")}
+          icon={PlusCircle}
+          label="Log"
+          onClick={() => onOpen?.("quick-log")}
         />
         <NavButton
           icon={Activity}
@@ -74,7 +75,7 @@ export default function HealthMobileQuickNav({
         />
         <NavButton
           icon={UserRound}
-          label="You"
+          label="Athlete"
           onClick={() => onOpen?.("profile-intake")}
         />
       </nav>

@@ -294,31 +294,31 @@ export default function HealthMobileHome({
   }
 
   return (
-    <section className="sw-health-home text-white" data-health-panel={desktopPanel}>
-      <div className="sw-health-focus-switcher" role="group" aria-label="Health dashboard focus">
-        <span className="sw-health-focus-switcher__title">MY HEALTH STUDIO</span>
-        {[
-          ["today", "Today", Dumbbell],
-          ["plan", "My Plan", CalendarDays],
-          ["insights", "Insights", BarChart3],
-        ].map(([key, label, Icon]) => (
-          <button key={key} type="button" aria-pressed={desktopPanel === key}
-            className={desktopPanel === key ? "is-current" : ""}
-            onClick={() => setDesktopPanel(key)}>
-            <Icon size={15} /> {label}
-          </button>
-        ))}
-        <button type="button" className="sw-health-progression-toggle"
-          aria-haspopup="dialog" aria-expanded={progressionOpen}
-          onClick={() => setProgressionOpen(true)}>
-          <BarChart3 size={15} /> My Strength
-        </button>
-        <button type="button" className="sw-health-tools-toggle"
-          aria-haspopup="dialog" aria-expanded={toolsOpen}
-          onClick={() => setToolsOpen(true)}>
-          <Menu size={16} /> All Tools
-        </button>
+    <section className="syncfit-lobby" aria-label="SYNCFIT training lobby">
+      <header className="syncfit-lobby-head">
+        <div><small>ATHLETE HQ · SYNCFIT</small><strong>{firstName}</strong></div>
+        <button type="button" onClick={() => setToolsOpen(true)} aria-label="Open training tools"><Menu size={22}/></button>
+      </header>
+      <div className="syncfit-arena">
+        <div className="syncfit-arena-light" aria-hidden="true" />
+        <img className="syncfit-arena-mark" src="/health/brand/syncfit-mark.svg" alt=""/>
+        <div className="syncfit-arena-copy"><small>DAILY MISSION</small><h1>{resumePreviousWorkout ? resumePreviousWorkout.workout_name : workoutName}</h1><span>{nextWorkout ? `${workoutExercises || "—"} exercises · ${workoutMinutes} min` : "Build your personalized training plan"}</span></div>
+        <button className="syncfit-arena-coach" type="button" onClick={() => onOpen?.("coach-chat")} aria-label="Talk to SYNCFIT fitness coach"><img src="/jarvis-avatars/sarahgym1.png" alt=""/><span>SYNCFIT</span></button>
       </div>
+      <div className="syncfit-mission-grid" aria-label="Training zones">
+        <button type="button" onClick={() => onOpen?.("my-workouts")}><Dumbbell/><strong>TRAIN</strong><small>{snapshot?.workout_completed_today ? "Complete" : "Workouts"}</small></button>
+        <button type="button" onClick={() => onOpen?.("nutrition-dashboard")}><Utensils/><strong>FUEL</strong><small>{Math.round(protein)} / {Math.round(proteinGoal)}g P</small></button>
+        <button type="button" onClick={() => setRecoveryOpen(true)}><HeartPulse/><strong>RECOVER</strong><small>{sleepHours ? `${sleepHours}h sleep` : "Check in"}</small></button>
+      </div>
+      <div className="syncfit-objectives" aria-label="Daily objectives">
+        <div><span>DAILY OBJECTIVES</span><button type="button" onClick={onEditDailyGoals}>Log <ChevronRight size={14}/></button></div>
+        {[
+          ["Training", snapshot?.workout_completed_today ? 100 : 0, () => onOpen?.("my-workouts")],
+          ["Protein", proteinGoal ? clampPct(protein / proteinGoal * 100) : 0, () => openQuick("meal","nutrition-coach")],
+          ["Steps", stepGoal ? clampPct(steps / stepGoal * 100) : 0, () => openQuick("steps","daily-goals")]
+        ].map(([label,pct,action]) => <button type="button" key={label} onClick={action}><span>{label}</span><span className="syncfit-meter"><i style={{width:pct+"%"}}/></span><small>{pct}%</small></button>)}
+      </div>
+      <button type="button" className="syncfit-start-mission" onClick={() => resumePreviousWorkout ? onStartWorkout?.(resumePreviousWorkout) : decision?.needsRebuild ? onOpen?.("planner") : nextWorkout ? onStartWorkout?.(nextWorkout) : onOpen?.("plan-today")}>{resumePreviousWorkout ? "RESUME MISSION" : nextWorkout ? "START MISSION" : "BUILD MISSION"} <ChevronRight size={20}/></button>
       {toolsOpen ? (
         <div className="sw-health-tools-layer" role="presentation">
           <button type="button" className="sw-health-tools-backdrop"
@@ -327,7 +327,7 @@ export default function HealthMobileHome({
             aria-label="SyncWorks Health tools">
             <div className="sw-health-tools-head">
               <div>
-                <small>SYNCWORKS HEALTH</small>
+                <small>SYNCFIT</small>
                 <h2>Command Center</h2>
                 <p>Choose where to go. Your workout stays available.</p>
               </div>
@@ -344,7 +344,7 @@ export default function HealthMobileHome({
                 { label: "Body Metrics", detail: "Measurements and health profile", icon: Scale, action: () => onOpen?.("profile-intake") },
                 { label: "Performance", detail: "Trends, progress and records", icon: BarChart3, action: () => onOpen?.("progress") },
                 { label: "Strength Progression", detail: "Personal weights, reps and improvement", icon: BarChart3, action: () => setProgressionOpen(true) },
-                { label: "SYNC AI Coach", detail: "Ask questions and adjust your plan", icon: BrainCircuit, action: () => onOpen?.("coach-chat") },
+                { label: "SYNCFIT Coach", detail: "Ask questions and adjust your plan", icon: BrainCircuit, action: () => onOpen?.("coach-chat") },
               ].map(({label,detail,icon:Icon,action}) => (
                 <button key={label} type="button" className="sw-health-tool-item"
                   onClick={() => { setToolsOpen(false); action(); }}>
@@ -358,151 +358,6 @@ export default function HealthMobileHome({
         </div>
       ) : null}
       <HealthStrengthProgression open={progressionOpen} onClose={() => setProgressionOpen(false)} />
-      <section className="sw-health-hero">
-        <img className="sw-health-hero__logo" src="/health/brand/syncfit-mark.svg" alt="" aria-hidden="true" />
-        <div className="sw-health-hero__copy">
-          <div className="sw-health-eyebrow">Powered by SyncWorks</div>
-          <h1>SYNCFIT</h1>
-          <p>What’s the plan today, {firstName}?</p>
-          <div className="sw-health-reference-quote">Built through discipline.</div>
-        </div>
-        <div className="sw-health-hero-actions">
-          <button type="button" className="sw-health-ai-pill" onClick={() => onOpen?.("coach-chat")}>
-            <BrainCircuit size={17} /> SYNCFIT Coach <ChevronRight size={15} />
-          </button>
-          <button type="button" className="sw-health-voice-pill" onClick={() => onOpen?.("workout")}>
-            <Mic2 size={15} /> {voiceLabel}
-          </button>
-        </div>
-      </section>
-
-      <section className="sw-health-panel sw-health-core-flow">
-        <div className="sw-health-section-head">
-          <span>Your health plan</span>
-          <button type="button" onClick={() => onOpen?.("coach-chat")}>Ask SYNCFIT <ChevronRight size={13} /></button>
-        </div>
-        <div className="sw-health-flow-grid">
-          <FlowAction
-            icon={Ruler}
-            eyebrow="1 · Input"
-            title="Profile & measurements"
-            detail="Body metrics, goals, limitations, equipment and lifestyle."
-            status={`${profileCompletion}%`}
-            onClick={() => onOpen?.("profile-intake")}
-          />
-          <FlowAction
-            icon={BrainCircuit}
-            eyebrow="2 · Build"
-            title="AI plan builder"
-            detail="Training, cardio, mobility, recovery and weekly schedule."
-            status={planReady ? "Ready" : "Start"}
-            featured
-            onClick={() => onOpen?.("questionnaire")}
-          />
-          <FlowAction
-            icon={Utensils}
-            eyebrow="3 · Fuel"
-            title="Nutrition plan"
-            detail="Calories, macros, meal guidance and fast meal logging."
-            status={proteinGoal ? `${proteinGoal}g P` : "Set"}
-            onClick={() => onOpen?.("nutrition-dashboard")}
-          />
-          <FlowAction
-            icon={CalendarDays}
-            eyebrow="4 · Adapt"
-            title="Weekly plan"
-            detail="See the week, reschedule, recover and adjust around real life."
-            status={`${weekPlan.length} days`}
-            onClick={() => onOpen?.("planner")}
-          />
-        </div>
-      </section>
-
-      <section className="sw-health-panel sw-health-quick-panel">
-        <div className="sw-health-section-head">
-          <span>Today at a glance</span>
-          <div className="sw-health-quick-actions">
-            {decision?.revised ? (
-              <button type="button" className="sw-health-adaptive-chip"
-                title={decision?.reason || "SYNC adjusted your workout around recovery"}
-                onClick={() => decision?.needsRebuild ? onOpen?.("planner") : onStartWorkout?.(decision?.workout)}>
-                <Sparkles size={15} /> SYNC adjusted plan <ChevronRight size={13} />
-              </button>
-            ) : null}
-            <button type="button" className="sw-health-recovery-trigger" onClick={() => setRecoveryOpen(true)}
-              aria-haspopup="dialog" aria-expanded={recoveryOpen}>
-              <HeartPulse size={15} /> Recovery {readiness}%
-            </button>
-            <button type="button" className="sw-health-strength-quick-link" onClick={() => setProgressionOpen(true)}>
-              My Strength <ChevronRight size={13} />
-            </button>
-            <button type="button" onClick={onEditDailyGoals}>Log progress <ChevronRight size={13} /></button>
-          </div>
-        </div>
-        <div className="sw-health-quick-grid">
-          <QuickLog icon={Dumbbell} label="Workout" active onClick={() => nextWorkout ? onStartWorkout?.(nextWorkout) : onOpen?.("plan-today")} />
-          <QuickLog icon={Utensils} label="Nutrition" onClick={() => openQuick("meal", "nutrition-coach")} />
-          <QuickLog icon={Footprints} label="Steps" onClick={() => openQuick("steps", "daily-goals")} />
-          <QuickLog icon={Moon} label="Sleep" onClick={() => onOpen?.("sleep")} />
-          <QuickLog icon={Scale} label="Weight" onClick={() => openQuick("weight", "progress")} />
-          <QuickLog icon={SmilePlus} label="Mood" onClick={() => openQuick("readiness", "daily-goals")} />
-        </div>
-      </section>
-
-      {decision?.revised ? (
-        <button type="button" className="sw-health-adaptive-alert" onClick={() => decision?.needsRebuild ? onOpen?.("planner") : onStartWorkout?.(decision?.workout)}>
-          <Sparkles size={17} />
-          <span><b>SYNC adjusted today</b>{decision?.reason || "Your plan was adapted around recovery."}</span>
-          <ChevronRight size={17} />
-        </button>
-      ) : null}
-
-      {previousWorkout && resumePreviousWorkout ? (
-        <button type="button" className="sw-health-resume" onClick={() => onStartWorkout?.(resumePreviousWorkout)}>
-          <Activity size={17} />
-          <span><b>{previousWorkout.label || "Yesterday — incomplete"}</b>{resumePreviousWorkout.workout_name}</span>
-          <strong>Resume</strong>
-        </button>
-      ) : null}
-
-      <div className="sw-health-desktop-grid">
-        <section className="sw-health-panel sw-health-workout-card">
-          <div className="sw-health-workout-copy">
-            <div className="sw-health-eyebrow">Today’s workout</div>
-            <h2>{workoutName}</h2>
-            <div className="sw-health-workout-stats">
-              <div><b>{workoutExercises || "—"}</b><span>Exercises</span></div>
-              <div><b>{workoutSets || "—"}</b><span>Sets</span></div>
-              <div><b>{workoutMinutes}</b><span>Min est.</span></div>
-            </div>
-            <button type="button" className="sw-health-primary" onClick={() => nextWorkout ? onStartWorkout?.(nextWorkout) : onOpen?.("plan-today")}>
-              {nextWorkout ? "Start workout" : "Build today’s workout"} <ChevronRight size={17} />
-            </button>
-          </div>
-          <div className="sw-health-workout-art">
-            <img src="/health/exercises/bench-press/bench-press-hero.png" alt="Bench press exercise" />
-            <span>Push<br /><small>Chest · Shoulders · Triceps</small></span>
-          </div>
-        </section>
-
-        <section className="sw-health-panel sw-health-profile-card">
-          <div className="sw-health-section-head">
-            <span>Starting point</span>
-            <button type="button" onClick={() => onOpen?.("profile-intake")}>Edit metrics <ChevronRight size={13} /></button>
-          </div>
-          <div className="sw-health-metric-grid">
-            <div><small>Weight</small><b>{displayMeasurement(profile?.weight || snapshot?.weight, " lb")}</b></div>
-            <div><small>Target</small><b>{displayMeasurement(profile?.target_weight, " lb")}</b></div>
-            <div><small>Body fat</small><b>{displayMeasurement(profile?.body_fat_percent, "%")}</b></div>
-            <div><small>Waist</small><b>{displayMeasurement(profile?.waist_in, " in")}</b></div>
-            <div><small>BMI</small><b>{displayMeasurement(profile?.bmi || snapshot?.bmi)}</b></div>
-            <div><small>Goal</small><b className="is-text">{profile?.primary_goal || snapshot?.goal || "Set goal"}</b></div>
-          </div>
-          <button type="button" className="sw-health-secondary sw-health-build-plan" onClick={() => onOpen?.("questionnaire")}>
-            <ClipboardCheck size={16} /> Build / update AI plan <ChevronRight size={16} />
-          </button>
-        </section>
-      </div>
 
       {recoveryOpen ? (
         <div className="sw-health-tools-layer sw-health-recovery-layer" role="presentation">
@@ -511,7 +366,7 @@ export default function HealthMobileHome({
           <aside className="sw-health-tools-drawer sw-health-recovery-drawer" role="dialog"
             aria-modal="true" aria-label="Readiness and recovery details">
             <div className="sw-health-tools-head">
-              <div><small>SYNCWORKS HEALTH</small><h2>Readiness & Recovery</h2>
+              <div><small>SYNCFIT</small><h2>Readiness & Recovery</h2>
                 <p>Your current recovery snapshot and daily check-in.</p></div>
               <button type="button" className="sw-health-tools-close"
                 aria-label="Close recovery details" onClick={() => setRecoveryOpen(false)}><X size={22} /></button>
@@ -539,95 +394,7 @@ export default function HealthMobileHome({
         </div>
       ) : null}
 
-      <section className="sw-health-panel sw-health-readiness-card">
-        <div className="sw-health-section-title">Readiness & recovery</div>
-        <div className="sw-health-readiness-layout">
-          <Ring value={readiness} label="Readiness" />
-          <div className="sw-health-readiness-metrics">
-            <MetricBar label="Soreness" value={100 - soreness} detail={soreness < 40 ? "Low" : soreness < 65 ? "Med" : "High"} />
-            <MetricBar label="Sleep quality" value={sleepQuality} detail={sleepQuality > 78 ? "Good" : "Fair"} />
-            <MetricBar label="Energy" value={energy} detail={energy > 84 ? "High" : "Good"} />
-            <button type="button" className="sw-health-secondary" onClick={() => onOpen?.("daily-goals")}>Check in now <ChevronRight size={16} /></button>
-          </div>
-        </div>
-      </section>
 
-      <div className="sw-health-dual-grid">
-        <section className="sw-health-panel sw-health-mini-card sw-health-nutrition-card">
-          <div className="sw-health-section-head">
-            <span>Nutrition</span>
-            <button type="button" onClick={() => onOpen?.("nutrition-dashboard")}>Open nutrition <ChevronRight size={13} /></button>
-          </div>
-          <div className="sw-health-mini-body">
-            <Ring value={proteinGoal ? (protein / proteinGoal) * 100 : 0} label="Protein" mainText={`${proteinRemaining}g`} />
-            <div className="sw-health-nutrition-summary">
-              <b>{Math.round(calories).toLocaleString()} <small>/ {Math.round(calorieGoal).toLocaleString()} cal</small></b>
-              <span>{proteinRemaining}g protein remaining</span>
-              <div className="sw-health-macro-row">
-                <em>P {Math.round(protein)}/{Math.round(proteinGoal)}g</em>
-                <em>C {Math.round(carbs)}{carbGoal ? `/${Math.round(carbGoal)}` : ""}g</em>
-                <em>F {Math.round(fat)}{fatGoal ? `/${Math.round(fatGoal)}` : ""}g</em>
-              </div>
-            </div>
-          </div>
-          <div className="sw-health-card-actions">
-            <button type="button" className="sw-health-secondary" onClick={() => onOpen?.("nutrition-coach")}>Log meal <ChevronRight size={15} /></button>
-            <button type="button" className="sw-health-secondary" onClick={() => onOpen?.("meal-planner")}>Meal plan <ChevronRight size={15} /></button>
-          </div>
-        </section>
-
-        <section className="sw-health-panel sw-health-mini-card sw-health-sleep-card">
-          <div className="sw-health-section-title">Sleep & activity</div>
-          <div className="sw-health-mini-body">
-            <Ring value={sleepGoal ? (sleepHours / sleepGoal) * 100 : 0} label="Sleep" tone="violet" mainText={sleepHours ? `${sleepHours.toFixed(1)}h` : "—"} />
-            <div>
-              <b>{sleepGoal}h</b><span>sleep target</span>
-              <small>{Math.round(steps).toLocaleString()} / {Math.round(stepGoal).toLocaleString()} steps</small>
-            </div>
-          </div>
-          <div className="sw-health-card-actions">
-            <button type="button" className="sw-health-secondary" onClick={() => onOpen?.("sleep")}>Sleep planner <ChevronRight size={15} /></button>
-            <button type="button" className="sw-health-secondary" onClick={() => onOpen?.("daily-goals")}>Daily goals <ChevronRight size={15} /></button>
-          </div>
-        </section>
-      </div>
-
-      <button type="button" className="sw-health-insight" onClick={() => onOpen?.("coach-chat")}>
-        <span className="sw-health-insight__icon"><BrainCircuit size={20} /></span>
-        <span><b>AI Coach insight</b>{insight}</span>
-        <ChevronRight size={18} />
-      </button>
-
-      <section className="sw-health-panel sw-health-week-card">
-        <div className="sw-health-section-head">
-          <span>This week</span>
-          <button type="button" onClick={() => onOpen?.("planner")}>Open plan <ChevronRight size={13} /></button>
-        </div>
-        <div className="sw-health-week-strip">
-          {[...weekPlan].slice(0, 7).map((item, index) => (
-            <button key={item?.id || index} type="button" onClick={() => item?.status !== "Completed" && onStartWorkout?.(item)}>
-              <small>{item?.day_label || String(item?.ymd || "").slice(5)}</small>
-              <b>{item?.workout_name || "Recovery"}</b>
-              <span className={item?.status === "Completed" ? "is-done" : ""}>{item?.status || "Planned"}</span>
-            </button>
-          ))}
-          {!weekPlan.length ? (
-            <button type="button" className="sw-health-empty-week" onClick={() => onOpen?.("questionnaire")}>
-              <BrainCircuit size={18} />
-              <b>Build your week with AI</b>
-              <span>Use your goals, body metrics, equipment, schedule and recovery.</span>
-            </button>
-          ) : null}
-        </div>
-      </section>
-
-      <nav className="sw-health-shell-tabs" aria-label="Health sections">
-        <HealthTab icon={Home} label="Home" active onClick={() => onOpen?.("home")} />
-        <HealthTab icon={CalendarDays} label="Plan" onClick={() => onOpen?.("questionnaire")} />
-        <HealthTab icon={Dumbbell} label="Workouts" onClick={() => onOpen?.("my-workouts")} />
-        <HealthTab icon={BarChart3} label="Progress" onClick={() => onOpen?.("progress")} />
-        <HealthTab icon={UserRound} label="You" onClick={() => onOpen?.("profile-intake")} />
-      </nav>
     </section>
   );
 }
