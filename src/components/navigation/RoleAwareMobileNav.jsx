@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { getAvatarPhotoForUser } from "../sync/JarvisAvatar";
+import { AVATARS, getAvatarPhotoForUser } from "../sync/JarvisAvatar";
 import { getPilotAgentsForUser } from "../sync/pilotAgentRoster";
 import OfficeAgentDock from "../customer/OfficeAgentDockV27";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -182,6 +182,8 @@ export default function RoleAwareMobileNav() {
   const teamAgents = getPilotAgentsForUser(user, []);
   const pathname = String(location.pathname || "").toLowerCase();
   const navMode = navModeFromPath(pathname, mode, location.search);
+  const healthRoute = /^\/customer\/health\/?$/.test(pathname);
+  const chiefAvatar = AVATARS.find(a => a.role === "Chief of Staff") || AVATARS[0];
   const [items, setItems] = useState(() => navMode ? readPreference(navMode, user) : []);
   const [unread, setUnread] = useState(0);
   const [aiTeamOpen, setAiTeamOpen] = useState(false);
@@ -209,7 +211,6 @@ export default function RoleAwareMobileNav() {
 
   const hidden = useMemo(() => {
     if (!navMode) return true;
-    if (pathname === "/customer/health" || pathname === "/customer/health/") return true;
     if (pathname === "/customer/games/table") return true;
     if (pathname === "/customer/games/clubs/room" && new URLSearchParams(location.search).has("room")) return true;
     if (/^\/tickets\/[^/]+\/?$/.test(pathname)) return true;
@@ -249,7 +250,7 @@ export default function RoleAwareMobileNav() {
 
   if (hidden) return null;
 
-  const center = centerConfig(navMode);
+  const center = healthRoute ? { label: "Sydney", route: "/sync/assist/chief", sync: true } : centerConfig(navMode);
   const renderedItems = items.map((itemId) => {
     const item = ITEM_LIBRARY[itemId];
     const target = routeFor(itemId, navMode);
@@ -275,6 +276,7 @@ export default function RoleAwareMobileNav() {
   };
 
   function openCenter() {
+    if (healthRoute) { navigate(`/sync/assist/chief?return=${encodeURIComponent(location.pathname + location.search)}`); return; }
     // The separate employee dock already opens individual bots and the team tray.
     // The center SYNC button is the direct launch point for the main assistant.
     if (center.sync) {
@@ -328,11 +330,11 @@ export default function RoleAwareMobileNav() {
           <button type="button" className="sw-mobile-bots-expand" onClick={() => setAiTeamOpen(true)} aria-label="View all AI employees"><span aria-hidden="true" className="sw-mobile-bots-more-icon">•••</span><span>More</span></button>
         </div>
       )}
-      <nav className="sw-role-mobile-nav lg:hidden" aria-label="Mobile quick navigation" data-sync-theme={navMode === "CUSTOMER" ? customerTheme : undefined} data-forge-route={pathname === "/customer/forge" ? "true" : undefined}>
+      <nav className="sw-role-mobile-nav lg:hidden" aria-label="Mobile quick navigation" data-sync-theme={navMode === "CUSTOMER" ? customerTheme : undefined} data-forge-route={pathname === "/customer/forge" ? "true" : undefined} data-syncfit-route={healthRoute ? "true" : undefined}>
         <div className="sw-role-mobile-nav-grid">
           {renderedItems.slice(0, 2).map((item) => <NavButton key={item.id} item={item} onClick={() => openItem(item)} />)}
-          <button type="button" className={`sw-role-mobile-nav-center ${center.sync ? "is-sync" : ""}`} onClick={openCenter} aria-label={center.sync ? "Open SYNC Assistant" : `New ${center.label}`}>
-            <span className="sw-role-mobile-nav-center-orb">{center.sync ? <Sparkles aria-hidden="true" size={27} strokeWidth={2.3} /> : navMode === "SBO" ? <Plus aria-hidden="true" size={31} strokeWidth={2.6} /> : <img src="/brands/syncworks-icon-192.png" alt="" />}</span>
+          <button type="button" className={`sw-role-mobile-nav-center ${center.sync ? "is-sync" : ""}`} onClick={openCenter} aria-label={healthRoute ? "Open Sydney Chief of Staff" : center.sync ? "Open SYNC Assistant" : `New ${center.label}`}>
+            <span className="sw-role-mobile-nav-center-orb">{healthRoute ? <img src={getAvatarPhotoForUser(chiefAvatar, user)} alt="" /> : center.sync ? <Sparkles aria-hidden="true" size={27} strokeWidth={2.3} /> : navMode === "SBO" ? <Plus aria-hidden="true" size={31} strokeWidth={2.6} /> : <img src="/brands/syncworks-icon-192.png" alt="" />}</span>
             <span>{center.label}</span>
           </button>
           {renderedItems.slice(2, 4).map((item) => <NavButton key={item.id} item={item} onClick={() => openItem(item)} />)}
