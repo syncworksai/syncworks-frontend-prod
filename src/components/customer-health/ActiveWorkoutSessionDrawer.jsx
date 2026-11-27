@@ -4807,13 +4807,13 @@ export default function ActiveWorkoutSessionDrawer({
   if (!open) return null;
 
   return (
-    <div className="health-active-workout-root fixed inset-0 z-[1100] bg-[#020617]">
+    <div className="syncfit-workout-hud health-active-workout-root fixed inset-0 z-[1100] bg-[#020617]">
 <section className="health-active-workout-shell relative z-[1101] flex h-[100dvh] w-full flex-col overflow-hidden bg-[radial-gradient(circle_at_50%_-10%,rgba(34,211,238,0.12),transparent_30%),linear-gradient(180deg,#050816_0%,#020617_100%)]">
         <header className="health-active-workout-header sticky top-0 z-30 border-b border-cyan-300/15 bg-[#020617]/97 px-3 py-2 backdrop-blur-xl sm:px-6 sm:py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="text-[9px] font-black uppercase tracking-[0.24em] text-cyan-200 sm:text-xs">
-                {formatHealthDay(session?.scheduled_ymd || session?.ymd || new Date())} · SYNC WORKOUT FOCUS MODE
+                {formatHealthDay(session?.scheduled_ymd || session?.ymd || new Date())} · SYNCFIT TRAINING
               </div>
 
               <h2 className="mt-0.5 truncate text-lg font-black text-white sm:text-4xl">
@@ -6021,7 +6021,7 @@ export default function ActiveWorkoutSessionDrawer({
             </div>
 
             <div className="mt-1 text-center text-[9px] font-black uppercase tracking-[0.13em] text-slate-500">
-              Pause · Set Control · Audio · Ask SYNC
+              Pause · Set Control · Audio · Coach
             </div>
           </div>
         ) : null}
