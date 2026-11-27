@@ -343,6 +343,8 @@ export default function CoachChatDrawer({
     useState(false);
 
   const [audioLoading,setAudioLoading] = useState(false);
+  const [showPlan,setShowPlan] = useState(false);
+  useEffect(()=>{if(open){setShowPlan(false);setMenuOpen(false);}},[open]);
   const scrollRef = useRef(null);
   useEffect(()=>{const listener=e=>setAudioLoading(e.detail==="loading");window.addEventListener("syncfit:audio-state",listener);return()=>window.removeEventListener("syncfit:audio-state",listener);},[]);
   const previousMessageCountRef = useRef(0);
@@ -598,13 +600,13 @@ export default function CoachChatDrawer({
 
       <section className="relative z-[181] ml-auto flex h-[100dvh] w-full max-w-2xl flex-col overflow-hidden border-l border-white/10 bg-[#06111f] shadow-[-30px_0_80px_rgba(0,0,0,0.5)]">
         <header className="shrink-0 border-b border-white/10 bg-[#071421]/98 px-3 pb-3 pt-[calc(env(safe-area-inset-top)+0.7rem)] backdrop-blur-xl sm:px-5">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-3">
+          <div className="syncfit-coach-header-row">
+            <div className="syncfit-coach-identity">
               <CoachAvatar />
 
               <div className="min-w-0">
                 <div className="truncate text-base font-black text-white sm:text-lg">
-                  SYNCFIT · Fitness Coach
+                  SYNCFIT
                 </div>
 
                 <div className="text-[10px] font-bold text-slate-400">
@@ -623,47 +625,26 @@ export default function CoachChatDrawer({
             <button type="button" onClick={()=>{setMenuOpen(false);replayDailyBriefing();}}>Play briefing</button>
             <button type="button" onClick={()=>{setMenuOpen(false);onBuildWorkout?.();}}>Workout plan</button>
             <button type="button" onClick={()=>{setMenuOpen(false);onOpenNutrition?.();}}>Nutrition</button>
-            <button type="button" onClick={jumpToLatest}>Latest message</button>
-            <button type="button" onClick={handleResetChat}>Reset conversation</button>
+            <button type="button" onClick={()=>{setShowPlan(v=>!v);setMenuOpen(false);}}>{showPlan?"Back to chat":"View saved plan"}</button>
+            <button type="button" onClick={()=>{setMenuOpen(false);jumpToLatest();}}>Latest message</button>
+            <button type="button" onClick={()=>{if(window.confirm("Reset this conversation?"))handleResetChat();}}>Reset conversation</button>
           </div>}
         </header>
 
         <div
           ref={scrollRef}
-          className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-4 sm:space-y-4 sm:px-5"
+          className="syncfit-coach-messages min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-4 sm:space-y-4 sm:px-5"
         >
-          {!proposal && chat.length === 0 ? (
-            <EmptyPlanCard
-              onOpenQuestionnaire={
-                handleOpenQuestionnaire
-              }
-            />
-          ) : null}
-
-          {chat.length > 0 ? (
-            <div className="sticky top-0 z-10 flex items-center justify-between rounded-xl border border-white/10 bg-[#06111f]/92 px-3 py-2 backdrop-blur-lg">
-              <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
-                Previous conversation
-              </div>
-
-              <button
-                type="button"
-                onClick={jumpToLatest}
-                className="text-[10px] font-black text-cyan-200"
-              >
-                Latest
-              </button>
-            </div>
-          ) : null}
-
-          {chat.map((message) => (
+          {!chat.length && <div className="syncfit-coach-welcome">Ready when you are. Ask me about your workout, technique or recovery.</div>}
+          {proposal && <button type="button" className="syncfit-coach-plan-link" onClick={()=>setShowPlan(v=>!v)}>{showPlan?"Hide workout plan":"View workout plan"}</button>}
+          {!showPlan && chat.map((message) => (
             <MessageBubble
               key={message.id}
               message={message}
             />
           ))}
 
-          {proposal ? (
+          {showPlan && proposal ? (
             <PlanProposalCard
               proposal={proposal}
               onAddToPlanner={
