@@ -734,7 +734,8 @@ export function buildSetRecommendation({
     actualReps >= target.max &&
     rpe > 0 &&
     rpe <= 6 &&
-    !isPoorForm(formQuality)
+    isGoodForm(formQuality) &&
+    lastSet.pain_score !== undefined && lastSet.pain_score !== null && lastSet.pain_score !== "" && pain === 0 && !lastSet.reached_failure
   ) {
     return {
       ...recommendation,
