@@ -412,13 +412,13 @@ export default function NutritionDashboard({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[134] flex items-end justify-center bg-black/80 p-0 backdrop-blur-xl sm:items-center sm:p-3">
+    <div className="syncfit-fuel-sheet fixed inset-0 z-[134] flex items-end justify-center bg-black/80 p-0 backdrop-blur-xl sm:items-center sm:p-3">
       <button type="button" aria-label="Close Nutrition Dashboard" onClick={onClose} className="absolute inset-0" />
       <section className="relative z-[135] h-[100dvh] w-full max-w-5xl overflow-y-auto border border-fuchsia-300/20 bg-[radial-gradient(circle_at_top_left,rgba(255,59,212,0.10),transparent_28%),radial-gradient(circle_at_top_right,rgba(112,255,61,0.08),transparent_28%),linear-gradient(180deg,#07111f,#040812)] p-3 pb-[calc(env(safe-area-inset-bottom)+2rem)] shadow-[0_28px_90px_rgba(0,0,0,0.72)] sm:h-auto sm:max-h-[94vh] sm:rounded-[2rem] sm:p-6">
         <div className="sticky top-0 z-20 -mx-3 -mt-3 flex items-start justify-between gap-3 border-b border-white/10 bg-[#07111f]/95 px-3 py-3 backdrop-blur-xl sm:static sm:mx-0 sm:mt-0 sm:border-0 sm:bg-transparent sm:px-0">
           <div>
-            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-fuchsia-200">SyncWorks Nutrition</div>
-            <h2 className="mt-1 text-2xl font-black text-white">Nutrition Intelligence Center</h2>
+            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-fuchsia-200">SYNCFIT · FUEL</div>
+            <h2 className="mt-1 text-2xl font-black text-white">Nutrition HQ</h2>
             <p className="mt-1 text-xs leading-5 text-slate-400">Log first. SYNC uses your real meals and targets instead of filling missing data with demo values.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close nutrition" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] font-black text-white">X</button>
