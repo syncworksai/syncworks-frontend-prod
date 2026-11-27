@@ -485,10 +485,10 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
       if(id==="executive-female"&&(dailyOn||dailyOff||responsibilityStatus)){
         let answer;
         if(responsibilityStatus){
-          const {data}=await api.get(memoryEndpoint,{params:{view:"responsibilities"},timeout:15000});
+          const {data}=await api.post("/sync-ai/assist/pilot/chief/execute/",{command:"list_responsibilities"},{timeout:20000});
           answer=(data.responsibilities||[]).map(item=>item.objective+": "+(item.enabled?"enabled":"disabled")+(item.last_success_at?". Last recorded successful check: "+new Date(item.last_success_at).toLocaleString():"")+(item.next_due_at?". Next eligible check: "+new Date(item.next_due_at).toLocaleString():"")+".").join("\n");
         }else{
-          const {data}=await api.post(memoryEndpoint,{action:dailyOn?"enable_daily_review":"disable_daily_review"},{timeout:15000});
+          const {data}=await api.post("/sync-ai/assist/pilot/chief/execute/",{command:dailyOn?"enable_daily_review":"disable_daily_review"},{timeout:20000});
           answer=data.enabled?"Daily executive review is enabled. I will check recorded upcoming bills and workout planning through the scheduled runtime. I will not make payments or assume workouts are completed.":"Daily executive review is disabled.";
         }
         const voiceKey="responsibilities:"+Date.now();
@@ -552,7 +552,7 @@ export default function OfficeAgentDock({ user, placement = "home", theme = "fut
       setChatHistory(previous => ({...previous,[id]:[...(previous[id]||[]),{by:"assistant",text:answer,voiceKey}]}));
       if(id==="executive-female"&&data?.message){void saveConversationTurn(question,answer);if(autoSpeak)void speakText(answer,voiceKey);}
     } catch(err) {
-      setChatError(err?.response?.data?.detail || "SYNC chat is unavailable. Your message was not processed; please try again.");
+      setChatError(typeof err?.response?.data?.detail==="string"?err.response.data.detail:err?.response?.status?`Sydney could not verify this request (HTTP ${err.response.status}). Check the saved status before retrying.`:"Sydney could not verify this request. Check your connection and saved status before retrying.");
     } finally { setChatBusy(false); }
   };
   const openEmployee = (person) => nav(person.id==="executive-female"?"/sync/assist/chief":person.configured
