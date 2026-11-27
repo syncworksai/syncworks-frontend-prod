@@ -3423,7 +3423,7 @@ export default function CustomerHealth() {
         <div
           className="absolute inset-0 sw-health-environment-image"
           style={{
-            backgroundImage: 'url("/health/syncfit-bg.png")',
+            backgroundImage: 'url("/health/syncfit-bg.png"), linear-gradient(145deg, #080808, #211713)',
             backgroundPosition: "center 60%",
             backgroundRepeat: "no-repeat",
             backgroundSize: "cover",
