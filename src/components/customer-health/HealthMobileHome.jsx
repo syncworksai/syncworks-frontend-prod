@@ -125,6 +125,9 @@ export default function HealthMobileHome({
   decision = null,
   onOpen,
   onStartWorkout,
+  trainerState = "checking",
+  onTrainerAccess,
+  onStartToday,
   onShowInsights,
   onQuickLog,
   onEditDailyGoals,
@@ -274,7 +277,8 @@ export default function HealthMobileHome({
 
   function openTodayMission() {
     if (resumePreviousWorkout) { onStartWorkout?.(resumePreviousWorkout); return; }
-    if (decision?.needsRebuild || !todayWorkout) { onOpen?.("plan-today"); return; }
+    if (decision?.needsRebuild) { onOpen?.("plan-today"); return; }
+    if (!todayWorkout) { onStartToday ? onStartToday() : onOpen?.("plan-today"); return; }
     onStartWorkout?.(todayWorkout);
   }
 
@@ -296,7 +300,7 @@ export default function HealthMobileHome({
         <div className="syncfit-arena-light" aria-hidden="true" />
         <img className="syncfit-arena-mark" src="/health/brand/syncfit-mark.svg" alt=""/>
         <div className="syncfit-arena-copy"><small>DAILY MISSION</small><h1>{resumePreviousWorkout ? resumePreviousWorkout.workout_name : workoutName}</h1><span>{nextWorkout ? `${workoutExercises || "—"} exercises · ${workoutMinutes} min` : "Build your personalized training plan"}</span></div>
-        <button className="syncfit-arena-coach" type="button" onClick={() => onOpen?.("coach-chat")} aria-label="Talk to SYNCFIT fitness coach"><img src="/jarvis-avatars/sarahgym1.png" alt=""/><span>SYNCFIT</span></button>
+        <button className="syncfit-arena-coach" type="button" onClick={onTrainerAccess} aria-label={trainerState==="trainer"?"Talk to SYNCFIT fitness coach":trainerState==="free"?"Add personal trainer":"Retry trainer access"}><img src="/jarvis-avatars/sarahgym1.png" alt=""/><span>{trainerState==="trainer"?"SYNCFIT · PT":trainerState==="free"?"+ ADD PT":trainerState==="checking"?"CHECKING":"RETRY PT"}</span></button>
       </div>
       <div className="syncfit-mission-grid" aria-label="Training zones">
         <button type="button" onClick={openTodayMission}><Dumbbell/><strong>TRAIN</strong><small>{snapshot?.workout_completed_today ? "Complete" : "Today"}</small></button>
@@ -311,7 +315,7 @@ export default function HealthMobileHome({
           ["Steps", stepGoal ? clampPct(steps / stepGoal * 100) : 0, () => openQuick("steps","daily-goals")]
         ].map(([label,pct,action]) => <button type="button" key={label} onClick={action}><span>{label}</span><span className="syncfit-meter"><i style={{width:pct+"%"}}/></span><small>{pct}%</small></button>)}
       </div>
-      <button type="button" className="syncfit-start-mission" onClick={openTodayMission}>{resumePreviousWorkout ? "RESUME MISSION" : nextWorkout && !decision?.needsRebuild ? "START TODAY’S WORKOUT" : "PLAN TODAY’S WORKOUT"} <ChevronRight size={20}/></button>
+      <button type="button" className="syncfit-start-mission" onClick={openTodayMission}>{resumePreviousWorkout ? "RESUME MISSION" : decision?.needsRebuild ? "REVIEW RECOVERY PLAN" : "START TODAY’S WORKOUT"} <ChevronRight size={20}/></button>
       {toolsOpen ? (
         <div className="sw-health-tools-layer" role="presentation">
           <button type="button" className="sw-health-tools-backdrop"
