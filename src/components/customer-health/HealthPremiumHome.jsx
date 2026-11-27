@@ -164,7 +164,7 @@ export default function HealthPremiumHome({
   function guardedStartWorkout(requestedWorkout) {
     if (decision?.revised) {
       if (decision.needsRebuild) {
-        onOpen?.("planner");
+        onOpen?.("plan-today");
         return;
       }
 
