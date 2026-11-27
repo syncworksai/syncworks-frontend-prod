@@ -856,7 +856,7 @@ export default function NutritionCoachDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-[135] flex items-end justify-center bg-black/80 p-0 backdrop-blur-xl sm:items-center sm:p-3">
+    <div className="syncfit-nutrition-sheet fixed inset-0 z-[135] flex items-end justify-center bg-black/80 p-0 backdrop-blur-xl sm:items-center sm:p-3">
       <button
         type="button"
         aria-label="Close Nutrition Coach"
