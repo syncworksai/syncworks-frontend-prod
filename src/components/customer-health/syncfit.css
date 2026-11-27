@@ -294,3 +294,19 @@ body:has(.syncfit-lobby .sw-health-recovery-layer) .sw-role-mobile-nav[data-sync
 .syncfit-coach-drawer form{padding:8px!important}
 .syncfit-audio-loading{display:inline-flex;gap:6px;align-items:center;color:#e2b5a0;font-size:12px}
 @media(prefers-reduced-motion:reduce){.syncfit-coach-drawer>section,.syncfit-coach-drawer .animate-spin{animation:none!important}}
+
+
+/* Keep launch controls above the device safe area and outside global dock. */
+:is(.syncfit-precheck,.syncfit-location-check,.syncfit-launch-gate){z-index:2147483100!important;background:#080706ee!important;padding:max(12px,env(safe-area-inset-top)) 10px max(12px,env(safe-area-inset-bottom))!important;align-items:center!important}
+:is(.syncfit-precheck,.syncfit-location-check)>section{max-height:100%!important;min-height:0!important;background:linear-gradient(#100d0bb8,#100d0be0),url("/health/syncfit-bg.png") center/contain no-repeat!important;border-color:#805b49!important}
+body:has(:is(.syncfit-precheck,.syncfit-location-check,.syncfit-launch-gate)) .sw-role-mobile-nav[data-syncfit-route="true"]{visibility:hidden!important;pointer-events:none!important}
+.syncfit-launch-gate{overflow:hidden!important;display:flex;align-items:center;justify-content:center;background:linear-gradient(#100d0bb8,#100d0be0),url("/health/syncfit-bg.png") center/contain no-repeat!important}
+.syncfit-launch-gate>div{min-height:0!important;max-height:100%;overflow-y:auto;padding:8px!important}
+.syncfit-launch-gate main{padding:8px 0!important}
+.syncfit-launch-gate main>div:first-child:not(.space-y-3){display:none}
+.syncfit-launch-gate main button.w-full{padding:12px!important;background:#171310c9!important;border-color:#805b49!important}
+.syncfit-launch-gate main button.w-full>span:nth-child(2){display:none}
+:is(.syncfit-precheck,.syncfit-location-check,.syncfit-launch-gate) :is(button,span)[class*="border-cyan-"],:is(.syncfit-precheck,.syncfit-location-check,.syncfit-launch-gate) :is(button,span)[class*="border-lime-"]{border-color:#805b4980!important;background:#241a15!important;color:#e2b5a0!important}
+.syncfit-precheck button{overflow-wrap:normal;word-break:normal}
+.syncfit-precheck button span:last-child{min-width:fit-content}
+.syncfit-workout-hud .health-active-workout-header{padding-top:12px!important}

@@ -94,7 +94,7 @@ function OptionCard({ trainer = false, locked = false, loading = false, onClick 
           </span>
           <span className="mt-1 block text-xs leading-5 text-slate-400">
             {trainer
-              ? "Gemma coaches the complete workout while you still log every set, rep and weight."
+              ? "SYNCFIT guides your sets, technique and recovery."
               : "Just log the workout. No trainer voice, AI interruptions or premium requirement."}
           </span>
         </span>
@@ -129,6 +129,7 @@ export default function WorkoutModeGate({
   onDismissFallback,
 }) {
   const [stage, setStage] = useState("choose");
+  const [retry,setRetry]=useState(0);
   const [aiStatus, setAiStatus] = useState(null);
   const [checking, setChecking] = useState(false);
   const [message, setMessage] = useState("");
@@ -143,15 +144,13 @@ export default function WorkoutModeGate({
       return undefined;
     }
 
+    let cancelled = false;
     setChecking(true);
-    getHealthAiStatus()
-      .then((data) => setAiStatus(data || {}))
-      .catch(() => {
-        setAiStatus(null);
-        setMessage("Trainer access could not be verified. Gym Log is still available.");
-      })
-      .finally(() => setChecking(false));
-  }, [open]);
+    setAiStatus(null);
+    const timeout = setTimeout(() => { if (!cancelled) { setChecking(false); setMessage("Access check timed out. Tap Retry to check again."); } }, 8000);
+    getHealthAiStatus().then(data => { if (!cancelled) { setAiStatus(data || {}); setMessage(""); } }).catch(() => { if (!cancelled) setMessage("Trainer access could not be verified. Please retry."); }).finally(() => { clearTimeout(timeout); if (!cancelled) setChecking(false); });
+    return () => { cancelled = true; clearTimeout(timeout); };
+  }, [open,retry]);
 
   if (!open) return null;
 
@@ -178,6 +177,7 @@ export default function WorkoutModeGate({
 
   function openTrainerBriefing() {
     if (!hasAccess) {
+      if (!aiStatus) { setRetry(v=>v+1); return; }
       if (AI_COACH_CHECKOUT_URL) {
         window.location.assign(AI_COACH_CHECKOUT_URL);
       } else {
@@ -186,7 +186,7 @@ export default function WorkoutModeGate({
       return;
     }
 
-    setStage("briefing");
+    setStage("choose");
     setActiveWorkoutMode("trainer");
     unlockWorkoutCoachAudio();
     stopWorkoutCoachAudio({ clearPlayed: true });
@@ -199,9 +199,10 @@ export default function WorkoutModeGate({
       audioMode: "trainer",
       provider: "elevenlabs",
       browserFallback: false,
-      energy: "high_energy",
+      energy: "controlled",
       eventType: "preworkout_briefing",
     });
+    beginTrainer();
   }
 
   function beginTrainer() {
@@ -231,7 +232,7 @@ export default function WorkoutModeGate({
   }
 
   return (
-    <div className="fixed inset-0 z-[2147483640] overflow-y-auto bg-[radial-gradient(circle_at_50%_-10%,rgba(34,211,238,.13),transparent_30%),linear-gradient(180deg,#04101d,#020617_45%,#01040b)] text-white">
+    <div className="syncfit-launch-gate fixed inset-0 z-[2147483640] overflow-y-auto bg-[radial-gradient(circle_at_50%_-10%,rgba(34,211,238,.13),transparent_30%),linear-gradient(180deg,#04101d,#020617_45%,#01040b)] text-white">
       <div className="mx-auto min-h-[100dvh] w-full max-w-2xl px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-[calc(env(safe-area-inset-top)+.75rem)]">
         <header className="flex items-center gap-3 border-b border-white/10 pb-4">
           <button type="button" onClick={back} className="grid h-11 w-11 place-items-center rounded-2xl border border-cyan-300/20 bg-cyan-300/[.06]">
@@ -281,6 +282,7 @@ export default function WorkoutModeGate({
               <OptionCard trainer locked={!hasAccess} loading={checking} onClick={openTrainerBriefing} />
               <OptionCard onClick={startLog} />
             </div>
+            {message && !checking && !aiStatus && <button type="button" onClick={()=>setRetry(v=>v+1)} className="mt-3 rounded-xl border p-3">Retry access</button>}
             {message ? <div className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[.06] p-3 text-xs leading-5 text-amber-100">{message}</div> : null}
           </main>
         )}

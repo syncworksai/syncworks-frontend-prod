@@ -247,7 +247,7 @@ export default function PreWorkoutCheckInDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-[170] flex items-end justify-center bg-black/85 p-3 backdrop-blur-md sm:items-center">
+    <div className="syncfit-precheck fixed inset-0 z-[170] flex items-end justify-center bg-black/85 p-3 backdrop-blur-md sm:items-center">
       <button
         type="button"
         aria-label="Close pre-workout check-in"
