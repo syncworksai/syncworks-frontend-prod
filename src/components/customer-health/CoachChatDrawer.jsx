@@ -8,7 +8,7 @@ import React, {
 } from "react";
 
 import { Volume2, VolumeX, Ellipsis, X, Send, LoaderCircle } from "lucide-react";
-import { createHealthCoachTurn } from "../../api/customerHealth";
+import { createHealthCoachTurn, patchCustomerHealthProfile } from "../../api/customerHealth";
 
 import {
   addCoachProposalToPlanner,
@@ -549,15 +549,25 @@ export default function CoachChatDrawer({
     }
   }
 
-  function handleAddToPlanner() {
-    const result = addCoachProposalToPlanner(
-      localSnapshot || {},
-      proposal
-    );
-
-    if (result?.snapshot) {
-      commitSnapshot(result.snapshot);
-    }
+  async function handleAddToPlanner() {
+    if (sending || !proposal || proposal.status === "added_to_planner") return;
+    const result=addCoachProposalToPlanner(localSnapshot || {},proposal);
+    if(!result.added){setProviderNote(result.message);return;}
+    setSending(true);
+    try{
+      const saved=await patchCustomerHealthProfile({snapshot_json:result.snapshot});
+      const receipt=saved?.execution_receipt;
+      const persisted=saved?.snapshot_json;
+      const ids=result.plannedIds||[];
+      const actual=new Set((Array.isArray(persisted?.week_plan)?persisted.week_plan:[]).map(w=>w.id));
+      const verified=new Set(receipt?.verified_workout_ids||[]);
+      if(!ids.every(id=>actual.has(id))) {setProviderNote("Plan persistence was not verified. Reopen planner before retrying.");return;}
+      const ok=receipt?.saved===true && ids.every(id=>verified.has(id));
+      commitSnapshot({...persisted,coach_plan_proposal:{...proposal,status:ok?"added_to_planner":"approved_pending_verification"},coach_chat:[...normalizeCoachChat(persisted),{id:"execution-"+Date.now(),role:"coach",content:ok?"Saved and verified "+ids.length+" workouts in your SyncWorks Calendar. Nutrition scheduling is not included in this action.":"Workout plan saved, but calendar synchronization is not verified. Check your planner before retrying.",created_at:new Date().toISOString()}]});
+      setShowPlan(false);
+      setProviderNote(ok?"Calendar verified":"Calendar verification pending");
+    }catch{setProviderNote("Could not verify the save. Check your planner before retrying.");}
+    finally{setSending(false);}
   }
 
   function handleRedoPlan() {
@@ -611,7 +621,7 @@ export default function CoachChatDrawer({
                 </div>
 
                 <div className="sf-chat-subtitle">
-                  Personal trainer
+                  Trainer & nutrition coach
                 </div>
               </div>
             </div>
