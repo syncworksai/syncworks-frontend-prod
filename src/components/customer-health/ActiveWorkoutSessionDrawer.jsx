@@ -36,6 +36,7 @@ import {
   buildTrainerNudge,
 } from "./healthTrainerLogic";
 
+import { HEALTH_EXERCISE_CATALOG } from "./healthExerciseCatalog";
 import { getExerciseKnowledge } from "./healthExerciseKnowledge";
 
 import {
@@ -2640,6 +2641,7 @@ export default function ActiveWorkoutSessionDrawer({
   onPauseSaved,
 }) {
   const [session, setSession] = useState(null);
+  const pendingCoachAction = useRef(null);
   const [queueOpen,setQueueOpen]=useState(false);
   const [reviewMode, setReviewMode] = useState(false);
   const [finishMessage, setFinishMessage] = useState("");
@@ -3343,11 +3345,44 @@ export default function ActiveWorkoutSessionDrawer({
     return `I am tracking ${exerciseName}, your target, completed sets, effort, rest, and exercise history. Ask whether to increase weight, shorten rest, swap the exercise, explain the rep target, or give you a form cue.`;
   }
 
+  function conversationalWorkoutAction(question) {
+    const q=question.toLowerCase().trim();
+    const e=currentExercise;
+    if(!session || !e) return null;
+    const blocked=session.set_active || session.pending_set_logging || session.rest_active || savingSet || countdownSeconds>0;
+    const normalize=v=>String(v||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+    const pending=pendingCoachAction.current;
+    if (/^(?:yes|confirm|do it|use it|sounds good|yes please)[.!]?$/.test(q) && pending) {
+      pendingCoachAction.current=null;
+      if(pending.session!==session.id || pending.exercise!==e.id || blocked || (e.set_logs||[]).length) return "The workout state has changed. Let's review the alternative again before switching.";
+      selectAdaptiveExercise(pending.candidate,"replace");
+      return "Switched to "+pending.candidate.name+". Aim for "+pending.candidate.sets+" sets of "+pending.candidate.reps+". Start with a comfortable load; don't copy the previous machine's weight.";
+    }
+    if (/^(?:no|cancel|not now)[.!]?$/.test(q) && pending) {pendingCoachAction.current=null;return "Keeping the current exercise.";}
+    if (/unavailable|occupied|(?:machine|bench|rack|cable).*(?:busy|taken)|alternative|instead of|swap/.test(q)) {
+      pendingCoachAction.current=null;
+      if (/pain|hurt|injur|sharp/.test(q)) return "Stop that movement and assess the symptoms before choosing another exercise.";
+      if(blocked) return "Finish logging your current set and complete your rest before changing exercises.";
+      if((e.set_logs||[]).length) return "You've already logged sets here. Keep those records and choose an unfinished exercise from Workout Log, or add an alternative without replacing your completed work.";
+      const name=normalize(e.substitute_name||e.name);
+      const source=HEALTH_EXERCISE_CATALOG.find(c=>normalize(c.name)===name || c.id===e.catalog_id);
+      if(!source) return "I can't verify a matching alternative for this movement yet. Open Swap Exercise to choose one from the library.";
+      const alternatives=HEALTH_EXERCISE_CATALOG.filter(c=>c.id!==source.id && (source.alternatives||[]).includes(c.id) && c.movement_pattern===source.movement_pattern && (c.primary_muscles||[]).some(m=>(source.primary_muscles||[]).includes(m)));
+      const named=alternatives.find(c=>q.includes(normalize(c.name)));
+      const candidate=named||alternatives[0];
+      if(!candidate) return "I don't have a verified like-for-like substitute for this exercise. We can defer it using Workout Log.";
+      pendingCoachAction.current={session:session.id,exercise:e.id,candidate};
+      return "For "+e.name+", try "+candidate.name+" ("+candidate.equipment+"), "+candidate.sets+" sets of "+candidate.reps+". If the equipment is available and the movement is comfortable and appropriate for you, say confirm to switch. Otherwise tell me what is available.";
+    }
+    return null;
+  }
+
   async function submitAskSync(rawQuestion, useAI = true) {
     const question = String(rawQuestion || "").trim();
     if (!question) return;
-    let reply = coachReplyForQuestion(question);
-    if (useAI && !isCoachQuestion(question.toLowerCase())) {
+    const actionReply=conversationalWorkoutAction(question);
+    let reply = actionReply || coachReplyForQuestion(question);
+    if (!actionReply && useAI && !isCoachQuestion(question.toLowerCase())) {
       try {
         const result = await createHealthCoachTurn({ userText: question, profile: snapshot?.profile || snapshot?.health_profile || {}, snapshot: { workout_name: session?.workout_name, current_exercise: currentExercise ? {name: currentExercise.name, current_target_weight: currentExercise.current_target_weight, current_target_reps: currentExercise.current_target_reps, set_logs: currentExercise.set_logs} : null, previous_training_recap: buildSpokenTrainingMemory(currentExercise, history), rest_active: session?.rest_active, set_active: session?.set_active, readiness: snapshot?.readiness }, history: [] });
         if (String(result?.reply || "").trim()) reply = String(result.reply).trim();
@@ -3512,6 +3547,7 @@ export default function ActiveWorkoutSessionDrawer({
       return;
     }
 
+    if (/unavailable|occupied|alternative|instead of|swap|^(yes|confirm|do it|use it|sounds good|cancel|no)[.!]?$/.test(command)) { submitAskSync(command); return; }
     if (isCoachQuestion(command)) {
       submitAskSync(command);
       return;
@@ -4310,7 +4346,8 @@ export default function ActiveWorkoutSessionDrawer({
   }
 
   function selectAdaptiveExercise(catalogExercise, mode) {
-    if (!session || !catalogExercise) return;
+    if (!session || !catalogExercise || session.set_active || session.pending_set_logging || session.rest_active || savingSet || countdownSeconds > 0) return;
+    if (mode === "replace" && (currentExercise?.set_logs || []).length) { setFinishMessage("Keep your recorded sets. Add an alternative or choose another exercise instead."); return; }
 
     if (mode === "replace" && currentExercise) {
       setSession((previous) => ({
