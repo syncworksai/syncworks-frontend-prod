@@ -704,6 +704,21 @@ export function buildSetRecommendation({
     };
   }
 
+  const difficulty = String(lastSet.perceived_difficulty || lastSet.effort_label || "").toLowerCase();
+  if (["too easy","just right","too hard","pain"].includes(difficulty)) {
+    const hard = difficulty === "too hard";
+    const easy = difficulty === "too easy" && actualReps >= target.max && isGoodForm(formQuality) && !pain;
+    const painful = difficulty === "pain";
+    return {...recommendation,
+      action: painful ? "hold_weight" : hard ? "hold_weight" : easy ? "increase_weight" : "hold_weight",
+      tone: painful || hard ? "amber" : "emerald",
+      confidence:"medium",
+      recommended_weight: easy ? recommendedIncrease(actualWeight || plannedWeight,exercise) : actualWeight || plannedWeight,
+      recommended_reps: Math.max(target.min,Math.min(actualReps || target.min,target.max)),
+      reason: painful ? "Stop this movement and assess pain before continuing." : hard ? "That was too hard. Rest, and consider a lighter load before the next set." : easy ? "You reached the top of the range with good form and reported it was too easy. Consider a small increase if recovered." : "Keep the load steady and focus on clean repetitions."
+    };
+  }
+
   if (
     rpe >= 9 ||
     (
@@ -760,7 +775,7 @@ export function buildSetRecommendation({
 
   if (
     actualReps > target.max &&
-    rpe <= 7 &&
+    rpe > 0 && rpe <= 7 &&
     !isPoorForm(formQuality)
   ) {
     return {
