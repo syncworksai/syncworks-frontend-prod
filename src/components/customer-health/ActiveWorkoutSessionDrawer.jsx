@@ -652,8 +652,8 @@ function SetCompletionSheet({
 }) {
   const [reps, setReps] = useState("");
   const [weight, setWeight] = useState("");
-  const [rpe, setRpe] = useState("7");
-  const [effortLabel, setEffortLabel] = useState("Medium");
+  const [rpe, setRpe] = useState("");
+  const [effortLabel, setEffortLabel] = useState("");
   const [formQuality, setFormQuality] = useState("Good");
   const [pain, setPain] = useState("0");
   const [painArea, setPainArea] = useState("");
@@ -683,8 +683,8 @@ function SetCompletionSheet({
         ""
     );
 
-    setRpe("7");
-    setEffortLabel("Medium");
+    setRpe("");
+    setEffortLabel("");
     setFormQuality("Good");
     setPain("0");
     setPainArea("");
@@ -727,6 +727,7 @@ function SetCompletionSheet({
       rpe,
       ease_score: rpe,
       effort_label: effortLabel,
+      perceived_difficulty: effortLabel,
       form_quality: formQuality,
       movement_pain: Number(pain || 0) > 0,
       pain_score: pain,
@@ -827,14 +828,14 @@ function SetCompletionSheet({
         </div>
 
         <div className="mt-4 rounded-2xl border border-fuchsia-300/15 bg-fuchsia-300/[0.06] p-3">
-          <div className="text-xs font-black text-white">How hard was that set?</div>
-          <div className="mt-1 text-[11px] leading-5 text-slate-400">Choose the answer that best describes how many quality reps you had left.</div>
+          <div className="text-xs font-black text-white">How did that feel?</div>
+          <div className="mt-1 text-[11px] leading-5 text-slate-400">Choose what best describes the set. No number needed.</div>
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
-              ["Easy", "6", "4+ reps left"],
-              ["Medium", "7", "2-3 reps left"],
-              ["Hard", "9", "1 rep left"],
-              ["Max Effort", "10", "No reps left"],
+              ["Too Easy", "", "Could do more"],
+              ["Just Right", "", "Good challenge"],
+              ["Too Hard", "", "Reduce or rest"],
+              ["Pain", "", "Stop and assess"],
             ].map(([label, value, detail]) => (
               <button
                 key={label}
@@ -842,6 +843,7 @@ function SetCompletionSheet({
                 onClick={() => {
                   setEffortLabel(label);
                   setRpe(value);
+                  if(label === "Pain") { setPain(p => Number(p)>0?p:"1"); setAdvancedOpen(true); }
                 }}
                 className={cx(
                   "rounded-xl border px-2 py-3 text-center",
@@ -3362,9 +3364,11 @@ export default function ActiveWorkoutSessionDrawer({
       if(reps<1||reps>100||weight<0||weight>2000||(effort!==null&&(effort<1||effort>10))) return "Those numbers need checking. Please repeat the set or use the log.";
       if(/\beach\b/.test(q)) return "Please confirm the per-dumbbell weight convention in the set log before saving.";
       pendingCoachAction.current={kind:"set",session:session.id,exercise:e.id,pendingStarted:session.pending_set_started_at,ordinal:(e.set_logs||[]).length,log:{actual_reps:String(reps),reps:String(reps),actual_weight:String(weight),weight:String(weight),weight_unit:unit,rpe:effort===null?"":String(effort),set_type:"working"}};
-      return e.name+": "+reps+" reps at "+weight+" "+unit+(effort===null?"":", effort "+effort+" out of ten")+". Say confirm to record, or repeat the numbers to correct them. If you had pain, tell me before confirming.";
+      return e.name+": "+reps+" reps at "+weight+" "+unit+(effort===null?"":", effort "+effort+" out of ten")+". How did that feel: too easy, just right, or too hard? Say confirm to record, or repeat the numbers to correct them. If you had pain, tell me before confirming.";
     }
     if(pending?.kind==="set"){
+      const difficulty = /^(?:too easy|pretty easy|easy|just right|good challenge|too hard|pretty hard|hard)[.!]?$/.test(q) ? (/easy/.test(q)?"Too Easy":/hard/.test(q)?"Too Hard":"Just Right") : "";
+      if(difficulty){pending.log.effort_label=difficulty;pending.log.perceived_difficulty=difficulty;return "Got it: "+difficulty+". Say confirm to save the set.";}
       if(/^(?:no|cancel|not now)[.!]?$/.test(q)){pendingCoachAction.current=null;return "Not recorded. Tell me the corrected numbers when ready.";}
       if(/pain|hurt|injur|sharp/.test(q)){pendingCoachAction.current=null;return "Stop that movement and assess the pain. The pending entry has not been recorded; use the set log to record your actual symptoms.";}
       if(/^(?:yes|confirm|do it|yes please)[.!]?$/.test(q)){
@@ -3566,7 +3570,7 @@ export default function ActiveWorkoutSessionDrawer({
       return;
     }
 
-    if (/unavailable|occupied|alternative|instead of|swap|^(yes|confirm|do it|use it|sounds good|cancel|no)[.!]?$/.test(command)) { submitAskSync(command); return; }
+    if (/unavailable|occupied|alternative|instead of|swap|^(yes|confirm|do it|use it|sounds good|cancel|no|too easy|pretty easy|easy|just right|good challenge|too hard|pretty hard|hard|pain)[.!]?$/.test(command)) { submitAskSync(command); return; }
     if (isCoachQuestion(command)) {
       submitAskSync(command);
       return;
