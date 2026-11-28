@@ -1,5 +1,6 @@
 // src/components/customer-health/SmartMealPlannerDrawer.jsx
 import React, { useEffect, useMemo, useState } from "react";
+import { patchCustomerHealthProfile } from "../../api/customerHealth";
 
 function n(value, fallback = 0) {
   const parsed = Number(String(value ?? "").replace(/[^\d.-]/g, ""));
@@ -226,6 +227,7 @@ export default function SmartMealPlannerDrawer({
   progressLogs,
   onLogMeal,
   setProfile,
+  setSnapshot,
 }) {
   const hour = new Date().getHours();
   const [mealType, setMealType] = useState(
@@ -238,6 +240,9 @@ export default function SmartMealPlannerDrawer({
   const [diet, setDiet] = useState("none");
   const [offset, setOffset] = useState(0);
   const [saved, setSaved] = useState(false);
+  const [draftPlan,setDraftPlan]=useState([]);
+  const [planStatus,setPlanStatus]=useState("");
+  const [savingPlan,setSavingPlan]=useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -325,6 +330,41 @@ export default function SmartMealPlannerDrawer({
 
   if (!open) return null;
 
+  function prepareWeek() {
+    setPlanStatus("");
+    if (!targets.calories || !targets.protein) {setPlanStatus("Set your daily calorie and protein goals first.");return;}
+    if (list(allergies).length || list(profile?.nutrition_allergies).length || list(profile?.allergies).length || list(profile?.food_allergies).length || !["none","vegetarian","gluten-free"].includes(diet)) {setPlanStatus("This limited meal library cannot verify allergy safety or specialized diets. Review your needs with a qualified professional before scheduling meals.");return;}
+    const slots=[["breakfast","07:00",.25],["lunch","12:00",.30],["snack","15:30",.15],["dinner","18:30",.30]];
+    const rows=[];
+    for(let day=0;day<7;day++){
+      const date=new Date();date.setDate(date.getDate()+day);
+      const ymd=[date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-");
+      for(const [type,time,fraction] of slots){
+        const candidates=MEALS.filter(m=>m.types.includes(type)&&scoreMeal(m,{...context,mealType:type})>-1000).sort((a,b)=>Math.abs(a.protein/a.calories-targets.protein/targets.calories)-Math.abs(b.protein/b.calories-targets.protein/targets.calories));
+        if(!candidates.length){setPlanStatus("No suitable meal found for "+type+". Review food preferences.");return;}
+        const m=candidates[day%Math.min(3,candidates.length)],portion=Math.round(targets.calories*fraction/m.calories*100)/100;
+        rows.push({id:"meal-"+ymd+"-"+type,ymd,time,meal_type:type,name:m.name,description:m.description,portion,calories:Math.round(m.calories*portion),protein:Math.round(m.protein*portion),carbs:Math.round(m.carbs*portion),fat:Math.round(m.fat*portion),status:"Planned"});
+      }
+    }
+    setDraftPlan(rows);setPlanStatus("Review all seven days and meal times before approving. Portions and nutrition values are estimates.");
+  }
+  async function approveWeek(){
+    if(savingPlan||!draftPlan.length)return;
+    setSavingPlan(true);
+    try{
+      const existing=Array.isArray(snapshot?.nutrition_week_plan)?snapshot.nutrition_week_plan:[];
+      const ids=new Set(draftPlan.map(m=>m.id));
+      const next={...snapshot,nutrition_week_plan:[...existing.filter(m=>!ids.has(m.id)),...draftPlan]};
+      const saved=await patchCustomerHealthProfile({snapshot_json:next});
+      const persisted=saved?.snapshot_json;
+      const verified=new Set(saved?.execution_receipt?.verified_meal_ids||[]);
+      const actual=new Set((persisted?.nutrition_week_plan||[]).map(m=>m.id));
+      if(!draftPlan.every(m=>actual.has(m.id))){setPlanStatus("Meal plan save not verified.");return;}
+      setSnapshot?.(persisted);
+      setPlanStatus(draftPlan.every(m=>verified.has(m.id))?"Meal plan saved and calendar entries verified.":"Meal plan saved; calendar verification pending.");
+    }catch{setPlanStatus("Unable to verify the save. Check your plan before retrying.");}finally{setSavingPlan(false);}
+  }
+
   function savePreferences() {
     setProfile((previous) => ({
       ...previous,
@@ -380,6 +420,14 @@ export default function SmartMealPlannerDrawer({
           </button>
         </div>
 
+        <div className="mt-4 rounded-2xl border border-[#805b49] bg-[#171310] p-3">
+          <h3 className="font-bold text-white">Seven-day nutrition plan</h3>
+          <p className="text-xs text-slate-300">Breakfast, lunch, snack and dinner every day, including rest days. Planned meals are not food logs.</p>
+          <button type="button" onClick={prepareWeek} className="mt-3 rounded-xl bg-[#c58f77] px-4 py-3 text-sm font-bold text-black">Prepare week</button>
+          {(draftPlan.length?draftPlan:(snapshot?.nutrition_week_plan||[])).map(m=><div key={m.id} className="mt-2 border-t border-white/10 py-2 text-xs text-white">{m.ymd} · {m.time} · {m.meal_type}<br/>{m.name} · {m.portion} servings · {m.calories} kcal · {m.protein}g protein</div>)}
+          {!!draftPlan.length&&<button type="button" disabled={savingPlan} onClick={approveWeek} className="mt-3 rounded-xl bg-[#c58f77] px-4 py-3 text-sm font-bold text-black">Approve and schedule meals</button>}
+          <p role="status" className="mt-2 text-xs text-[#e2b5a0]">{planStatus}</p>
+        </div>
         <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
             ["Calories left", Math.round(remaining.calories), ""],
