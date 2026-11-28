@@ -290,7 +290,7 @@ export default function HealthMobileHome({
     <section className="syncfit-lobby" aria-label="SYNCFIT training lobby">
       <header className="syncfit-lobby-head">
         <div><small>ATHLETE HQ · SYNCFIT</small><strong>{firstName}</strong></div>
-        <div className="syncfit-head-actions"><button type="button" className="syncfit-desktop-home" onClick={() => navigate("/customer")} aria-label="Return to SyncWorks home"><Home size={20}/></button><button type="button" onClick={() => onOpen?.("planner")} aria-label="Weekly missions"><CalendarDays size={20}/></button><button type="button" onClick={() => onOpen?.("progress")} aria-label="Performance stats"><BarChart3 size={20}/></button><button type="button" onClick={() => setToolsOpen(true)} aria-label="Open training tools"><Menu size={22}/></button></div>
+        <div className="syncfit-head-actions"><button type="button" className="syncfit-desktop-home" onClick={() => navigate("/customer")} aria-label="Return to SyncWorks home"><Home size={20}/></button><button type="button" onClick={() => onOpen?.("planner")} aria-label="Workout planner and calendar"><CalendarDays size={20}/></button><button type="button" onClick={() => onOpen?.("progress")} aria-label="Workout progress"><BarChart3 size={20}/></button><button type="button" onClick={() => setToolsOpen(true)} aria-label="Open training tools"><Menu size={22}/></button></div>
       </header>
       <div className="syncfit-arena">
         <div className="syncfit-arena-light" aria-hidden="true" />
@@ -300,7 +300,7 @@ export default function HealthMobileHome({
       </div>
       <div className="syncfit-mission-grid" aria-label="Training zones">
         <button type="button" onClick={openTodayMission}><Dumbbell/><strong>TRAIN</strong><small>{snapshot?.workout_completed_today ? "Complete" : "Today"}</small></button>
-        <button type="button" onClick={() => onOpen?.("nutrition-dashboard")}><Utensils/><strong>FUEL</strong><small>{Math.round(protein)} / {Math.round(proteinGoal)}g P</small></button>
+        <button type="button" onClick={() => onOpen?.("nutrition-dashboard")}><Utensils/><strong>NUTRITION</strong><small>{Math.round(protein)} / {Math.round(proteinGoal)}g P</small></button>
         <button type="button" onClick={() => { setToolsOpen(false); setRecoveryOpen(v=>!v); }}><HeartPulse/><strong>RECOVER</strong><small>{sleepHours ? `${sleepHours}h sleep` : "Check in"}</small></button>
       </div>
       <div className="syncfit-objectives" aria-label="Daily objectives">
@@ -332,7 +332,12 @@ export default function HealthMobileHome({
                 { label: "Start Workout", detail: "Launch your guided session", icon: Dumbbell, action: openTodayMission },
                 { label: "Workout Library", detail: "Exercises and previous sessions", icon: Activity, action: () => onOpen?.("my-workouts") },
                 { label: "Build My Plan", detail: "Set up or revise your training", icon: CalendarDays, action: () => onOpen?.("questionnaire") },
+                { label: "Workout Calendar", detail: "Review and schedule your training plan", icon: CalendarDays, action: () => onOpen?.("planner") },
+                { label: "SyncWorks Calendar", detail: "Open your main calendar", icon: CalendarDays, action: () => navigate("/calendar") },
+                { label: "Workout Logs", detail: "Completed workouts, weights and reps", icon: ClipboardCheck, action: () => onOpen?.("workout-history") },
                 { label: "Nutrition", detail: "Meals, macros and food logging", icon: Utensils, action: () => onOpen?.("nutrition-dashboard") },
+                { label: "Meal Plan", detail: "Build and review your nutrition plan", icon: Utensils, action: () => onOpen?.("meal-planner") },
+                { label: "Nutrition Goals", detail: "Calories, macros and dietary preferences", icon: Utensils, action: () => onOpen?.("nutrition-goals") },
                 { label: "Recovery", detail: "Sleep and daily check-in", icon: Moon, action: () => onOpen?.("daily-goals") },
                 { label: "Body Metrics", detail: "Measurements and health profile", icon: Scale, action: () => onOpen?.("profile-intake") },
                 { label: "Performance", detail: "Trends, progress and records", icon: BarChart3, action: () => onOpen?.("progress") },
