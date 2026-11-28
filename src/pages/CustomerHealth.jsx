@@ -4183,6 +4183,7 @@ export default function CustomerHealth() {
           />
 
           <CoachChatDrawer
+            history={history}
             open={
               drawer ===
               "coach-chat"

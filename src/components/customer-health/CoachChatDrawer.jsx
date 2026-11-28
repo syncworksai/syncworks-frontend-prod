@@ -303,6 +303,7 @@ function MessageBubble({ message }) {
 }
 
 export default function CoachChatDrawer({
+  history = [],
   open,
   onClose,
   snapshot,
@@ -460,6 +461,7 @@ export default function CoachChatDrawer({
     const localResult = runLocalCoachTurn({
       snapshot: localSnapshot || {},
       userText: clean,
+      history,
     });
 
     commitSnapshot(localResult.snapshot);
@@ -473,10 +475,7 @@ export default function CoachChatDrawer({
           localSnapshot?.health_profile ||
           {},
         snapshot: localSnapshot || {},
-        history:
-          localSnapshot?.history ||
-          localSnapshot?.recent_history ||
-          [],
+        history: Array.isArray(history) ? history : [],
       });
 
       const reply = String(ai?.reply || "").trim();
@@ -488,7 +487,7 @@ export default function CoachChatDrawer({
 
         const lastAssistantIndex = [...nextChat]
           .map((message) => message?.role)
-          .lastIndexOf("assistant");
+          .findLastIndex(role => role === "assistant" || role === "coach");
 
         if (lastAssistantIndex >= 0) {
           nextChat[lastAssistantIndex] = {
@@ -521,7 +520,7 @@ export default function CoachChatDrawer({
             text: reply,
             audioMode: "essential",
             voicePreference: "australian",
-            rate: 0.96,
+            rate: 0.92,
             pitch: 1,
             volume: 1,
             cancelFirst: true,
@@ -531,6 +530,8 @@ export default function CoachChatDrawer({
         }
 
         setProviderNote("OpenAI response Ã‚Â· SyncWorks validated");
+      } else {
+        setProviderNote("Conversational coach returned no answer. Showing local guidance.");
       }
     } catch (error) {
       if (error?.response?.status === 402) {

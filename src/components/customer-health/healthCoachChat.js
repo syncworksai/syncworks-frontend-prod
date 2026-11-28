@@ -1133,24 +1133,10 @@ export function shouldGeneratePlanFromInput(input, profile = {}) {
 
   if (missing.length > 0) return false;
 
-  return (
-    includesAny(text, [
-      "build",
-      "make",
-      "create",
-      "plan",
-      "start",
-      "ready",
-      "go",
-      "yes",
-      "do it",
-      "let's go",
-      "lets go",
-    ]) || text.length > 18
-  );
+  return /\b(?:build|create|make|redo|generate|update)\b.{0,65}\b(?:plan|routine|workout|program)\b/i.test(text) && !/\b(?:what did|last time|previous|history)\b/i.test(text);
 }
 
-export function runLocalCoachTurn({ snapshot = {}, userText = "" }) {
+export function runLocalCoachTurn({ snapshot = {}, userText = "", history = [] }) {
   const cleanText = String(userText || "").trim();
 
   if (!cleanText) {
@@ -1163,6 +1149,20 @@ export function runLocalCoachTurn({ snapshot = {}, userText = "" }) {
   }
 
   const currentChat = normalizeCoachChat(snapshot);
+  if (/\b(?:last time|last workout|previous workout|previous session|what did i (?:train|lift)|what weights)\b/i.test(cleanText)) {
+    const sessions = (Array.isArray(history)?history:[]).filter(h=>h?.status==="completed" || h?.completed_at).sort((a,b)=>String(b.completed_at||b.updated_at||"").localeCompare(String(a.completed_at||a.updated_at||"")));
+    const last=sessions[0];
+    const details=(last?.exercises||[]).slice(0,12).map(e=>{
+      const logs=(e.set_logs||[]).filter(l=>String(l.set_type||"working")==="working");
+      const sets=logs.map(l=>{const reps=l.actual_reps??l.reps, weight=l.actual_weight??l.weight, unit=l.weight_unit||e.weight_unit||last.weight_unit||"";return reps!=null&&reps!==""&&weight!=null&&weight!==""?String(reps)+" reps at "+String(weight)+(unit?" "+unit:""):"";}).filter(Boolean);
+      return (e.name||e.exercise_name||"Exercise")+": "+(sets.length?sets.join("; "):"no verified weight and rep log");
+    });
+    const recap=last ? "Last completed workout: "+(last.workout_name||last.name||"Recorded session")+". "+details.join(". ")+".": "I don't have a verified completed workout in the available history.";
+    const coachMessage=createCoachMessage(recap+" I need your current recovery and any soreness or pain to recommend today's intensity safely. I have not changed your plan.");
+    const userMessage=createUserMessage(cleanText);
+    return {snapshot:{...snapshot,coach_chat:[...currentChat,userMessage,coachMessage]},userMessage,coachMessage,proposal:snapshot.coach_plan_proposal||null};
+  }
+
   const baseProfile = buildCoachProfileFromSnapshot(snapshot);
   const previousCoachProfile = snapshot.coach_profile || {};
   const mergedBaseProfile = {
@@ -1179,7 +1179,7 @@ export function runLocalCoachTurn({ snapshot = {}, userText = "" }) {
     proposal = buildPlanProposal(nextCoachProfile);
   }
 
-  const coachMessage = buildCoachReplyAfterUserMessage(nextCoachProfile, proposal);
+  const coachMessage = shouldGeneratePlanFromInput(cleanText, nextCoachProfile) ? buildCoachReplyAfterUserMessage(nextCoachProfile, proposal) : createCoachMessage("I could not complete that coaching request locally. I will try the conversational coach; no new plan has been created.");
 
   const nextChat = [...currentChat, userMessage, coachMessage];
 
