@@ -2640,6 +2640,7 @@ export default function ActiveWorkoutSessionDrawer({
   onPauseSaved,
 }) {
   const [session, setSession] = useState(null);
+  const [queueOpen,setQueueOpen]=useState(false);
   const [reviewMode, setReviewMode] = useState(false);
   const [finishMessage, setFinishMessage] = useState("");
   const [savingWorkout, setSavingWorkout] =
@@ -4255,10 +4256,22 @@ export default function ActiveWorkoutSessionDrawer({
   }
 
   function moveExercise(index) {
-    if (!session) return;
-
-    setSession(moveToExercise(session, index));
+    if (!session || session.set_active || session.pending_set_logging || savingSet || countdownSeconds > 0 || session.rest_active) {
+      setFinishMessage("Finish logging your set and complete your rest before switching exercises.");
+      return;
+    }
+    const target = session.exercises?.[index];
+    if (!target || target.completed || target.skipped) return;
+    // Move the chosen unfinished exercise to the current slot, preserving all IDs and logs.
+    const current = Number(session.current_exercise_index || 0);
+    const exercises = [...session.exercises];
+    const [chosen] = exercises.splice(index, 1);
+    exercises.splice(Math.min(current, exercises.length), 0, chosen);
+    const next = {...session, exercises, current_exercise_index: Math.min(current, exercises.length - 1)};
+    persistWorkoutSession(next, plannerItem);
+    setSession(next);
     setSetCheckInOpen(false);
+    setFinishMessage("Now training: "+(chosen.substitute_name || chosen.name)+". Unfinished exercises remain in your workout.");
   }
 
   function patchExercise(field, value) {
@@ -6041,12 +6054,23 @@ export default function ActiveWorkoutSessionDrawer({
               </button>
             </div>
 
-            <div className="mt-1 text-center text-[9px] font-black uppercase tracking-[0.13em] text-slate-500">
-              Pause · Set Control · Audio · Coach
-            </div>
+            <button type="button" onClick={()=>setQueueOpen(true)} className="mt-2 w-full rounded-xl border border-white/15 py-2 text-xs font-bold text-white">Workout log · Change exercise order</button>
           </div>
         ) : null}
 
+        {queueOpen && session && <div className="fixed inset-0 z-[2147483200] flex items-end justify-center bg-black/60 p-3" role="dialog" aria-modal="true" aria-label="Live workout log">
+          <div className="flex max-h-[75dvh] w-full max-w-md flex-col rounded-2xl border border-[#805b49] bg-[#171310] p-3 text-white" style={{marginBottom:"env(safe-area-inset-bottom)"}}>
+            <div className="flex items-center justify-between gap-2"><strong>Workout log</strong><button type="button" onClick={()=>setQueueOpen(false)} aria-label="Close workout log" className="p-3">✕</button></div>
+            <p className="mb-2 text-xs text-[#e2b5a0]">Select an unfinished exercise to do next. Completed sets stay recorded.</p>
+            <div className="min-h-0 overflow-y-auto space-y-2">
+              {(session.exercises || []).map((e,index)=><div key={e.id} className="rounded-xl border border-[#805b4966] p-3">
+                <div className="flex items-center justify-between gap-2"><div><strong>{e.substitute_name || e.name}</strong><div className="text-xs text-[#e2b5a0]">{e.completed?"Complete":e.skipped?"Skipped":index===session.current_exercise_index?"Current":"Pending"} · {(e.set_logs||[]).length}/{e.planned_sets} sets</div></div>
+                {!e.completed&&!e.skipped&&index!==session.current_exercise_index&&<button type="button" disabled={session.set_active||session.pending_set_logging||session.rest_active||savingSet||countdownSeconds>0} onClick={()=>{moveExercise(index);setQueueOpen(false);}} className="rounded-lg bg-[#c58f77] px-3 py-2 text-xs font-bold text-black disabled:opacity-40">Do next</button>}</div>
+                {(e.set_logs||[]).map((l,j)=><div key={l.id||j} className="mt-1 text-xs text-slate-300">Set {j+1}: {l.actual_reps??l.reps??"—"} · {l.actual_weight??l.weight??"—"} {l.weight_unit||e.weight_unit||""}</div>)}
+              </div>)}
+            </div>
+          </div>
+        </div>}
         <AskSyncCoachSheet
           open={askSyncOpen}
           listening={voiceListening}
