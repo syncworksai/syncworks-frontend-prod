@@ -158,6 +158,17 @@ export default function SyncAssistChiefOfStaff(){
       </div>
       <div className="mt-3 grid grid-cols-3 gap-2 text-center" aria-label="Executive daily context">{[[brief?.date||"—","Date"],[localLabel,"Local time"],[weather.available?`${forecast.temperature??""} ${forecast.temperature_unit||""} ${forecast.short_forecast||""}`.trim()||"Forecast available":"Unavailable","Weather"]].map(([value,label])=><div key={label} className={`rounded-xl border p-2 ${design.border}`}><p className={`text-[10px] ${subText}`}>{label}</p><p className="break-words text-xs font-bold">{value}</p></div>)}</div><p className={`mt-2 text-xs ${subText}`}>Updated when refreshed · {context.timezone||"Timezone unavailable"}</p>
     </section>
+    {authorized&&<section className={`mt-3 rounded-2xl border p-4 shadow-lg backdrop-blur-xl ${design.border} ${design.panel}`} aria-label="Freelance income priorities">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div><p className={`text-[10px] font-black uppercase tracking-widest ${isLight?"text-slate-700":design.accent}`}>Sydney / Income Operations</p><h2 className="mt-1 text-base font-bold">Upwork applications & saved jobs</h2></div>
+        <button type="button" onClick={()=>navigate("/customer/freelance/upwork")} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/20 px-3 text-xs font-bold">Open pipeline <ExternalLink size={14}/></button>
+      </div>
+      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+        {[["1","Proposal viewed"],["3","Jobs saved"],["0","Contracts verified"]].map(([count,label])=><div key={label} className={`rounded-xl border p-2 ${design.border}`}><strong className="block text-lg">{count}</strong><span className={`text-[10px] ${subText}`}>{label}</span></div>)}
+      </div>
+      <p className={`mt-3 text-xs leading-5 ${subText}`}>UpForward's AI Research Assistant proposal was viewed. One Amazon research proposal is still unviewed. Three other opportunities are saved on Upwork for later evaluation.</p>
+      <p className={`mt-2 text-[11px] ${subText}`}>Verified account snapshot: November 28, 2026. This card does not refresh Upwork, send proposals, or monitor in the background; live account integration remains pending.</p>
+    </section>}
     {error&&<p role="alert" className="mt-3 rounded-xl border border-rose-400/40 p-3 text-sm text-rose-200">{error}</p>}
     {notice&&<p role="status" className="sw-chief-notice mt-3 rounded-xl border border-emerald-400/30 p-3 text-sm text-emerald-200">{notice}</p>}
     {!authorized&&<p className="mt-3 text-rose-200">Private pilot account only.</p>}
