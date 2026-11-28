@@ -3352,6 +3352,31 @@ export default function ActiveWorkoutSessionDrawer({
     const blocked=session.set_active || session.pending_set_logging || session.rest_active || savingSet || countdownSeconds>0;
     const normalize=v=>String(v||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
     const pending=pendingCoachAction.current;
+    const setMatch=q.match(/^(?:log(?: set)?[,: ]+)?(?:i (?:got|did) )?(\d{1,3})(?: reps)? (?:at|with) (\d{1,4}(?:\.\d+)?)\s*(pounds|lbs?|kg|kilograms)(?:\s+each)?(?:[, ]+(?:and )?(?:rpe|effort(?: was)?) (\d{1,2})(?: out of (?:10|ten))?)?[.!]?$/);
+    if(setMatch) {
+      if(!session.pending_set_logging || session.pending_set_exercise_id!==e.id || savingSet || isTimedExercise) return "Finish the resistance set first so I can attach those numbers to the correct set.";
+      const reps=Number(setMatch[1]),weight=Number(setMatch[2]),effort=setMatch[4]?Number(setMatch[4]):null;
+      const unit=/kg|kilograms/.test(setMatch[3])?"kg":"lb";
+      const plannedUnit=String(e.weight_unit||session.weight_unit||"").toLowerCase().replace(/^lbs$/,"lb");
+      if(!plannedUnit || plannedUnit!==unit) return "Please confirm the weight unit in the set log before saving. I don't want to record the wrong load.";
+      if(reps<1||reps>100||weight<0||weight>2000||(effort!==null&&(effort<1||effort>10))) return "Those numbers need checking. Please repeat the set or use the log.";
+      if(/\beach\b/.test(q)) return "Please confirm the per-dumbbell weight convention in the set log before saving.";
+      pendingCoachAction.current={kind:"set",session:session.id,exercise:e.id,pendingStarted:session.pending_set_started_at,ordinal:(e.set_logs||[]).length,log:{actual_reps:String(reps),reps:String(reps),actual_weight:String(weight),weight:String(weight),weight_unit:unit,rpe:effort===null?"":String(effort),set_type:"working"}};
+      return e.name+": "+reps+" reps at "+weight+" "+unit+(effort===null?"":", effort "+effort+" out of ten")+". Say confirm to record, or repeat the numbers to correct them. If you had pain, tell me before confirming.";
+    }
+    if(pending?.kind==="set"){
+      if(/^(?:no|cancel|not now)[.!]?$/.test(q)){pendingCoachAction.current=null;return "Not recorded. Tell me the corrected numbers when ready.";}
+      if(/pain|hurt|injur|sharp/.test(q)){pendingCoachAction.current=null;return "Stop that movement and assess the pain. The pending entry has not been recorded; use the set log to record your actual symptoms.";}
+      if(/^(?:yes|confirm|do it|yes please)[.!]?$/.test(q)){
+        pendingCoachAction.current=null;
+        if(!session.pending_set_logging || session.pending_set_exercise_id!==e.id || session.id!==pending.session || e.id!==pending.exercise || session.pending_set_started_at!==pending.pendingStarted || (e.set_logs||[]).length!==pending.ordinal || savingSet) return "That set has changed. Please check the current log before recording.";
+        saveTimedSet(pending.log);
+        return {recordedSet:true};
+      }
+      return "Your set is awaiting confirmation. Say confirm, cancel, or repeat the corrected reps and weight with units.";
+    }
+    if(/(?:\b\d{1,3}\s+reps\b|^(?:log(?: set)?[,: ]+)?(?:i (?:got|did) )?\d{1,3} (?:at|with) )/.test(q)) return "Tell me the number of reps, weight and pounds or kilograms, for example 12 reps at 50 pounds, effort 7.";
+
     if (/^(?:yes|confirm|do it|use it|sounds good|yes please)[.!]?$/.test(q) && pending) {
       pendingCoachAction.current=null;
       if(pending.session!==session.id || pending.exercise!==e.id || blocked || (e.set_logs||[]).length) return "The workout state has changed. Let's review the alternative again before switching.";
@@ -3381,6 +3406,7 @@ export default function ActiveWorkoutSessionDrawer({
     const question = String(rawQuestion || "").trim();
     if (!question) return;
     const actionReply=conversationalWorkoutAction(question);
+    if(actionReply?.recordedSet){setAskSyncDraft("");setVoiceError("");return;}
     let reply = actionReply || coachReplyForQuestion(question);
     if (!actionReply && useAI && !isCoachQuestion(question.toLowerCase())) {
       try {
@@ -3535,15 +3561,8 @@ export default function ActiveWorkoutSessionDrawer({
       return;
     }
 
-    const spokenSet = command.match(/^(?:log(?: set)?[,: ]+)?(?:i (?:got|did) )?(\d{1,3})(?: reps)? (?:at|with) (\d{1,4}(?:\.\d+)?)(?: pounds| lbs?)?(?:[, ]+(?:rpe|effort) (\d{1,2}))?$/);
-    if (spokenSet && session?.pending_set_logging && currentExercise && !savingSet) {
-      const reps = Number(spokenSet[1]), weight = Number(spokenSet[2]), effort = spokenSet[3] ? Number(spokenSet[3]) : null;
-      if (reps > 0 && reps <= 100 && weight >= 0 && weight <= 2000 && effort !== null && effort >= 1 && effort <= 10) {
-        saveTimedSet({actual_reps:String(reps), reps:String(reps), actual_weight:String(weight), weight:String(weight), rpe:String(effort), ease_score:String(effort), set_type:"working"});
-        setVoiceError("");
-        return;
-      }
-      setVoiceError("Tell me reps, weight and effort from one to ten, or use the set log to confirm.");
+    if (/(?:\b\d{1,3}\s+reps\b|^(?:log(?: set)?[,: ]+)?(?:i (?:got|did) )?\d{1,3} (?:at|with) )/.test(command) || (/^(?:yes|confirm|cancel|no)[.!]?$/.test(command) && pendingCoachAction.current?.kind==="set")) {
+      submitAskSync(command);
       return;
     }
 
