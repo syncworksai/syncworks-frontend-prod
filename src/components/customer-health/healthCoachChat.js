@@ -1232,48 +1232,35 @@ export function addCoachProposalToPlanner(snapshot = {}, proposal = null) {
     };
   }
 
-  const existingWeekPlan = snapshot.week_plan || {};
-  const existingWorkouts = Array.isArray(existingWeekPlan.workouts)
-    ? existingWeekPlan.workouts
-    : Array.isArray(existingWeekPlan.days)
-      ? existingWeekPlan.days
-      : [];
-
-  const plannedWorkouts = safeProposal.workouts.map((workout, index) => ({
-    ...workout,
-    id: workout.id || `planned_coach_workout_${Date.now()}_${index + 1}`,
-    status: "planned",
-    added_to_planner_at: NOW(),
-    source: "coach_chat",
-  }));
-
-  const nextWeekPlan = {
-    ...existingWeekPlan,
-    id: existingWeekPlan.id || `week_plan_${Date.now()}`,
-    source: "coach_chat",
-    updated_at: NOW(),
-    coach_plan_id: safeProposal.id,
-    summary: safeProposal.summary,
-    workouts: [...existingWorkouts, ...plannedWorkouts],
-    days: [...existingWorkouts, ...plannedWorkouts],
-  };
-
-  const confirmation = createCoachMessage(
-    "Done. I added this plan to your weekly planner. Next step is starting the workout and tracking sets, reps, weight, rest time, pain score, and difficulty so I can adjust the next plan like a real trainer."
-  );
-
-  const nextChat = [...normalizeCoachChat(snapshot), confirmation];
+  const existingWeekPlan = Array.isArray(snapshot.week_plan) ? snapshot.week_plan : [];
+  if (!Array.isArray(snapshot.week_plan) && snapshot.week_plan && Object.keys(snapshot.week_plan).length) return {snapshot,added:false,message:"Open the planner to normalize the existing schedule before adding a plan."};
+  const preferred = snapshot.preferred_workout_time || safeProposal.profile_used?.preferred_workout_time;
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(String(preferred||""))) return {snapshot,added:false,message:"Set your preferred workout time in your training profile first."};
+  const localDate = date => [date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-");
+  const plannedWorkouts = safeProposal.workouts.map((workout,index)=>{
+    const date = new Date();
+    date.setDate(date.getDate()+Math.floor(index*7/safeProposal.workouts.length));
+    return {...workout,id:workout.id||safeProposal.id+"-"+index,workout_name:workout.title||workout.name,ymd:localDate(date),time:preferred,status:"Planned",source:"coach_chat"};
+  });
+  if (!plannedWorkouts.length || plannedWorkouts.some(w=>!w.workout_name||!w.exercises?.length)) return {snapshot,added:false,message:"No valid workouts to schedule."};
+  const ids=new Set(plannedWorkouts.map(w=>w.id));
+  const retained=existingWeekPlan.filter(w=>!ids.has(w.id));
+  if(existingWeekPlan.some(w=>ids.has(w.id)&&String(w.status).toLowerCase()==="completed")) return {snapshot,added:false,message:"This proposal includes a completed workout and cannot overwrite it."};
+  if(retained.some(w=>plannedWorkouts.some(p=>p.ymd===w.ymd)&&!["completed","skipped","rescheduled","cancelled","canceled"].includes(String(w.status).toLowerCase()))) return {snapshot,added:false,message:"Your existing schedule has workouts on those days. Review the planner before adding this proposal."};
+  const nextWeekPlan=[...retained,...plannedWorkouts].sort((a,b)=>String(a.ymd).localeCompare(String(b.ymd)));
+  const nextChat=normalizeCoachChat(snapshot);
 
   return {
     added: true,
-    message: "Plan added to planner.",
+    message: "Plan prepared for saving.",
+    plannedIds: plannedWorkouts.map(w=>w.id),
     snapshot: {
       ...snapshot,
       week_plan: nextWeekPlan,
       coach_chat: nextChat,
       coach_plan_proposal: {
         ...safeProposal,
-        status: "added_to_planner",
+        status: "approved_pending_verification",
         added_to_planner_at: NOW(),
         updated_at: NOW(),
       },
