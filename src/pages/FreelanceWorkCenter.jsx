@@ -46,9 +46,16 @@ const VERIFIED_INVITATION = Object.freeze({
  notes:"Invitation accepted, not hired. Client had not viewed at last check. Terms include scheduled 15% raise every 3 months; review before accepting any future contract.",
  source:"Upwork invitation accepted; verified in ChatGPT 2026-11-25. Static snapshot, not live status"
 });
+// Saved in the founder's connected Upwork account on November 28, 2026.
+// These entries are fixed verification snapshots, not live API synchronization.
+const VERIFIED_SAVED_JOBS = Object.freeze([
+ {id:"upwork-saved-2126259811823525088",title:"Home Services Phone Research & Quality Assurance Assistant",platform:"Upwork",url:"https://www.upwork.com/jobs/~022126259811823525088",type:"Hourly",budget:0,hourlyMin:15,hourlyMax:55,status:"Saved",upworkJobId:"2126259811823525088",notes:"Requires real outbound business calls and reports; confirm client still hiring (one hire shown).",source:"Upwork saved confirmation 2026-11-28, not live"},
+ {id:"upwork-saved-2126260564929740205",title:"Home Services Market Research & Lead Qualification Assistant",platform:"Upwork",url:"https://www.upwork.com/jobs/~022126260564929740205",type:"Hourly",budget:0,hourlyMin:10,hourlyMax:55,status:"Saved",upworkJobId:"2126260564929740205",notes:"Requires outbound calls and customer-service research. Client had no completed contracts at last check.",source:"Upwork saved confirmation 2026-11-28, not live"},
+ {id:"upwork-saved-2126716851987611053",title:"Etsy Store helper data entry",platform:"Upwork",url:"https://www.upwork.com/jobs/~022126716851987611053",type:"Fixed price",budget:100,status:"Saved",upworkJobId:"2126716851987611053",notes:"Listing uploads and customer support messages. Confirm number of listings and expected hours.",source:"Upwork saved confirmation 2026-11-28, not live"}
+]);
 function initialState(){ return { opportunities: [], updatedAt: null, firstProposalImported: false }; }
 function loadState(userId) {
- const pinned=[VERIFIED_FIRST_PROPOSAL,VERIFIED_INVITATION];
+ const pinned=[VERIFIED_FIRST_PROPOSAL,VERIFIED_INVITATION,...VERIFIED_SAVED_JOBS];
  try {
   const saved=JSON.parse(window.localStorage.getItem(storageKey(userId))||"null");
   const state=saved&&Array.isArray(saved.opportunities)?saved:initialState();
