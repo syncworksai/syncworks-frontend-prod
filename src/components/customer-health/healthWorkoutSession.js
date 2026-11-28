@@ -649,6 +649,8 @@ function createSetRecord({
 
     rpe,
     ease_score: rpe,
+    effort_label: setLog.effort_label || "",
+    perceived_difficulty: setLog.perceived_difficulty || setLog.effort_label || "",
 
     form_quality:
       setLog.form_quality || "",
