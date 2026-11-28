@@ -4039,6 +4039,7 @@ export default function CustomerHealth() {
               );
             }}
             setProfile={setProfile}
+            setSnapshot={setSnapshot}
           />
 
           <DailyHealthGoalsDrawer
